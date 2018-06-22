@@ -24,6 +24,7 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - db-volume:/var/lib/postgresql/data
+      - ./db_scripts/:/docker-entrypoint-initdb.d
   swagger:
     image: swaggerapi/swagger-ui
     ports:
