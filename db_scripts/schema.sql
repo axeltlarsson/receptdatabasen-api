@@ -44,21 +44,25 @@ CREATE OR REPLACE VIEW api.recipes AS (
   SELECT
     rs.*,
     (
-      SELECT array_to_json(array_agg(groups))
+      SELECT array_to_json(array_agg(ingredients))
       FROM (
-        SELECT name
-        FROM data.ingredient_groups
-        WHERE rs.id = data.ingredient_groups.recipe_id
+        SELECT
+        json_build_object(name, array_agg(ingredients.contents)) AS ingredients
+        FROM data.ingredient_groups AS ingredient_groups
+        LEFT JOIN data.ingredients AS ingredients ON ingredient_groups.id = ingredients.ingredient_group_id
+        WHERE rs.id = ingredient_groups.recipe_id
+        GROUP BY recipe_id, name
+        ORDER BY recipe_id, name
       ) groups
     ) AS ingredients
   FROM data.recipes AS rs
 );
 
 /*
- ingredients: [
-  { group1: [ingredients...] },
-  { group2: [ingredients...] }
- ]
+ ingredients: {
+  group1: [ingredients...],
+  group2: [ingredients...]
+ }
  */
 CREATE FUNCTION api.insert_recipe()
 RETURNS TRIGGER
@@ -89,4 +93,4 @@ $$ LANGUAGE 'plpgsql';
 CREATE TRIGGER insert_recipe
 INSTEAD OF INSERT ON api.recipes
 FOR EACH ROW
-EXECUTE PROCEDURE api.insert_recipe();<Paste>
+EXECUTE PROCEDURE api.insert_recipe();
