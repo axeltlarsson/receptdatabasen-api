@@ -44,10 +44,12 @@ CREATE OR REPLACE VIEW api.recipes AS (
   SELECT
     rs.*,
     (
-      SELECT array_to_json(array_agg(ingredients))
+      SELECT
+        json_object_agg(name, ingredients)
       FROM (
         SELECT
-        json_build_object(name, array_agg(ingredients.contents)) AS ingredients
+          name,
+          array_to_json(array_agg(ingredients.contents)) AS ingredients
         FROM data.ingredient_groups AS ingredient_groups
         LEFT JOIN data.ingredients AS ingredients ON ingredient_groups.id = ingredients.ingredient_group_id
         WHERE rs.id = ingredient_groups.recipe_id

@@ -1,0 +1,22 @@
+{
+  "title": "Cheese Cake",
+  "description": "Väldigt god cheese cake, servera gärna med färska bär till.",
+  "instructions": "Smält smöret. Krossa kexen grovt i en matberedare. Häll i smöret och kör till en smulig smet. Tryck ut blandningen i en bakform med löstagbar kant. Du behöver inte trycka upp smeten längs kanterna. Det ska bara bli en bottenplatta.\n  Ställ kallt. Värm ugnen till 175 grader. \nRör ihop philadelphiaosten med sockret och vaniljsockret i en bunke. Blanda ner vetemjölet och saltet och rör till en slät smet.\n Rör ner äggen – ett i taget – så att de blandas ut ordentligt i smeten.\n Riv citronskal och pressa i lite citronsaft – smaka av till lagom nivå.\nHäll i formen med kexbotten. Grädda i nedre delen av ugnen i cirka 45-50 minuter*. Kakan kommer att verka mjuk men den stelnar när den svalnar.\nLåt kakan kallna helt och lossa den sedan från formen med en kniv eller liten spatel.\nHur lång tid kakan ska gräddas varierar från ugn till ugn och beroende på form. Tiden ska ses som ungefärlig.",
+  "ingredients": {
+    "botten": [
+      "12 st digestivekex",
+    "75 g smör"
+    ],
+    "fyllningen": [
+      "800 g philedphiaost",
+    "2 dl strösocker",
+    "1 msk vaniljsocker",
+    "2 msk vetemjöl",
+    "0,5 tsk salt",
+    "4 st ägg",
+    "citronskal och citronsaft"
+    ]
+  },
+  "tags": ["efterrätt"],
+  "quantity": "12"
+}
