@@ -1,5 +1,7 @@
 # receptdatabasen-api
-*The new PostgREST backend for receptdatabasen*
+*The new PostgREST backend and Elm frontend for receptdatabasen*
+
+See [frontend](./frontend/) for the Elm frontend.
 
 ## Run
 `docker-compose up`
@@ -14,4 +16,5 @@ Using [httpie](https://httpie.org/doc) it's very easy to interact with the API:
 - `http :3000/recipes` - get the list of recipes
 - `http :3000/recipes title=="eq.Cheese Cake"` - get a recipe by title
 - `http PATCH :3000/recipes quantity:=23 tags:='["efterätt", "dessert"]'` - edit the recipe
+
 
