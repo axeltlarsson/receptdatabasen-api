@@ -1,2 +1,2 @@
 # receptdatabasen-frontend
-The new SPA Elm frontend fro receptdatabasen.
+The new SPA Elm frontend for receptdatabasen.
