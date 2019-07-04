@@ -3,8 +3,10 @@ module Page.Recipe exposing (Model, Msg, init, toSession, update, view)
 import Browser exposing (Document)
 import Dict exposing (Dict)
 import Html exposing (..)
+import Html.Attributes exposing (class)
 import Http
 import Json.Decode exposing (Decoder, dict, field, index, int, list, map2, map8, string)
+import Markdown
 import Session exposing (Session)
 import Url exposing (Url)
 import Url.Builder
@@ -15,17 +17,22 @@ import Url.Builder
 
 
 type alias Model =
-    { session : Session, recipe : Status Recipe, error : Maybe Http.Error }
+    { session : Session, recipe : Status Recipe }
 
 
-type Status a
+type Status recipe
     = Loading
-    | Loaded a
-    | Failed
+    | Loaded recipe
+    | Failed Http.Error
+    | NotFound
+
+
+type alias Slug =
+    Int
 
 
 type alias Recipe =
-    { id : Int
+    { id : Slug
     , title : String
     , description : String
     , instructions : String
@@ -36,11 +43,10 @@ type alias Recipe =
     }
 
 
-init : Session -> Int -> ( Model, Cmd Msg )
+init : Session -> Slug -> ( Model, Cmd Msg )
 init session slug =
     ( { recipe = Loading
       , session = session
-      , error = Nothing
       }
     , getRecipe slug
     )
@@ -58,12 +64,17 @@ view model =
             , body = [ text "Loading..." ]
             }
 
-        Failed ->
+        Failed err ->
             { title = "Failed to load"
             , body =
                 [ text "Failed to load"
-                , viewError model.error
+                , viewError err
                 ]
+            }
+
+        NotFound ->
+            { title = "Not found"
+            , body = [ text "Not found" ]
             }
 
         Loaded recipe ->
@@ -80,13 +91,20 @@ viewRecipe recipe =
         , p [] [ text recipe.description ]
         , p [] [ text <| String.concat [ "För ", String.fromInt recipe.quantity, " personer" ] ]
         , h2 [] [ text "Ingredienser" ]
-
-        -- , text <| Debug.toString recipe.ingredients
         , viewIngredientsDict recipe.ingredients
         , h2 [] [ text "Instruktioner" ]
-        , p [] [ text recipe.instructions ]
+        , p [] [ Markdown.toHtmlWith mdOptions [ class "ingredients" ] recipe.instructions ]
         , p [] [ text <| String.concat [ "Skapad: ", recipe.created_at ] ]
         ]
+
+
+mdOptions : Markdown.Options
+mdOptions =
+    { githubFlavored = Nothing
+    , defaultHighlighting = Nothing
+    , sanitize = True
+    , smartypants = True
+    }
 
 
 viewIngredientsDict : Dict String (List String) -> Html msg
@@ -109,26 +127,23 @@ viewIngredient ingredient =
     li [] [ text ingredient ]
 
 
-viewError : Maybe Http.Error -> Html msg
+viewError : Http.Error -> Html msg
 viewError error =
     case error of
-        Just (Http.BadUrl str) ->
+        Http.BadUrl str ->
             text str
 
-        Just Http.NetworkError ->
+        Http.NetworkError ->
             text "NetworkError"
 
-        Just (Http.BadStatus status) ->
+        Http.BadStatus status ->
             text ("BadStatus" ++ String.fromInt status)
 
-        Just (Http.BadBody str) ->
+        Http.BadBody str ->
             text ("BadBody" ++ str)
 
-        Just Http.Timeout ->
+        Http.Timeout ->
             text "Timeout"
-
-        Nothing ->
-            text ""
 
 
 
@@ -136,39 +151,45 @@ viewError error =
 
 
 type Msg
-    = LoadedRecipe (Result Http.Error Recipe)
+    = LoadedRecipe (Result Http.Error (List Recipe))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        LoadedRecipe (Ok recipe) ->
+        LoadedRecipe (Ok [ recipe ]) ->
             ( { model | recipe = Loaded recipe }, Cmd.none )
 
+        LoadedRecipe (Ok []) ->
+            ( { model | recipe = NotFound }, Cmd.none )
+
         LoadedRecipe (Err error) ->
-            ( { model | recipe = Failed, error = Just error }, Cmd.none )
+            ( { model | recipe = Failed error }, Cmd.none )
+
+        LoadedRecipe (Ok _) ->
+            Debug.todo "Multiple recipes matched"
 
 
 
 -- HTTP
 
 
-hardCodedUrl : String
-hardCodedUrl =
-    Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] [ Url.Builder.string "id" "eq.4" ]
+url : Slug -> String
+url slug =
+    Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] [ Url.Builder.string "id" ("eq." ++ String.fromInt slug) ]
 
 
-getRecipe : Int -> Cmd Msg
+getRecipe : Slug -> Cmd Msg
 getRecipe slug =
     Http.get
-        { url = hardCodedUrl
+        { url = url slug
         , expect = Http.expectJson LoadedRecipe recipeDecoder
         }
 
 
-recipeDecoder : Decoder Recipe
+recipeDecoder : Decoder (List Recipe)
 recipeDecoder =
-    index 0 <|
+    list <|
         map8 Recipe
             (field "id" int)
             (field "title" string)
