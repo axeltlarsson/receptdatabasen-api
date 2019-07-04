@@ -1,9 +1,10 @@
 module Page.Recipe exposing (Model, Msg, init, toSession, update, view)
 
 import Browser exposing (Document)
+import Dict exposing (Dict)
 import Html exposing (..)
 import Http
-import Json.Decode exposing (Decoder, dict, field, index, map2, string)
+import Json.Decode exposing (Decoder, dict, field, index, int, list, map2, map8, string)
 import Session exposing (Session)
 import Url exposing (Url)
 import Url.Builder
@@ -24,8 +25,14 @@ type Status a
 
 
 type alias Recipe =
-    { title : String
+    { id : Int
+    , title : String
+    , description : String
     , instructions : String
+    , tags : List String
+    , quantity : Int
+    , ingredients : Dict String (List String)
+    , created_at : String
     }
 
 
@@ -61,13 +68,45 @@ view model =
 
         Loaded recipe ->
             { title = "Individual recipe view"
-            , body =
-                [ div []
-                    [ h1 [] [ text recipe.title ]
-                    , text "recipe number: "
-                    ]
-                ]
+            , body = [ viewRecipe recipe ]
             }
+
+
+viewRecipe : Recipe -> Html msg
+viewRecipe recipe =
+    div []
+        [ h1 [] [ text recipe.title ]
+        , p [] [ text <| String.concat [ "Recipe id: ", String.fromInt recipe.id ] ]
+        , p [] [ text recipe.description ]
+        , p [] [ text <| String.concat [ "För ", String.fromInt recipe.quantity, " personer" ] ]
+        , h2 [] [ text "Ingredienser" ]
+
+        -- , text <| Debug.toString recipe.ingredients
+        , viewIngredientsDict recipe.ingredients
+        , h2 [] [ text "Instruktioner" ]
+        , p [] [ text recipe.instructions ]
+        , p [] [ text <| String.concat [ "Skapad: ", recipe.created_at ] ]
+        ]
+
+
+viewIngredientsDict : Dict String (List String) -> Html msg
+viewIngredientsDict ingredients =
+    div []
+        (Dict.toList ingredients |> List.map viewGroupedIngredients)
+
+
+viewGroupedIngredients : ( String, List String ) -> Html msg
+viewGroupedIngredients ( groupKey, ingredients ) =
+    div []
+        [ h3 [] [ text groupKey ]
+        , ul []
+            (List.map viewIngredient ingredients)
+        ]
+
+
+viewIngredient : String -> Html msg
+viewIngredient ingredient =
+    li [] [ text ingredient ]
 
 
 viewError : Maybe Http.Error -> Html msg
@@ -129,9 +168,16 @@ getRecipe slug =
 
 recipeDecoder : Decoder Recipe
 recipeDecoder =
-    map2 Recipe
-        (index 0 (field "title" string))
-        (index 0 (field "instructions" string))
+    index 0 <|
+        map8 Recipe
+            (field "id" int)
+            (field "title" string)
+            (field "description" string)
+            (field "instructions" string)
+            (field "tags" (list string))
+            (field "quantity" int)
+            (field "ingredients" (dict (list string)))
+            (field "created_at" string)
 
 
 
