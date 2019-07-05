@@ -5,6 +5,7 @@ import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Page.Recipe as Recipe
+import Page.RecipeList as RecipeList
 import Route exposing (Route)
 import Session exposing (Session)
 import Url
@@ -16,6 +17,7 @@ import Url
 
 type Model
     = Recipe Recipe.Model
+    | RecipeList
     | Redirect Session
     | NotFound Session
 
@@ -69,6 +71,7 @@ type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
     | GotRecipeMsg Recipe.Msg
+    | GotRecipeListMsg RecipeList.Msg
 
 
 toSession : Model -> Session
@@ -97,6 +100,10 @@ changeRouteTo maybeRoute model =
         Just (Route.Recipe slug) ->
             Recipe.init session slug
                 |> updateWith Recipe GotRecipeMsg model
+
+        Just Route.RecipeList ->
+            RecipeList.init session
+                |> updateWith RecipeList GotRecipeListMsg model
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )

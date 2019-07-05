@@ -10,6 +10,7 @@ import Url.Parser as Parser exposing ((</>), Parser, int, map, oneOf, s, string)
 
 type Route
     = Recipe Int
+    | RecipeList
 
 
 
@@ -21,6 +22,7 @@ parser : Parser (Route -> a) a
 parser =
     oneOf
         [ map Recipe (s "recipes" </> int)
+        , map RecipeList (s "recipes")
 
         -- , map RecipeQuery (s "recipes" <?> Query.string "search")
         ]

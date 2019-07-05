@@ -5,8 +5,8 @@ import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes exposing (class)
 import Http
-import Json.Decode exposing (Decoder, dict, field, index, int, list, map2, map8, string)
 import Markdown
+import Recipe exposing (Full, Recipe)
 import Session exposing (Session)
 import Url exposing (Url)
 import Url.Builder
@@ -17,7 +17,7 @@ import Url.Builder
 
 
 type alias Model =
-    { session : Session, recipe : Status Recipe }
+    { session : Session, recipe : Status (Recipe Full) }
 
 
 type Status recipe
@@ -31,16 +31,17 @@ type alias Slug =
     Int
 
 
-type alias Recipe =
-    { id : Slug
-    , title : String
-    , description : String
-    , instructions : String
-    , tags : List String
-    , quantity : Int
-    , ingredients : Dict String (List String)
-    , created_at : String
-    }
+
+-- type alias Recipe =
+-- { id : Slug
+-- , title : String
+-- , description : String
+-- , instructions : String
+-- , tags : List String
+-- , quantity : Int
+-- , ingredients : Dict String (List String)
+-- , created_at : String
+-- }
 
 
 init : Session -> Slug -> ( Model, Cmd Msg )
@@ -83,7 +84,7 @@ view model =
             }
 
 
-viewRecipe : Recipe -> Html msg
+viewRecipe : Recipe Full -> Html msg
 viewRecipe recipe =
     div []
         [ h1 [] [ text recipe.title ]
@@ -151,7 +152,7 @@ viewError error =
 
 
 type Msg
-    = LoadedRecipe (Result Http.Error (List Recipe))
+    = LoadedRecipe (Result Http.Error (List (Recipe Full)))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -183,22 +184,8 @@ getRecipe : Slug -> Cmd Msg
 getRecipe slug =
     Http.get
         { url = url slug
-        , expect = Http.expectJson LoadedRecipe recipeDecoder
+        , expect = Http.expectJson LoadedRecipe Recipe.previewDecoder
         }
-
-
-recipeDecoder : Decoder (List Recipe)
-recipeDecoder =
-    list <|
-        map8 Recipe
-            (field "id" int)
-            (field "title" string)
-            (field "description" string)
-            (field "instructions" string)
-            (field "tags" (list string))
-            (field "quantity" int)
-            (field "ingredients" (dict (list string)))
-            (field "created_at" string)
 
 
 
