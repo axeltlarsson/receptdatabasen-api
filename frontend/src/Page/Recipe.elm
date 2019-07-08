@@ -6,7 +6,7 @@ import Html exposing (..)
 import Html.Attributes exposing (class)
 import Http
 import Markdown
-import Recipe exposing (Full, Recipe)
+import Recipe exposing (Full, Metadata, Recipe, contents, fullDecoder, metadata)
 import Session exposing (Session)
 import Url exposing (Url)
 import Url.Builder
@@ -29,19 +29,6 @@ type Status recipe
 
 type alias Slug =
     Int
-
-
-
--- type alias Recipe =
--- { id : Slug
--- , title : String
--- , description : String
--- , instructions : String
--- , tags : List String
--- , quantity : Int
--- , ingredients : Dict String (List String)
--- , created_at : String
--- }
 
 
 init : Session -> Slug -> ( Model, Cmd Msg )
@@ -86,16 +73,29 @@ view model =
 
 viewRecipe : Recipe Full -> Html msg
 viewRecipe recipe =
+    let
+        { title, slug, createdAt } =
+            Recipe.metadata recipe
+
+        slugStr =
+            String.fromInt slug
+
+        { description, quantity, ingredients, instructions } =
+            Recipe.contents recipe
+
+        quantityStr =
+            String.fromInt quantity
+    in
     div []
-        [ h1 [] [ text recipe.title ]
-        , p [] [ text <| String.concat [ "Recipe id: ", String.fromInt recipe.id ] ]
-        , p [] [ text recipe.description ]
-        , p [] [ text <| String.concat [ "För ", String.fromInt recipe.quantity, " personer" ] ]
+        [ h1 [] [ text title ]
+        , p [] [ text <| String.concat [ "Recipe id: ", slugStr ] ]
+        , p [] [ text description ]
+        , p [] [ text <| String.concat [ "För ", quantityStr, " personer" ] ]
         , h2 [] [ text "Ingredienser" ]
-        , viewIngredientsDict recipe.ingredients
+        , viewIngredientsDict ingredients
         , h2 [] [ text "Instruktioner" ]
-        , p [] [ Markdown.toHtmlWith mdOptions [ class "ingredients" ] recipe.instructions ]
-        , p [] [ text <| String.concat [ "Skapad: ", recipe.created_at ] ]
+        , p [] [ Markdown.toHtmlWith mdOptions [ class "ingredients" ] instructions ]
+        , p [] [ text <| String.concat [ "Skapad: ", createdAt ] ]
         ]
 
 
@@ -184,7 +184,7 @@ getRecipe : Slug -> Cmd Msg
 getRecipe slug =
     Http.get
         { url = url slug
-        , expect = Http.expectJson LoadedRecipe Recipe.previewDecoder
+        , expect = Http.expectJson LoadedRecipe Recipe.fullDecoder
         }
 
 

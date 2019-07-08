@@ -17,7 +17,7 @@ import Url
 
 type Model
     = Recipe Recipe.Model
-    | RecipeList
+    | RecipeList RecipeList.Model
     | Redirect Session
     | NotFound Session
 
@@ -48,6 +48,9 @@ view model =
 
         Recipe recipe ->
             Recipe.view recipe
+
+        RecipeList recipes ->
+            RecipeList.view recipes
 
 
 viewLinks : Html msg
@@ -85,6 +88,9 @@ toSession page =
 
         Recipe recipe ->
             Recipe.toSession recipe
+
+        RecipeList recipes ->
+            RecipeList.toSession recipes
 
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -126,6 +132,9 @@ update msg model =
             Recipe.update subMsg recipe
                 |> updateWith Recipe GotRecipeMsg model
 
+        -- ( GotRecipeListMsg subMsg, RecipeList recipes ) ->
+        -- RecipeList.update subMsg recipes
+        -- |> updateWith RecipeList GotReclpeListMsg model
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page
             ( model, Cmd.none )

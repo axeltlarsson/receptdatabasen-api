@@ -1,4 +1,4 @@
-module Recipe exposing (Full, Internals, Metadata, Preview, Recipe(..), previewDecoder)
+module Recipe exposing (Full, Metadata, Preview, Recipe(..), contents, fullDecoder, metadata, previewDecoder)
 
 {- The interface to the Recipe data structure.
 
@@ -19,17 +19,12 @@ import Json.Decode as Decoder exposing (Decoder, dict, field, index, int, list, 
 
 
 type Recipe a
-    = Recipe Internals a
-
-
-type alias Internals =
-    { slug : Int
-    , metadata : Metadata
-    }
+    = Recipe Metadata a
 
 
 type alias Metadata =
-    { title : String
+    { slug : Int
+    , title : String
     , createdAt : String
     , updatedAt : String
     }
@@ -43,14 +38,27 @@ type Full
     = Full Contents
 
 
-type Contents
-    = Contents
-        { description : String
-        , instructions : String
-        , tags : List String
-        , quantity : Int
-        , ingredients : Dict String (List String)
-        }
+type alias Contents =
+    { description : String
+    , instructions : String
+    , tags : List String
+    , quantity : Int
+    , ingredients : Dict String (List String)
+    }
+
+
+
+-- EXPORT
+
+
+metadata : Recipe a -> Metadata
+metadata (Recipe data _) =
+    data
+
+
+contents : Recipe Full -> Contents
+contents (Recipe _ (Full c)) =
+    c
 
 
 
@@ -59,22 +67,39 @@ type Contents
 
 metadataDecoder : Decoder Metadata
 metadataDecoder =
-    Decoder.map3 Metadata
+    Decoder.map4 Metadata
+        (field "id" int)
         (field "title" string)
         (field "created_at" string)
         (field "updated_at" string)
-
-
-internalsDecoder : Decoder Internals
-internalsDecoder =
-    Decoder.map2 Internals
-        (field "slug" int)
-        metadataDecoder
 
 
 previewDecoder : Decoder (List (Recipe Preview))
 previewDecoder =
     list <|
         Decoder.map2 Recipe
-            internalsDecoder
+            metadataDecoder
             (Decoder.succeed Preview)
+
+
+xDecoder : Decoder Contents
+xDecoder =
+    Decoder.map5 Contents
+        (field "description" string)
+        (field "instructions" string)
+        (field "tags" (list string))
+        (field "quantity" int)
+        (field "ingredients" (dict (list string)))
+
+
+contentsDecoder : Decoder Full
+contentsDecoder =
+    Decoder.map Full xDecoder
+
+
+fullDecoder : Decoder (List (Recipe Full))
+fullDecoder =
+    list <|
+        Decoder.map2 Recipe
+            metadataDecoder
+            contentsDecoder
