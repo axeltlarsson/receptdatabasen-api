@@ -55,7 +55,7 @@ view model =
         Failed err ->
             { title = "Failed to load"
             , body =
-                [ text "Failed to load"
+                [ text "Failed to load "
                 , viewError err
                 ]
             }
@@ -138,10 +138,10 @@ viewError error =
             text "NetworkError"
 
         Http.BadStatus status ->
-            text ("BadStatus" ++ String.fromInt status)
+            text ("BadStatus " ++ String.fromInt status)
 
         Http.BadBody str ->
-            text ("BadBody" ++ str)
+            text ("BadBody " ++ str)
 
         Http.Timeout ->
             text "Timeout"

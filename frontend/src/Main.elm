@@ -132,9 +132,10 @@ update msg model =
             Recipe.update subMsg recipe
                 |> updateWith Recipe GotRecipeMsg model
 
-        -- ( GotRecipeListMsg subMsg, RecipeList recipes ) ->
-        -- RecipeList.update subMsg recipes
-        -- |> updateWith RecipeList GotReclpeListMsg model
+        ( GotRecipeListMsg subMsg, RecipeList recipes ) ->
+            RecipeList.update subMsg recipes
+                |> updateWith RecipeList GotRecipeListMsg model
+
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page
             ( model, Cmd.none )

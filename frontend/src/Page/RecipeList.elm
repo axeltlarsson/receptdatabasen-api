@@ -1,7 +1,8 @@
-module Page.RecipeList exposing (Model, Msg, Status, init, toSession, view)
+module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, view)
 
 import Browser exposing (Document)
 import Html exposing (..)
+import Html.Attributes as Attr
 import Http
 import Recipe exposing (Preview, Recipe, previewDecoder)
 import Session exposing (Session)
@@ -14,25 +15,102 @@ import Url.Builder
 
 
 type alias Model =
-    { session : Session, recipes : List (Recipe Preview) }
+    { session : Session, recipes : Status (List (Recipe Preview)) }
 
 
-type Status a
+type Status recipes
     = Loading
-    | Loaded (List (Recipe Preview))
+    | Loaded recipes
+    | Failed Http.Error
 
 
 init : Session -> ( Model, Cmd Msg )
 init session =
     ( { session = session
-      , recipes = []
+      , recipes = Loading
       }
     , getRecipes
     )
 
 
+
+-- VIEW
+
+
+view : Model -> Document msg
+view model =
+    case model.recipes of
+        Loading ->
+            { title = "Loading recipes"
+            , body = [ text "Loading..." ]
+            }
+
+        Failed err ->
+            { title = "Failed to load"
+            , body =
+                [ text "Failed to load ", viewError err ]
+            }
+
+        Loaded recipes ->
+            { title = "Recipes"
+            , body =
+                [ ul []
+                    (List.map viewPreview recipes)
+                ]
+            }
+
+
+viewPreview : Recipe Preview -> Html msg
+viewPreview recipe =
+    let
+        { title, slug, createdAt } =
+            Recipe.metadata recipe
+
+        recipeUrl =
+            "/recipes/" ++ String.fromInt slug
+    in
+    li [] [ a [ Attr.href recipeUrl ] [ text title ] ]
+
+
+viewError : Http.Error -> Html msg
+viewError error =
+    case error of
+        Http.BadUrl str ->
+            text str
+
+        Http.NetworkError ->
+            text "NetworkError"
+
+        Http.BadStatus status ->
+            text ("BadStatus " ++ String.fromInt status)
+
+        Http.BadBody str ->
+            text ("BadBody " ++ str)
+
+        Http.Timeout ->
+            text "Timeout"
+
+
+
+-- UPDATE
+
+
 type Msg
     = LoadedRecipes (Result Http.Error (List (Recipe Preview)))
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        LoadedRecipes (Ok recipes) ->
+            ( { model | recipes = Loaded recipes }, Cmd.none )
+
+        LoadedRecipes (Err error) ->
+            ( { model | recipes = Failed error }, Cmd.none )
+
+
+
+-- HTTP
 
 
 url : String
@@ -46,11 +124,6 @@ getRecipes =
         { url = url
         , expect = Http.expectJson LoadedRecipes Recipe.previewDecoder
         }
-
-
-view : Model -> Document msg
-view model =
-    { title = "Recipe List", body = [ div [] [ text "recipe list" ] ] }
 
 
 
