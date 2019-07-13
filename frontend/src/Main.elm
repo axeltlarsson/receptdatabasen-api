@@ -5,6 +5,7 @@ import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Page.Recipe as Recipe
+import Page.Recipe.Editor as Editor
 import Page.RecipeList as RecipeList
 import Route exposing (Route)
 import Session exposing (Session)
@@ -20,6 +21,7 @@ type Model
     | RecipeList RecipeList.Model
     | Redirect Session
     | NotFound Session
+    | Editor (Maybe Slug) Session
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )

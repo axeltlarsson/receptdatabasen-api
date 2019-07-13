@@ -41,8 +41,8 @@ view : Model -> Document msg
 view model =
     case model.recipes of
         Loading ->
-            { title = "Loading recipes"
-            , body = [ text "Loading..." ]
+            { title = "Recipes"
+            , body = [ text "" ]
             }
 
         Failed err ->

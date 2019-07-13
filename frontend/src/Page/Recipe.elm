@@ -49,7 +49,7 @@ view model =
     case model.recipe of
         Loading ->
             { title = "Loading recipe"
-            , body = [ text "Loading..." ]
+            , body = [ text "" ]
             }
 
         Failed err ->
@@ -66,7 +66,11 @@ view model =
             }
 
         Loaded recipe ->
-            { title = "Individual recipe view"
+            let
+                { title } =
+                    Recipe.metadata recipe
+            in
+            { title = title
             , body = [ viewRecipe recipe ]
             }
 
