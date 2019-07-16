@@ -1,9 +1,14 @@
-module Page.Recipe.Editor exposing (Model)
+module Page.Recipe.Editor exposing (Model, Msg, initNew, toSession, view)
 
+import Browser exposing (Document)
 import Html exposing (..)
 import Http
-import Recipe exposing (Full, Recipe)
+import Json.Decode as Decode
+import Json.Encode as Encode
+import Recipe exposing (Full, Recipe, fullDecoder)
 import Session exposing (Session)
+import Url
+import Url.Builder
 
 
 
@@ -43,7 +48,7 @@ initNew session =
                 { title = ""
                 , description = ""
                 , instructions = ""
-                , quantity = ""
+                , quantity = 0
                 }
       }
     , Cmd.none
@@ -54,10 +59,10 @@ initNew session =
 -- VIEW
 
 
-view : Model -> { title : String, content : Html Msg }
+view : Model -> Document msg
 view model =
     { title = "New Article"
-    , content = text "the form"
+    , body = [ text "the form" ]
     }
 
 
@@ -68,7 +73,7 @@ view model =
 type Msg
     = ClickedSave
     | EnteredTitle String
-    | CompletedCreate (Result Http.Error (Recipe Full))
+    | CompletedCreate (Result Http.Error (List (Recipe Full)))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -82,12 +87,39 @@ update msg model =
         EnteredTitle title ->
             updateForm (\form -> { form | title = title }) model
 
+        CompletedCreate (Ok recipes) ->
+            updateForm (\form -> { form | title = "saved" }) model
+
+        CompletedCreate (Err error) ->
+            updateForm (\form -> { form | title = "error" }) model
+
 
 save : Status -> ( Status, Cmd Msg )
 save status =
     case status of
         EditingNew _ form ->
-            ( Creating form, create form |> Http.send CompletedCreate )
+            ( Creating form, create form )
+
+        _ ->
+            ( status, Cmd.none )
+
+
+url : String
+url =
+    Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] []
+
+
+create : Form -> Cmd Msg
+create form =
+    let
+        body =
+            Encode.object [ ( "recipe", Encode.string form.title ) ] |> Http.jsonBody
+    in
+    Http.post
+        { url = url
+        , body = body
+        , expect = Http.expectJson CompletedCreate Recipe.fullDecoder
+        }
 
 
 updateForm : (Form -> Form) -> Model -> ( Model, Cmd Msg )
@@ -111,3 +143,8 @@ type TrimmedForm
 type ValidatedField
     = Title
     | Body
+
+
+toSession : Model -> Session
+toSession model =
+    model.session

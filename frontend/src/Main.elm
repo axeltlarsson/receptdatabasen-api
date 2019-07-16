@@ -21,7 +21,7 @@ type Model
     | RecipeList RecipeList.Model
     | Redirect Session
     | NotFound Session
-    | Editor (Maybe Slug) Session
+    | Editor (Maybe Int) Editor.Model
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -54,12 +54,16 @@ view model =
         RecipeList recipes ->
             RecipeList.view recipes
 
+        Editor _ editor ->
+            Editor.view editor
+
 
 viewLinks : Html msg
 viewLinks =
     ul []
         [ viewLink "/recipes"
         , viewLink "/recipes/1"
+        , viewLink "/editor"
         ]
 
 
@@ -77,6 +81,7 @@ type Msg
     | UrlChanged Url.Url
     | GotRecipeMsg Recipe.Msg
     | GotRecipeListMsg RecipeList.Msg
+    | GotEditorMsg Editor.Msg
 
 
 toSession : Model -> Session
@@ -93,6 +98,9 @@ toSession page =
 
         RecipeList recipes ->
             RecipeList.toSession recipes
+
+        Editor _ editor ->
+            Editor.toSession editor
 
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -112,6 +120,10 @@ changeRouteTo maybeRoute model =
         Just Route.RecipeList ->
             RecipeList.init session
                 |> updateWith RecipeList GotRecipeListMsg model
+
+        Just Route.NewRecipe ->
+            Editor.initNew session
+                |> updateWith (Editor Nothing) GotEditorMsg model
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
