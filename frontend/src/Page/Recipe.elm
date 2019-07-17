@@ -44,7 +44,7 @@ init session slug =
 -- VIEW
 
 
-view : Model -> Document msg
+view : Model -> Document Msg
 view model =
     case model.recipe of
         Loading ->
@@ -75,7 +75,7 @@ view model =
             }
 
 
-viewRecipe : Recipe Full -> Html msg
+viewRecipe : Recipe Full -> Html Msg
 viewRecipe recipe =
     let
         { title, slug, createdAt } =
@@ -112,13 +112,13 @@ mdOptions =
     }
 
 
-viewIngredientsDict : Dict String (List String) -> Html msg
+viewIngredientsDict : Dict String (List String) -> Html Msg
 viewIngredientsDict ingredients =
     div []
         (Dict.toList ingredients |> List.map viewGroupedIngredients)
 
 
-viewGroupedIngredients : ( String, List String ) -> Html msg
+viewGroupedIngredients : ( String, List String ) -> Html Msg
 viewGroupedIngredients ( groupKey, ingredients ) =
     div []
         [ h3 [] [ text groupKey ]
@@ -127,12 +127,12 @@ viewGroupedIngredients ( groupKey, ingredients ) =
         ]
 
 
-viewIngredient : String -> Html msg
+viewIngredient : String -> Html Msg
 viewIngredient ingredient =
     li [] [ text ingredient ]
 
 
-viewError : Http.Error -> Html msg
+viewError : Http.Error -> Html Msg
 viewError error =
     case error of
         Http.BadUrl str ->

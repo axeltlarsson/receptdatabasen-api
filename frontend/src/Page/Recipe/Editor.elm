@@ -2,6 +2,8 @@ module Page.Recipe.Editor exposing (Model, Msg, initNew, toSession, view)
 
 import Browser exposing (Document)
 import Html exposing (..)
+import Html.Attributes exposing (placeholder, value)
+import Html.Events exposing (onInput, onSubmit)
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -59,11 +61,30 @@ initNew session =
 -- VIEW
 
 
-view : Model -> Document msg
+view : Model -> Document Msg
 view model =
-    { title = "New Article"
-    , body = [ text "the form" ]
+    { title = "New Recipe"
+    , body =
+        [ case model.status of
+            EditingNew probs form ->
+                viewForm form
+
+            Creating form ->
+                viewForm form
+        ]
     }
+
+
+viewForm : Form -> Html Msg
+viewForm fields =
+    form [ onSubmit ClickedSave ]
+        [ input
+            [ placeholder "Recipe Title"
+            , onInput EnteredTitle
+            , value fields.title
+            ]
+            []
+        ]
 
 
 

@@ -37,7 +37,7 @@ init session =
 -- VIEW
 
 
-view : Model -> Document msg
+view : Model -> Document Msg
 view model =
     case model.recipes of
         Loading ->
@@ -60,7 +60,7 @@ view model =
             }
 
 
-viewPreview : Recipe Preview -> Html msg
+viewPreview : Recipe Preview -> Html Msg
 viewPreview recipe =
     let
         { title, slug, createdAt } =
@@ -72,7 +72,7 @@ viewPreview recipe =
     li [] [ a [ Attr.href recipeUrl ] [ text title ] ]
 
 
-viewError : Http.Error -> Html msg
+viewError : Http.Error -> Html Msg
 viewError error =
     case error of
         Http.BadUrl str ->

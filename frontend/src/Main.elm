@@ -36,6 +36,12 @@ init flags url key =
 
 view : Model -> Browser.Document Msg
 view model =
+    let
+        viewPage { title, body } toMsg =
+            { title = title
+            , body = List.map (Html.map toMsg) body
+            }
+    in
     case model of
         Redirect _ ->
             { title = "Redirect", body = [ text "not found" ] }
@@ -49,13 +55,13 @@ view model =
             }
 
         Recipe recipe ->
-            Recipe.view recipe
+            viewPage (Recipe.view recipe) GotRecipeMsg
 
         RecipeList recipes ->
-            RecipeList.view recipes
+            viewPage (RecipeList.view recipes) GotRecipeListMsg
 
         Editor _ editor ->
-            Editor.view editor
+            viewPage (Editor.view editor) GotEditorMsg
 
 
 viewLinks : Html msg
