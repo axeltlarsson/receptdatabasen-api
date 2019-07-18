@@ -156,6 +156,10 @@ update msg model =
             RecipeList.update subMsg recipes
                 |> updateWith RecipeList GotRecipeListMsg model
 
+        ( GotEditorMsg subMsg, Editor Nothing editor ) ->
+            Editor.update subMsg editor
+                |> updateWith (Editor Nothing) GotEditorMsg model
+
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page
             ( model, Cmd.none )

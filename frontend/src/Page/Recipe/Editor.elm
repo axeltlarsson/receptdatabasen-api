@@ -1,4 +1,4 @@
-module Page.Recipe.Editor exposing (Model, Msg, initNew, toSession, view)
+module Page.Recipe.Editor exposing (Model, Msg, initNew, toSession, update, view)
 
 import Browser exposing (Document)
 import Html exposing (..)
@@ -84,6 +84,8 @@ viewForm fields =
             , value fields.title
             ]
             []
+        , button []
+            [ text "Save" ]
         ]
 
 
