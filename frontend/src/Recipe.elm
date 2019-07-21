@@ -10,7 +10,7 @@ module Recipe exposing (Full, Metadata, Preview, Recipe(..), contents, fullDecod
 -}
 
 import Dict exposing (Dict)
-import Json.Decode as Decoder exposing (Decoder, dict, field, index, int, list, map2, map8, string, value)
+import Json.Decode as Decoder exposing (Decoder, dict, field, index, int, list, map2, map8, maybe, string, value)
 
 
 
@@ -41,9 +41,9 @@ type Full
 type alias Contents =
     { description : String
     , instructions : String
-    , tags : List String
+    , tags : Maybe (List String)
     , quantity : Int
-    , ingredients : Dict String (List String)
+    , ingredients : Maybe (Dict String (List String))
     }
 
 
@@ -87,9 +87,9 @@ xDecoder =
     Decoder.map5 Contents
         (field "description" string)
         (field "instructions" string)
-        (field "tags" (list string))
+        (field "tags" (maybe (list string)))
         (field "quantity" int)
-        (field "ingredients" (dict (list string)))
+        (field "ingredients" (maybe (dict (list string))))
 
 
 contentsDecoder : Decoder Full

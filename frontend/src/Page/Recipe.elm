@@ -112,10 +112,15 @@ mdOptions =
     }
 
 
-viewIngredientsDict : Dict String (List String) -> Html Msg
+viewIngredientsDict : Maybe (Dict String (List String)) -> Html Msg
 viewIngredientsDict ingredients =
-    div []
-        (Dict.toList ingredients |> List.map viewGroupedIngredients)
+    case ingredients of
+        Nothing ->
+            div [] [ text "no ingredients" ]
+
+        Just realIngredients ->
+            div []
+                (Dict.toList realIngredients |> List.map viewGroupedIngredients)
 
 
 viewGroupedIngredients : ( String, List String ) -> Html Msg

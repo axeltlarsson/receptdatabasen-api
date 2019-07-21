@@ -2,7 +2,7 @@ module Page.Recipe.Editor exposing (Model, Msg, initNew, toSession, update, view
 
 import Browser exposing (Document)
 import Html exposing (..)
-import Html.Attributes exposing (placeholder, value)
+import Html.Attributes exposing (class, for, min, placeholder, type_, value)
 import Html.Events exposing (onInput, onSubmit)
 import Http
 import Json.Decode as Decode
@@ -50,7 +50,7 @@ initNew session =
                 { title = ""
                 , description = ""
                 , instructions = ""
-                , quantity = 0
+                , quantity = 1
                 }
       }
     , Cmd.none
@@ -78,14 +78,50 @@ view model =
 viewForm : Form -> Html Msg
 viewForm fields =
     form [ onSubmit ClickedSave ]
+        [ viewTitleInput fields
+        , viewDescriptionInput fields
+        , viewQuantityInput fields
+        , button []
+            [ text "Save" ]
+        ]
+
+
+viewDescriptionInput : Form -> Html Msg
+viewDescriptionInput fields =
+    div []
+        [ textarea
+            [ placeholder "Description"
+            , onInput EnteredDescription
+            , value fields.description
+            ]
+            []
+        ]
+
+
+viewTitleInput : Form -> Html Msg
+viewTitleInput fields =
+    div []
         [ input
             [ placeholder "Recipe Title"
             , onInput EnteredTitle
             , value fields.title
             ]
             []
-        , button []
-            [ text "Save" ]
+        ]
+
+
+viewQuantityInput : Form -> Html Msg
+viewQuantityInput fields =
+    div [ class "quantity-wrapper" ]
+        [ label [ for "quantity" ] [ text "Enter quantity" ]
+        , input
+            [ placeholder "Quantity"
+            , type_ "number"
+            , onInput EnteredQuantity
+            , value (String.fromInt fields.quantity)
+            , min "1"
+            ]
+            []
         ]
 
 
@@ -96,6 +132,9 @@ viewForm fields =
 type Msg
     = ClickedSave
     | EnteredTitle String
+    | EnteredDescription String
+    | EnteredInstructions String
+    | EnteredQuantity String
     | CompletedCreate (Result Http.Error (List (Recipe Full)))
 
 
@@ -109,6 +148,19 @@ update msg model =
 
         EnteredTitle title ->
             updateForm (\form -> { form | title = title }) model
+
+        EnteredDescription description ->
+            updateForm (\form -> { form | description = description }) model
+
+        EnteredInstructions instructions ->
+            updateForm (\form -> { form | instructions = instructions }) model
+
+        EnteredQuantity quantity ->
+            let
+                quantityInt =
+                    Maybe.withDefault 0 <| String.toInt quantity
+            in
+            updateForm (\form -> { form | quantity = quantityInt }) model
 
         CompletedCreate (Ok recipes) ->
             updateForm (\form -> { form | title = "saved" }) model
@@ -135,8 +187,19 @@ url =
 create : Form -> Cmd Msg
 create form =
     let
+        quantityString =
+            String.fromInt form.quantity
+
+        recipe =
+            Encode.object
+                [ ( "title", Encode.string form.title )
+                , ( "description", Encode.string form.description )
+                , ( "instructions", Encode.string form.instructions )
+                , ( "quantity", Encode.string quantityString )
+                ]
+
         body =
-            Encode.object [ ( "recipe", Encode.string form.title ) ] |> Http.jsonBody
+            Http.jsonBody recipe
     in
     Http.post
         { url = url
