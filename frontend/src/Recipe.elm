@@ -41,9 +41,9 @@ type Full
 type alias Contents =
     { description : String
     , instructions : String
-    , tags : Maybe (List String)
+    , tags : List String
     , quantity : Int
-    , ingredients : Maybe (Dict String (List String))
+    , ingredients : Dict String (List String)
     }
 
 
@@ -87,9 +87,9 @@ xDecoder =
     Decoder.map5 Contents
         (field "description" string)
         (field "instructions" string)
-        (field "tags" (maybe (list string)))
+        (field "tags" (list string))
         (field "quantity" int)
-        (field "ingredients" (maybe (dict (list string))))
+        (field "ingredients" (dict (list string)))
 
 
 contentsDecoder : Decoder Full

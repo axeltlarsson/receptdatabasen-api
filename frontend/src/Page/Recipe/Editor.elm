@@ -1,14 +1,16 @@
 module Page.Recipe.Editor exposing (Model, Msg, initNew, toSession, update, view)
 
 import Browser exposing (Document)
+import Dict exposing (Dict)
 import Html exposing (..)
-import Html.Attributes exposing (class, for, min, placeholder, type_, value)
-import Html.Events exposing (onInput, onSubmit)
+import Html.Attributes exposing (class, for, id, min, placeholder, type_, value)
+import Html.Events exposing (keyCode, on, onInput, onSubmit)
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Recipe exposing (Full, Recipe, fullDecoder)
 import Session exposing (Session)
+import Set exposing (Set)
 import Url
 import Url.Builder
 
@@ -39,6 +41,10 @@ type alias Form =
     , description : String
     , instructions : String
     , quantity : Int
+    , tags : Set String
+    , currentTag : String
+
+    -- , ingredients : Dict String (List String)
     }
 
 
@@ -51,6 +57,8 @@ initNew session =
                 , description = ""
                 , instructions = ""
                 , quantity = 1
+                , tags = Set.empty
+                , currentTag = ""
                 }
       }
     , Cmd.none
@@ -81,14 +89,48 @@ viewForm fields =
         [ viewTitleInput fields
         , viewDescriptionInput fields
         , viewQuantityInput fields
+        , viewTagsInput fields
         , button []
             [ text "Save" ]
         ]
 
 
+viewTagsInput : Form -> Html Msg
+viewTagsInput fields =
+    div [ class "tags" ]
+        [ input
+            [ placeholder "Tags"
+            , onEnter PressedEnterTag
+            , onInput EnteredCurrentTag
+            , value fields.currentTag
+            ]
+            []
+        , ul []
+            (List.map viewTag <| Set.toList fields.tags)
+        ]
+
+
+onEnter : Msg -> Attribute Msg
+onEnter msg =
+    let
+        isEnter code =
+            if code == 13 then
+                Decode.succeed msg
+
+            else
+                Decode.fail "not ENTER"
+    in
+    on "keydown" (Decode.andThen isEnter keyCode)
+
+
+viewTag : String -> Html Msg
+viewTag tag =
+    li [] [ text tag ]
+
+
 viewDescriptionInput : Form -> Html Msg
 viewDescriptionInput fields =
-    div []
+    div [ class "description" ]
         [ textarea
             [ placeholder "Description"
             , onInput EnteredDescription
@@ -100,7 +142,7 @@ viewDescriptionInput fields =
 
 viewTitleInput : Form -> Html Msg
 viewTitleInput fields =
-    div []
+    div [ class "title" ]
         [ input
             [ placeholder "Recipe Title"
             , onInput EnteredTitle
@@ -112,10 +154,11 @@ viewTitleInput fields =
 
 viewQuantityInput : Form -> Html Msg
 viewQuantityInput fields =
-    div [ class "quantity-wrapper" ]
-        [ label [ for "quantity" ] [ text "Enter quantity" ]
+    div [ class "quantity" ]
+        [ label [ for "quantity-input" ] [ text "Enter quantity" ]
         , input
-            [ placeholder "Quantity"
+            [ id "quantity"
+            , placeholder "Quantity"
             , type_ "number"
             , onInput EnteredQuantity
             , value (String.fromInt fields.quantity)
@@ -135,6 +178,8 @@ type Msg
     | EnteredDescription String
     | EnteredInstructions String
     | EnteredQuantity String
+    | EnteredCurrentTag String
+    | PressedEnterTag
     | CompletedCreate (Result Http.Error (List (Recipe Full)))
 
 
@@ -161,6 +206,19 @@ update msg model =
                     Maybe.withDefault 0 <| String.toInt quantity
             in
             updateForm (\form -> { form | quantity = quantityInt }) model
+
+        EnteredCurrentTag currentTag ->
+            updateForm (\form -> { form | currentTag = currentTag }) model
+
+        PressedEnterTag ->
+            updateForm
+                (\form ->
+                    { form
+                        | tags = Set.insert form.currentTag form.tags
+                        , currentTag = ""
+                    }
+                )
+                model
 
         CompletedCreate (Ok recipes) ->
             updateForm (\form -> { form | title = "saved" }) model
