@@ -3,7 +3,7 @@ module Page.Recipe.Editor exposing (Model, Msg, initNew, toSession, update, view
 import Browser exposing (Document)
 import Dict exposing (Dict)
 import Html exposing (..)
-import Html.Attributes exposing (class, for, id, min, placeholder, type_, value)
+import Html.Attributes exposing (class, for, id, min, placeholder, style, type_, value)
 import Html.Events exposing (keyCode, on, onInput, onSubmit)
 import Http
 import Json.Decode as Decode
@@ -75,7 +75,10 @@ view model =
     , body =
         [ case model.status of
             EditingNew probs form ->
-                viewForm form
+                div []
+                    [ viewForm form
+                    , viewProblems probs
+                    ]
 
             Creating form ->
                 viewForm form
@@ -93,6 +96,25 @@ viewForm fields =
         , button []
             [ text "Save" ]
         ]
+
+
+viewProblems : List Problem -> Html Msg
+viewProblems problems =
+    ul [ class "error-messages" ] (List.map viewProblem problems)
+
+
+viewProblem : Problem -> Html msg
+viewProblem problem =
+    let
+        errorMessage =
+            case problem of
+                InvalidEntry _ message ->
+                    message
+
+                ServerError message ->
+                    message
+    in
+    li [] [ code [ style "background-color" "red", style "color" "white" ] [ text errorMessage ] ]
 
 
 viewTagsInput : Form -> Html Msg
@@ -224,7 +246,9 @@ update msg model =
             updateForm (\form -> { form | title = "saved" }) model
 
         CompletedCreate (Err error) ->
-            updateForm (\form -> { form | title = "error" }) model
+            ( { model | status = savingError error model.status }
+            , Cmd.none
+            )
 
 
 save : Status -> ( Status, Cmd Msg )
@@ -235,6 +259,39 @@ save status =
 
         _ ->
             ( status, Cmd.none )
+
+
+savingError : Http.Error -> Status -> Status
+savingError error status =
+    let
+        problems =
+            [ ServerError ("Error saving " ++ httpErrorAsString error) ]
+    in
+    case status of
+        Creating form ->
+            EditingNew problems form
+
+        _ ->
+            status
+
+
+httpErrorAsString : Http.Error -> String
+httpErrorAsString error =
+    case error of
+        Http.BadUrl str ->
+            "BadUrl" ++ str
+
+        Http.NetworkError ->
+            "NetworkError"
+
+        Http.BadStatus status ->
+            "BadStatus " ++ String.fromInt status
+
+        Http.BadBody str ->
+            "BadBody: " ++ str
+
+        Http.Timeout ->
+            "Timeout"
 
 
 url : String
@@ -254,6 +311,7 @@ create form =
                 , ( "description", Encode.string form.description )
                 , ( "instructions", Encode.string form.instructions )
                 , ( "quantity", Encode.string quantityString )
+                , ( "tags", Encode.set Encode.string form.tags )
                 ]
 
         body =
