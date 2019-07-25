@@ -5,8 +5,8 @@ import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes exposing (class, for, id, min, placeholder, style, type_, value)
 import Html.Events exposing (keyCode, on, onInput, onSubmit)
-import Http
-import Json.Decode as Decode
+import Http exposing (Expect)
+import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Recipe exposing (Full, Recipe, fullDecoder)
 import Session exposing (Session)
@@ -202,7 +202,7 @@ type Msg
     | EnteredQuantity String
     | EnteredCurrentTag String
     | PressedEnterTag
-    | CompletedCreate (Result Http.Error (List (Recipe Full)))
+    | CompletedCreate (Result MyError (List (Recipe Full)))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -261,11 +261,11 @@ save status =
             ( status, Cmd.none )
 
 
-savingError : Http.Error -> Status -> Status
+savingError : MyError -> Status -> Status
 savingError error status =
     let
         problems =
-            [ ServerError ("Error saving " ++ httpErrorAsString error) ]
+            [ ServerError ("Error saving " ++ myErrorAsString error) ]
     in
     case status of
         Creating form ->
@@ -275,23 +275,26 @@ savingError error status =
             status
 
 
-httpErrorAsString : Http.Error -> String
-httpErrorAsString error =
+myErrorAsString : MyError -> String
+myErrorAsString error =
     case error of
-        Http.BadUrl str ->
+        MyError (Http.BadUrl str) ->
             "BadUrl" ++ str
 
-        Http.NetworkError ->
+        MyError Http.NetworkError ->
             "NetworkError"
 
-        Http.BadStatus status ->
-            "BadStatus " ++ String.fromInt status
+        MyErrorWithBody (Http.BadStatus status) body ->
+            "BadStatus " ++ String.fromInt status ++ body
 
-        Http.BadBody str ->
+        MyError (Http.BadBody str) ->
             "BadBody: " ++ str
 
-        Http.Timeout ->
+        MyError Http.Timeout ->
             "Timeout"
+
+        _ ->
+            ""
 
 
 url : String
@@ -320,8 +323,39 @@ create form =
     Http.post
         { url = url
         , body = body
-        , expect = Http.expectJson CompletedCreate Recipe.fullDecoder
+        , expect = expectJson CompletedCreate Recipe.fullDecoder
         }
+
+
+type MyError
+    = MyError Http.Error
+    | MyErrorWithBody Http.Error String
+
+
+expectJson : (Result MyError a -> Msg) -> Decoder a -> Expect Msg
+expectJson toMsg decoder =
+    Http.expectStringResponse toMsg <|
+        \response ->
+            case response of
+                Http.BadUrl_ urll ->
+                    Err (MyError (Http.BadUrl urll))
+
+                Http.Timeout_ ->
+                    Err (MyError Http.Timeout)
+
+                Http.NetworkError_ ->
+                    Err (MyError Http.NetworkError)
+
+                Http.BadStatus_ metadata body ->
+                    Err (MyErrorWithBody (Http.BadStatus metadata.statusCode) body)
+
+                Http.GoodStatus_ metadata body ->
+                    case Decode.decodeString decoder body of
+                        Ok value ->
+                            Ok value
+
+                        Err err ->
+                            Err (MyError (Http.BadBody (Decode.errorToString err)))
 
 
 updateForm : (Form -> Form) -> Model -> ( Model, Cmd Msg )
