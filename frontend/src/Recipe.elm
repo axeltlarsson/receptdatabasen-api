@@ -1,4 +1,4 @@
-module Recipe exposing (Full, Metadata, Preview, Recipe(..), contents, fullDecoder, metadata, previewDecoder)
+module Recipe exposing (Full, Metadata, Preview, Recipe(..), contents, fullDecoder, metadata, previewDecoder, slug)
 
 {- The interface to the Recipe data structure.
 
@@ -11,6 +11,7 @@ module Recipe exposing (Full, Metadata, Preview, Recipe(..), contents, fullDecod
 
 import Dict exposing (Dict)
 import Json.Decode as Decoder exposing (Decoder, dict, field, index, int, list, map2, map8, maybe, string, value)
+import Recipe.Slug as Slug exposing (Slug)
 
 
 
@@ -23,8 +24,8 @@ type Recipe a
 
 
 type alias Metadata =
-    { slug : Int
-    , title : String
+    { id : Int
+    , title : Slug
     , createdAt : String
     , updatedAt : String
     }
@@ -61,6 +62,11 @@ contents (Recipe _ (Full c)) =
     c
 
 
+slug : Recipe a -> Slug
+slug (Recipe md _) =
+    md.title
+
+
 
 -- (DE)SERIALIZATION
 
@@ -69,7 +75,7 @@ metadataDecoder : Decoder Metadata
 metadataDecoder =
     Decoder.map4 Metadata
         (field "id" int)
-        (field "title" string)
+        (field "title" Slug.decoder)
         (field "created_at" string)
         (field "updated_at" string)
 

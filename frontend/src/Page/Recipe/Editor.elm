@@ -1,6 +1,7 @@
 module Page.Recipe.Editor exposing (Model, Msg, initNew, toSession, update, view)
 
 import Browser exposing (Document)
+import Browser.Navigation as Nav
 import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes exposing (class, for, id, min, placeholder, style, type_, value)
@@ -9,6 +10,8 @@ import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Recipe exposing (Full, Recipe, fullDecoder)
+import Recipe.Slug as Slug exposing (Slug)
+import Route
 import Session exposing (Session)
 import Set exposing (Set)
 import Url
@@ -242,8 +245,14 @@ update msg model =
                 )
                 model
 
-        CompletedCreate (Ok recipes) ->
-            updateForm (\form -> { form | title = "saved" }) model
+        CompletedCreate (Ok [ recipe ]) ->
+            ( model
+            , Route.Recipe (Recipe.slug recipe)
+                |> Route.replaceUrl (Session.navKey model.session)
+            )
+
+        CompletedCreate (Ok _) ->
+            ( model, Cmd.none )
 
         CompletedCreate (Err error) ->
             ( { model | status = savingError error model.status }

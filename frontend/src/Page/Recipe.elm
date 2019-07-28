@@ -7,6 +7,7 @@ import Html.Attributes exposing (class)
 import Http
 import Markdown
 import Recipe exposing (Full, Metadata, Recipe, contents, fullDecoder, metadata)
+import Recipe.Slug as Slug exposing (Slug)
 import Session exposing (Session)
 import Url exposing (Url)
 import Url.Builder
@@ -25,10 +26,6 @@ type Status recipe
     | Loaded recipe
     | Failed Http.Error
     | NotFound
-
-
-type alias Slug =
-    Int
 
 
 init : Session -> Slug -> ( Model, Cmd Msg )
@@ -81,9 +78,6 @@ viewRecipe recipe =
         { title, slug, createdAt } =
             Recipe.metadata recipe
 
-        slugStr =
-            String.fromInt slug
-
         { description, quantity, ingredients, instructions } =
             Recipe.contents recipe
 
@@ -92,7 +86,7 @@ viewRecipe recipe =
     in
     div []
         [ h1 [] [ text title ]
-        , p [] [ text <| String.concat [ "Recipe id: ", slugStr ] ]
+        , p [] [ text <| String.concat [ "Recipe id: ", Slug.toString slug ] ]
         , p [] [ text description ]
         , p [] [ text <| String.concat [ "För ", quantityStr, " personer" ] ]
         , h2 [] [ text "Ingredienser" ]
@@ -181,7 +175,7 @@ update msg model =
 
 url : Slug -> String
 url slug =
-    Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] [ Url.Builder.string "id" ("eq." ++ String.fromInt slug) ]
+    Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] [ Url.Builder.string "id" ("eq." ++ Slug.toString slug) ]
 
 
 getRecipe : Slug -> Cmd Msg

@@ -5,6 +5,8 @@ import Html exposing (..)
 import Html.Attributes as Attr
 import Http
 import Recipe exposing (Preview, Recipe, previewDecoder)
+import Recipe.Slug as Slug exposing (Slug)
+import Route exposing (Route)
 import Session exposing (Session)
 import Url
 import Url.Builder
@@ -65,11 +67,8 @@ viewPreview recipe =
     let
         { title, slug, createdAt } =
             Recipe.metadata recipe
-
-        recipeUrl =
-            "/recipes/" ++ String.fromInt slug
     in
-    li [] [ a [ Attr.href recipeUrl ] [ text title ] ]
+    li [] [ a [ Route.href (Route.Recipe slug) ] [ text title ] ]
 
 
 viewError : Http.Error -> Html Msg
