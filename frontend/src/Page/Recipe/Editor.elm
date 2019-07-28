@@ -329,8 +329,12 @@ create form =
         body =
             Http.jsonBody recipe
     in
-    Http.post
+    Http.request
         { url = url
+        , method = "POST"
+        , timeout = Nothing
+        , tracker = Nothing
+        , headers = [ Http.header "Prefer" "return=representation" ]
         , body = body
         , expect = expectJson CompletedCreate Recipe.fullDecoder
         }
