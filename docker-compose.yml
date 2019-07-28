@@ -1,7 +1,7 @@
 version: '3'
 services:
   server:
-    image: postgrest/postgrest
+    image: postgrest/postgrest:v5.2.0
     ports:
       - "3000:3000"
     networks:
@@ -13,7 +13,7 @@ services:
     depends_on:
       - db
   db:
-    image: postgres
+    image: postgres:11
     ports:
       - "5432:5432"
     networks:
