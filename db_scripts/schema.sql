@@ -42,7 +42,7 @@ CREATE SCHEMA api;
 
 CREATE OR REPLACE VIEW api.recipes AS (
   SELECT
-    rs.*,
+    data.recipes.*,
     (
       SELECT
         json_object_agg(name, ingredients)
@@ -52,12 +52,12 @@ CREATE OR REPLACE VIEW api.recipes AS (
           array_to_json(array_agg(ingredients.contents)) AS ingredients
         FROM data.ingredient_groups AS ingredient_groups
         LEFT JOIN data.ingredients AS ingredients ON ingredient_groups.id = ingredients.ingredient_group_id
-        WHERE rs.id = ingredient_groups.recipe_id
+        WHERE data.recipes.id = ingredient_groups.recipe_id
         GROUP BY recipe_id, name
         ORDER BY recipe_id, name
       ) groups
     ) AS ingredients
-  FROM data.recipes AS rs
+  FROM data.recipes
 );
 
 /*
@@ -70,25 +70,36 @@ CREATE FUNCTION api.insert_recipe()
 RETURNS TRIGGER
 AS $$
   DECLARE recipe_id int;
+  DECLARE recipe_created_at timestamptz;
+  DECLARE recipe_updated_at timestamptz;
   DECLARE g text;
   DECLARE ingredients json;
   DECLARE ingredient_group_id int;
   DECLARE ingredient text;
+
   BEGIN
     -- Insert the recipe
     INSERT INTO data.recipes (title, description, instructions, tags, quantity)
-            VALUES (new.title, new.description, new.instructions, new.tags, new.quantity) RETURNING id INTO recipe_id;
+            VALUES (new.title, new.description, new.instructions, new.tags, new.quantity)
+              RETURNING id, created_at, updated_at INTO recipe_id, recipe_created_at, recipe_updated_at;
     -- Insert the ingredient groups
     FOR g, ingredients IN SELECT * FROM json_each(new.ingredients) LOOP
-      INSERT INTO data.ingredient_groups (name, recipe_id) VALUES (g, recipe_id) RETURNING id INTO ingredient_group_id;
+      INSERT INTO data.ingredient_groups (name, recipe_id)
+        VALUES (g, recipe_id)
+        RETURNING id INTO ingredient_group_id;
 
       -- Insert the ingredients in each ingredient group
       FOR ingredient IN SELECT * FROM json_array_elements_text(ingredients) LOOP
-        INSERT INTO data.ingredients (contents, ingredient_group_id) VALUES (ingredient, ingredient_group_id);
+        INSERT INTO data.ingredients (contents, ingredient_group_id)
+        VALUES (ingredient, ingredient_group_id);
       END LOOP;
 
     END LOOP;
-    RETURN new;
+
+    new.id = recipe_id;
+    new.created_at = recipe_created_at;
+    new.updated_at = recipe_updated_at;
+    RETURN new; 
   END;
 $$ LANGUAGE 'plpgsql';
 
