@@ -5,6 +5,7 @@ import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes exposing (class)
 import Http
+import Json.Decode as Decoder exposing (Decoder, list)
 import Markdown
 import Recipe exposing (Full, Metadata, Recipe, contents, fullDecoder, metadata)
 import Recipe.Slug as Slug exposing (Slug)
@@ -67,7 +68,7 @@ view model =
                 { title } =
                     Recipe.metadata recipe
             in
-            { title = title
+            { title = Slug.toString title
             , body = [ viewRecipe recipe ]
             }
 
@@ -75,7 +76,7 @@ view model =
 viewRecipe : Recipe Full -> Html Msg
 viewRecipe recipe =
     let
-        { title, slug, createdAt } =
+        { title, id, createdAt } =
             Recipe.metadata recipe
 
         { description, quantity, ingredients, instructions } =
@@ -85,8 +86,8 @@ viewRecipe recipe =
             String.fromInt quantity
     in
     div []
-        [ h1 [] [ text title ]
-        , p [] [ text <| String.concat [ "Recipe id: ", Slug.toString slug ] ]
+        [ h1 [] [ text (Slug.toString title) ]
+        , p [] [ text <| String.concat [ "Recipe id: ", String.fromInt id ] ]
         , p [] [ text description ]
         , p [] [ text <| String.concat [ "För ", quantityStr, " personer" ] ]
         , h2 [] [ text "Ingredienser" ]
@@ -175,15 +176,20 @@ update msg model =
 
 url : Slug -> String
 url slug =
-    Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] [ Url.Builder.string "id" ("eq." ++ Slug.toString slug) ]
+    Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] [ Url.Builder.string "title" "eq." ]
 
 
 getRecipe : Slug -> Cmd Msg
 getRecipe slug =
     Http.get
-        { url = url slug
-        , expect = Http.expectJson LoadedRecipe Recipe.fullDecoder
+        { url = url slug ++ Slug.toString slug
+        , expect = Http.expectJson LoadedRecipe recipesDecoder
         }
+
+
+recipesDecoder : Decoder (List (Recipe Full))
+recipesDecoder =
+    list <| Recipe.fullDecoder
 
 
 

@@ -80,12 +80,11 @@ metadataDecoder =
         (field "updated_at" string)
 
 
-previewDecoder : Decoder (List (Recipe Preview))
+previewDecoder : Decoder (Recipe Preview)
 previewDecoder =
-    list <|
-        Decoder.map2 Recipe
-            metadataDecoder
-            (Decoder.succeed Preview)
+    Decoder.map2 Recipe
+        metadataDecoder
+        (Decoder.succeed Preview)
 
 
 xDecoder : Decoder Contents
@@ -103,9 +102,8 @@ contentsDecoder =
     Decoder.map Full xDecoder
 
 
-fullDecoder : Decoder (List (Recipe Full))
+fullDecoder : Decoder (Recipe Full)
 fullDecoder =
-    list <|
-        Decoder.map2 Recipe
-            metadataDecoder
-            contentsDecoder
+    Decoder.map2 Recipe
+        metadataDecoder
+        contentsDecoder

@@ -205,7 +205,7 @@ type Msg
     | EnteredQuantity String
     | EnteredCurrentTag String
     | PressedEnterTag
-    | CompletedCreate (Result MyError (List (Recipe Full)))
+    | CompletedCreate (Result MyError (Recipe Full))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -245,14 +245,11 @@ update msg model =
                 )
                 model
 
-        CompletedCreate (Ok [ recipe ]) ->
+        CompletedCreate (Ok recipe) ->
             ( model
             , Route.Recipe (Recipe.slug recipe)
                 |> Route.replaceUrl (Session.navKey model.session)
             )
-
-        CompletedCreate (Ok _) ->
-            ( model, Cmd.none )
 
         CompletedCreate (Err error) ->
             ( { model | status = savingError error model.status }
@@ -334,7 +331,7 @@ create form =
         , method = "POST"
         , timeout = Nothing
         , tracker = Nothing
-        , headers = [ Http.header "Prefer" "return=representation" ]
+        , headers = [ Http.header "Prefer" "return=representation", Http.header "Accept" "application/vnd.pgrst.object+json" ]
         , body = body
         , expect = expectJson CompletedCreate Recipe.fullDecoder
         }
@@ -368,6 +365,7 @@ expectJson toMsg decoder =
                             Ok value
 
                         Err err ->
+                            -- TODO: Http.BadBody is quite misleading - the decoding failed, not the request...
                             Err (MyError (Http.BadBody (Decode.errorToString err)))
 
 

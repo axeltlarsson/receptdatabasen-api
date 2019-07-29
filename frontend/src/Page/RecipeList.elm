@@ -4,6 +4,7 @@ import Browser exposing (Document)
 import Html exposing (..)
 import Html.Attributes as Attr
 import Http
+import Json.Decode as Decoder exposing (Decoder, list)
 import Recipe exposing (Preview, Recipe, previewDecoder)
 import Recipe.Slug as Slug exposing (Slug)
 import Route exposing (Route)
@@ -65,10 +66,10 @@ view model =
 viewPreview : Recipe Preview -> Html Msg
 viewPreview recipe =
     let
-        { title, slug, createdAt } =
+        { title, id, createdAt } =
             Recipe.metadata recipe
     in
-    li [] [ a [ Route.href (Route.Recipe slug) ] [ text title ] ]
+    li [] [ a [ Route.href (Route.Recipe title) ] [ text (Slug.toString title) ] ]
 
 
 viewError : Http.Error -> Html Msg
@@ -121,8 +122,13 @@ getRecipes : Cmd Msg
 getRecipes =
     Http.get
         { url = url
-        , expect = Http.expectJson LoadedRecipes Recipe.previewDecoder
+        , expect = Http.expectJson LoadedRecipes previewsDecoder
         }
+
+
+previewsDecoder : Decoder (List (Recipe Preview))
+previewsDecoder =
+    list <| Recipe.previewDecoder
 
 
 
