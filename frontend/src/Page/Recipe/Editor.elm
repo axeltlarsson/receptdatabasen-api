@@ -46,6 +46,8 @@ type alias Form =
     , quantity : Int
     , tags : Set String
     , currentTag : String
+    , currentIngredient : String
+    , ingredients : List String
 
     -- , ingredients : Dict String (List String)
     }
@@ -62,6 +64,8 @@ initNew session =
                 , quantity = 1
                 , tags = Set.empty
                 , currentTag = ""
+                , currentIngredient = ""
+                , ingredients = []
                 }
       }
     , Cmd.none
@@ -96,8 +100,24 @@ viewForm fields =
         , viewDescriptionInput fields
         , viewQuantityInput fields
         , viewTagsInput fields
+        , viewIngredientsInput fields
         , button []
             [ text "Save" ]
+        ]
+
+
+viewIngredientsInput : Form -> Html Msg
+viewIngredientsInput fields =
+    div [ class "ingredients" ]
+        [ h3 [] [ text "Ingredients" ]
+        , input
+            [ placeholder "Ingredienser"
+            , onEnter PressedEnterIngredient
+            , onInput EnteredCurrentIngredient
+            , value fields.currentIngredient
+            ]
+            []
+        , ul [] (List.map viewIngredient fields.ingredients)
         ]
 
 
@@ -153,6 +173,11 @@ viewTag tag =
     li [] [ text tag ]
 
 
+viewIngredient : String -> Html Msg
+viewIngredient ingredient =
+    li [] [ text ingredient ]
+
+
 viewDescriptionInput : Form -> Html Msg
 viewDescriptionInput fields =
     div [ class "description" ]
@@ -204,7 +229,9 @@ type Msg
     | EnteredInstructions String
     | EnteredQuantity String
     | EnteredCurrentTag String
+    | EnteredCurrentIngredient String
     | PressedEnterTag
+    | PressedEnterIngredient
     | CompletedCreate (Result MyError (Recipe Full))
 
 
@@ -241,6 +268,19 @@ update msg model =
                     { form
                         | tags = Set.insert form.currentTag form.tags
                         , currentTag = ""
+                    }
+                )
+                model
+
+        EnteredCurrentIngredient currentIngredient ->
+            updateForm (\form -> { form | currentIngredient = currentIngredient }) model
+
+        PressedEnterIngredient ->
+            updateForm
+                (\form ->
+                    { form
+                        | ingredients = form.currentIngredient :: form.ingredients
+                        , currentIngredient = ""
                     }
                 )
                 model
@@ -314,6 +354,9 @@ create form =
         quantityString =
             String.fromInt form.quantity
 
+        ingredientDict =
+            Dict.fromList [ ( "ingredients", form.ingredients ) ]
+
         recipe =
             Encode.object
                 [ ( "title", Encode.string form.title )
@@ -321,6 +364,7 @@ create form =
                 , ( "instructions", Encode.string form.instructions )
                 , ( "quantity", Encode.string quantityString )
                 , ( "tags", Encode.set Encode.string form.tags )
+                , ( "ingredients", Encode.dict identity (Encode.list Encode.string) ingredientDict )
                 ]
 
         body =
