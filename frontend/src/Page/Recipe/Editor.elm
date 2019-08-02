@@ -5,7 +5,7 @@ import Browser.Navigation as Nav
 import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes exposing (class, for, id, min, placeholder, style, type_, value)
-import Html.Events exposing (keyCode, on, onInput, onSubmit)
+import Html.Events exposing (keyCode, onInput, onSubmit, preventDefaultOn)
 import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
@@ -48,8 +48,6 @@ type alias Form =
     , currentTag : String
     , currentIngredient : String
     , ingredients : List String
-
-    -- , ingredients : Dict String (List String)
     }
 
 
@@ -101,8 +99,22 @@ viewForm fields =
         , viewQuantityInput fields
         , viewTagsInput fields
         , viewIngredientsInput fields
+        , viewInstructionsInput fields
         , button []
             [ text "Save" ]
+        ]
+
+
+viewInstructionsInput : Form -> Html Msg
+viewInstructionsInput fields =
+    div [ class "instructions" ]
+        [ h3 [] [ text "Instructions" ]
+        , textarea
+            [ placeholder "Instruktioner"
+            , onInput EnteredInstructions
+            , value fields.instructions
+            ]
+            []
         ]
 
 
@@ -160,12 +172,12 @@ onEnter msg =
     let
         isEnter code =
             if code == 13 then
-                Decode.succeed msg
+                Decode.succeed ( msg, True )
 
             else
                 Decode.fail "not ENTER"
     in
-    on "keydown" (Decode.andThen isEnter keyCode)
+    preventDefaultOn "keydown" (Decode.andThen isEnter keyCode)
 
 
 viewTag : String -> Html Msg
