@@ -65,7 +65,7 @@ routeToString page =
                     [ "recipes", Slug.toString slug ]
 
                 RecipeList ->
-                    [ "editor" ]
+                    [ "recipes" ]
 
                 NewRecipe ->
                     [ "editor" ]
