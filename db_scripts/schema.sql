@@ -2,11 +2,11 @@ CREATE SCHEMA data;
 
 CREATE TABLE data.recipes(
   id            SERIAL PRIMARY KEY,
-  title         TEXT NOT NULL UNIQUE,
+  title         TEXT NOT NULL UNIQUE CHECK (length(title) >= 3),
   description   TEXT,
-  instructions  TEXT NOT NULL,
+  instructions  TEXT NOT NULL CHECK (length(instructions) >= 5),
   tags          TEXT[],
-  quantity      INTEGER,
+  quantity      INTEGER CHECK (quantity > 0),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
