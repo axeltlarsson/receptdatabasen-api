@@ -5,7 +5,7 @@ CREATE TABLE data.recipes(
   title         TEXT NOT NULL UNIQUE CHECK (length(title) >= 3),
   description   TEXT,
   instructions  TEXT NOT NULL CHECK (length(instructions) >= 5),
-  tags          TEXT[],
+  tags          TEXT[] DEFAULT '{}',
   quantity      INTEGER CHECK (quantity > 0),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -82,12 +82,18 @@ AS $$
     INSERT INTO data.recipes (title, description, instructions, tags, quantity)
             VALUES (new.title, new.description, new.instructions, new.tags, new.quantity)
               RETURNING id, created_at, updated_at INTO recipe_id, recipe_created_at, recipe_updated_at;
+    IF new.ingredients IS NULL THEN
+      RAISE EXCEPTION 'A recipe must have ingredients!';
+    END IF;
     -- Insert the ingredient groups
     FOR g, ingredients IN SELECT * FROM json_each(new.ingredients) LOOP
       INSERT INTO data.ingredient_groups (name, recipe_id)
         VALUES (g, recipe_id)
         RETURNING id INTO ingredient_group_id;
 
+        IF ingredients IS NULL OR json_array_length(ingredients) = 0 THEN
+          RAISE EXCEPTION 'Ingredient group "%" must not be empty!', g;
+        END IF;
       -- Insert the ingredients in each ingredient group
       FOR ingredient IN SELECT * FROM json_array_elements_text(ingredients) LOOP
         INSERT INTO data.ingredients (contents, ingredient_group_id)
