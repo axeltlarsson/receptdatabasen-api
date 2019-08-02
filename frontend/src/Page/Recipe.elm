@@ -1,6 +1,5 @@
 module Page.Recipe exposing (Model, Msg, init, toSession, update, view)
 
-import Browser exposing (Document)
 import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes exposing (class)
@@ -42,25 +41,23 @@ init session slug =
 -- VIEW
 
 
-view : Model -> Document Msg
+view : Model -> { title : String, content : Html Msg }
 view model =
     case model.recipe of
         Loading ->
             { title = "Loading recipe"
-            , body = [ text "" ]
+            , content = text ""
             }
 
         Failed err ->
             { title = "Failed to load"
-            , body =
-                [ text "Failed to load "
-                , viewError err
-                ]
+            , content =
+                viewError err
             }
 
         NotFound ->
             { title = "Not found"
-            , body = [ text "Not found" ]
+            , content = text "Not found"
             }
 
         Loaded recipe ->
@@ -69,7 +66,7 @@ view model =
                     Recipe.metadata recipe
             in
             { title = Slug.toString title
-            , body = [ viewRecipe recipe ]
+            , content = viewRecipe recipe
             }
 
 

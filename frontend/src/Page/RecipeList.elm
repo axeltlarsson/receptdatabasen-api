@@ -1,6 +1,5 @@
 module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, view)
 
-import Browser exposing (Document)
 import Html exposing (..)
 import Html.Attributes as Attr
 import Http
@@ -40,26 +39,23 @@ init session =
 -- VIEW
 
 
-view : Model -> Document Msg
+view : Model -> { title : String, content : Html Msg }
 view model =
     case model.recipes of
         Loading ->
             { title = "Recipes"
-            , body = [ text "" ]
+            , content = text ""
             }
 
         Failed err ->
             { title = "Failed to load"
-            , body =
-                [ text "Failed to load ", viewError err ]
+            , content = viewError err
             }
 
         Loaded recipes ->
             { title = "Recipes"
-            , body =
-                [ ul []
-                    (List.map viewPreview recipes)
-                ]
+            , content =
+                ul [] (List.map viewPreview recipes)
             }
 
 

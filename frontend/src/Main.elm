@@ -4,6 +4,7 @@ import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Page exposing (Page)
 import Page.Recipe as Recipe
 import Page.Recipe.Editor as Editor
 import Page.RecipeList as RecipeList
@@ -37,10 +38,12 @@ init flags url key =
 view : Model -> Document Msg
 view model =
     let
-        viewPage { title, body } toMsg =
-            { title = title
-            , body = List.map (Html.map toMsg) body
-            }
+        viewPage page toMsg config =
+            let
+                { title, body } =
+                    Page.view page config
+            in
+            { title = title, body = List.map (Html.map toMsg) body }
     in
     case model of
         Redirect _ ->
@@ -55,13 +58,13 @@ view model =
             }
 
         Recipe recipe ->
-            viewPage (Recipe.view recipe) GotRecipeMsg
+            viewPage Page.Recipe GotRecipeMsg (Recipe.view recipe)
 
         RecipeList recipes ->
-            viewPage (RecipeList.view recipes) GotRecipeListMsg
+            viewPage Page.RecipeList GotRecipeListMsg (RecipeList.view recipes)
 
         Editor _ editor ->
-            viewPage (Editor.view editor) GotEditorMsg
+            viewPage Page.Editor GotEditorMsg (Editor.view editor)
 
 
 viewLinks : Html msg

@@ -1,6 +1,5 @@
 module Page.Recipe.Editor exposing (Model, Msg, initNew, toSession, update, view)
 
-import Browser exposing (Document)
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
 import Html exposing (..)
@@ -74,11 +73,11 @@ initNew session =
 -- VIEW
 
 
-view : Model -> Document Msg
+view : Model -> { title : String, content : Html Msg }
 view model =
     { title = "New Recipe"
-    , body =
-        [ case model.status of
+    , content =
+        case model.status of
             EditingNew probs form ->
                 div []
                     [ viewForm form
@@ -87,7 +86,6 @@ view model =
 
             Creating form ->
                 viewForm form
-        ]
     }
 
 
