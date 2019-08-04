@@ -12,6 +12,7 @@ type Page
     = Recipe
     | RecipeList
     | Editor
+    | Other
 
 
 {-| Takes a page's Html and frames it with header and footer.

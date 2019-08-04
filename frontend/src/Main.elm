@@ -5,6 +5,8 @@ import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Page exposing (Page)
+import Page.Blank
+import Page.NotFound
 import Page.Recipe as Recipe
 import Page.Recipe.Editor as Editor
 import Page.RecipeList as RecipeList
@@ -47,15 +49,10 @@ view model =
     in
     case model of
         Redirect _ ->
-            { title = "Redirect", body = [ text "not found" ] }
+            Page.view Page.Other Page.Blank.view
 
         NotFound _ ->
-            { title = "Not Found"
-            , body =
-                [ text "Not found"
-                , viewLinks
-                ]
-            }
+            Page.view Page.Other Page.NotFound.view
 
         Recipe recipe ->
             viewPage Page.Recipe GotRecipeMsg (Recipe.view recipe)

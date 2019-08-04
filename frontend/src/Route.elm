@@ -25,11 +25,9 @@ type Route
 parser : Parser (Route -> a) a
 parser =
     oneOf
-        [ map Recipe (s "recipes" </> Slug.urlParser)
-        , map RecipeList (s "recipes")
+        [ map Recipe (s "recipe" </> Slug.urlParser)
+        , map RecipeList Parser.top
         , map NewRecipe (s "editor")
-
-        -- , map RecipeQuery (s "recipes" <?> Query.string "search")
         ]
 
 
@@ -62,10 +60,10 @@ routeToString page =
         pieces =
             case page of
                 Recipe slug ->
-                    [ "recipes", Slug.toString slug ]
+                    [ "recipe", Url.percentEncode (Slug.toString slug) ]
 
                 RecipeList ->
-                    [ "recipes" ]
+                    []
 
                 NewRecipe ->
                     [ "editor" ]

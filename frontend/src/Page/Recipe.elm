@@ -148,23 +148,17 @@ viewError error =
 
 
 type Msg
-    = LoadedRecipe (Result Http.Error (List (Recipe Full)))
+    = LoadedRecipe (Result Http.Error (Recipe Full))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        LoadedRecipe (Ok [ recipe ]) ->
+        LoadedRecipe (Ok recipe) ->
             ( { model | recipe = Loaded recipe }, Cmd.none )
-
-        LoadedRecipe (Ok []) ->
-            ( { model | recipe = NotFound }, Cmd.none )
 
         LoadedRecipe (Err error) ->
             ( { model | recipe = Failed error }, Cmd.none )
-
-        LoadedRecipe (Ok _) ->
-            Debug.todo "Multiple recipes matched"
 
 
 
@@ -178,15 +172,15 @@ url slug =
 
 getRecipe : Slug -> Cmd Msg
 getRecipe slug =
-    Http.get
+    Http.request
         { url = url slug ++ Slug.toString slug
-        , expect = Http.expectJson LoadedRecipe recipesDecoder
+        , method = "GET"
+        , timeout = Nothing
+        , tracker = Nothing
+        , headers = [ Http.header "Accept" "application/vnd.pgrst.object+json" ]
+        , body = Http.emptyBody
+        , expect = Http.expectJson LoadedRecipe Recipe.fullDecoder
         }
-
-
-recipesDecoder : Decoder (List (Recipe Full))
-recipesDecoder =
-    list <| Recipe.fullDecoder
 
 
 
