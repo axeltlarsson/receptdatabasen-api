@@ -10,6 +10,7 @@ import Page.NotFound
 import Page.Recipe as Recipe
 import Page.Recipe.Editor as Editor
 import Page.RecipeList as RecipeList
+import Recipe.Slug as Slug exposing (Slug)
 import Route exposing (Route)
 import Session exposing (Session)
 import Url
@@ -24,7 +25,7 @@ type Model
     | RecipeList RecipeList.Model
     | Redirect Session
     | NotFound Session
-    | Editor (Maybe Int) Editor.Model
+    | Editor (Maybe Slug) Editor.Model
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -131,6 +132,10 @@ changeRouteTo maybeRoute model =
             Editor.initNew session
                 |> updateWith (Editor Nothing) GotEditorMsg model
 
+        Just (Route.EditRecipe slug) ->
+            Editor.initEdit session slug
+                |> updateWith (Editor (Just slug)) GotEditorMsg model
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -156,9 +161,9 @@ update msg model =
             RecipeList.update subMsg recipes
                 |> updateWith RecipeList GotRecipeListMsg model
 
-        ( GotEditorMsg subMsg, Editor Nothing editor ) ->
+        ( GotEditorMsg subMsg, Editor slug editor ) ->
             Editor.update subMsg editor
-                |> updateWith (Editor Nothing) GotEditorMsg model
+                |> updateWith (Editor slug) GotEditorMsg model
 
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page

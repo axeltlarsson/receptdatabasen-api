@@ -1,4 +1,4 @@
-module Page.Recipe.Editor exposing (Model, Msg, initNew, toSession, update, view)
+module Page.Recipe.Editor exposing (Model, Msg, initEdit, initNew, toSession, update, view)
 
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
@@ -13,6 +13,7 @@ import Recipe.Slug as Slug exposing (Slug)
 import Route
 import Session exposing (Session)
 import Set exposing (Set)
+import Task
 import Url
 import Url.Builder
 
@@ -28,9 +29,14 @@ type alias Model =
 
 
 type Status
-    = -- New Article
+    = -- New Recipe
       EditingNew (List Problem) Form
     | Creating Form
+      -- Edit Recipe
+    | Loading Slug
+    | LoadingFailed Slug
+    | Editing Slug (List Problem) Form
+    | Saving Slug Form
 
 
 type Problem
@@ -69,6 +75,33 @@ initNew session =
     )
 
 
+initEdit : Session -> Slug -> ( Model, Cmd Msg )
+initEdit session slug =
+    ( { session = session
+      , status = Loading slug
+      }
+    , fetchRecipe slug
+    )
+
+
+fetchUrl : Slug -> String
+fetchUrl slug =
+    Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] [ Url.Builder.string "title" "eq." ]
+
+
+fetchRecipe : Slug -> Cmd Msg
+fetchRecipe slug =
+    Http.request
+        { url = fetchUrl slug ++ Slug.toString slug
+        , method = "GET"
+        , timeout = Nothing
+        , tracker = Nothing
+        , headers = [ Http.header "Accept" "application/vnd.pgrst.object+json" ]
+        , body = Http.emptyBody
+        , expect = Http.expectJson CompletedRecipeLoad Recipe.fullDecoder
+        }
+
+
 
 -- VIEW
 
@@ -78,6 +111,7 @@ view model =
     { title = "New Recipe"
     , content =
         case model.status of
+            -- Creating a new recipe
             EditingNew probs form ->
                 div []
                     [ viewForm form
@@ -85,6 +119,19 @@ view model =
                     ]
 
             Creating form ->
+                viewForm form
+
+            -- Editing an exisiting recipe
+            Loading slug ->
+                text "Loading"
+
+            LoadingFailed slug ->
+                text ("Failed to load" ++ Slug.toString slug)
+
+            Editing slug probs form ->
+                text "editing slug"
+
+            Saving slug form ->
                 viewForm form
     }
 
@@ -243,6 +290,8 @@ type Msg
     | PressedEnterTag
     | PressedEnterIngredient
     | CompletedCreate (Result MyError (Recipe Full))
+    | CompletedRecipeLoad (Result Http.Error (Recipe Full))
+    | CompletedEdit (Result Http.Error (Recipe Full))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -305,6 +354,35 @@ update msg model =
             ( { model | status = savingError error model.status }
             , Cmd.none
             )
+
+        CompletedRecipeLoad (Ok recipe) ->
+            let
+                status =
+                    Editing (Recipe.slug recipe)
+                        []
+                        { title = "CompletedLoadRecipe"
+                        , description = ""
+                        , instructions = ""
+                        , quantity = 1
+                        , tags = Set.empty
+                        , currentTag = ""
+                        , currentIngredient = ""
+                        , ingredients = []
+                        }
+            in
+            ( { model | status = status }, Cmd.none )
+
+        CompletedRecipeLoad (Err error) ->
+            Debug.todo "completedRecipeLoad isn't impleted"
+
+        CompletedEdit (Ok recipe) ->
+            ( model
+            , Route.Recipe (Recipe.slug recipe)
+                |> Route.replaceUrl (Session.navKey model.session)
+            )
+
+        CompletedEdit (Err error) ->
+            Debug.todo "CompletedEdit not yet implemented"
 
 
 save : Status -> ( Status, Cmd Msg )
@@ -428,6 +506,18 @@ updateForm transform model =
     let
         newModel =
             case model.status of
+                Loading _ ->
+                    model
+
+                LoadingFailed _ ->
+                    model
+
+                Saving slug form ->
+                    { model | status = Saving slug (transform form) }
+
+                Editing slug errors form ->
+                    { model | status = Editing slug errors (transform form) }
+
                 EditingNew errors form ->
                     { model | status = EditingNew errors (transform form) }
 
