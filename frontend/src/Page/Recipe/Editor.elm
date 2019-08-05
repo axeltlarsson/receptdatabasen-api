@@ -1,5 +1,6 @@
 module Page.Recipe.Editor exposing (Model, Msg, initEdit, initNew, toSession, update, view)
 
+import Array exposing (Array)
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
 import Html exposing (..)
@@ -52,7 +53,7 @@ type alias Form =
     , tags : Set String
     , currentTag : String
     , currentIngredient : String
-    , ingredients : List String
+    , ingredients : Array String
     }
 
 
@@ -68,7 +69,7 @@ initNew session =
                 , tags = Set.empty
                 , currentTag = ""
                 , currentIngredient = ""
-                , ingredients = []
+                , ingredients = Array.empty
                 }
       }
     , Cmd.none
@@ -113,10 +114,7 @@ view model =
         case model.status of
             -- Creating a new recipe
             EditingNew probs form ->
-                div []
-                    [ viewForm form
-                    , viewProblems probs
-                    ]
+                div [] [ viewForm form, viewProblems probs ]
 
             Creating form ->
                 viewForm form
@@ -129,7 +127,7 @@ view model =
                 text ("Failed to load" ++ Slug.toString slug)
 
             Editing slug probs form ->
-                text "editing slug"
+                div [] [ viewForm form, viewProblems probs ]
 
             Saving slug form ->
                 viewForm form
@@ -174,7 +172,7 @@ viewIngredientsInput fields =
             , value fields.currentIngredient
             ]
             []
-        , ul [] (List.map viewIngredient fields.ingredients)
+        , ul [] (List.map viewIngredient <| Array.toIndexedList fields.ingredients)
         ]
 
 
@@ -230,9 +228,15 @@ viewTag tag =
     li [] [ text tag ]
 
 
-viewIngredient : String -> Html Msg
-viewIngredient ingredient =
-    li [] [ text ingredient ]
+viewIngredient : ( Int, String ) -> Html Msg
+viewIngredient ( idx, ingredient ) =
+    li []
+        [ input
+            [ value ingredient
+            , onInput (EnteredIngredient idx)
+            ]
+            []
+        ]
 
 
 viewDescriptionInput : Form -> Html Msg
@@ -289,6 +293,7 @@ type Msg
     | EnteredCurrentIngredient String
     | PressedEnterTag
     | PressedEnterIngredient
+    | EnteredIngredient Int String
     | CompletedCreate (Result MyError (Recipe Full))
     | CompletedRecipeLoad (Result Http.Error (Recipe Full))
     | CompletedEdit (Result Http.Error (Recipe Full))
@@ -338,11 +343,14 @@ update msg model =
             updateForm
                 (\form ->
                     { form
-                        | ingredients = form.currentIngredient :: form.ingredients
+                        | ingredients = Array.push form.currentIngredient form.ingredients
                         , currentIngredient = ""
                     }
                 )
                 model
+
+        EnteredIngredient idx ingredient ->
+            updateForm (\form -> { form | ingredients = Array.set idx ingredient form.ingredients }) model
 
         CompletedCreate (Ok recipe) ->
             ( model
@@ -357,17 +365,23 @@ update msg model =
 
         CompletedRecipeLoad (Ok recipe) ->
             let
+                { id, title } =
+                    Recipe.metadata recipe
+
+                { description, instructions, tags, quantity, ingredients } =
+                    Recipe.contents recipe
+
                 status =
                     Editing (Recipe.slug recipe)
                         []
-                        { title = "CompletedLoadRecipe"
-                        , description = ""
-                        , instructions = ""
-                        , quantity = 1
-                        , tags = Set.empty
+                        { title = Slug.toString title
+                        , description = description
+                        , instructions = instructions
+                        , quantity = quantity
+                        , tags = Set.fromList tags
                         , currentTag = ""
                         , currentIngredient = ""
-                        , ingredients = []
+                        , ingredients = Array.empty -- TODO: fill in ingredients from recipe
                         }
             in
             ( { model | status = status }, Cmd.none )
@@ -443,7 +457,7 @@ create form =
             String.fromInt form.quantity
 
         ingredientDict =
-            Dict.fromList [ ( "ingredients", form.ingredients ) ]
+            Dict.fromList [ ( "ingredients", Array.toList form.ingredients ) ]
 
         recipe =
             Encode.object
