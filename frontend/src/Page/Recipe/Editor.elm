@@ -53,7 +53,7 @@ type alias Form =
     , tags : Set String
     , currentTag : String
     , currentIngredient : String
-    , ingredients : Array String
+    , ingredients : Dict String (Array String)
     }
 
 
@@ -154,8 +154,41 @@ viewInstructionsInput fields =
         [ h3 [] [ text "Instructions" ]
         , textarea
             [ placeholder "Instruktioner"
-            , onInput EnteredInstructions
+            , onInput ChangedInstructions
             , value fields.instructions
+            ]
+            []
+        ]
+
+
+viewIngredientGroupInput : ( String, Array String ) -> Html Msg
+viewIngredientGroupInput ( groupName, ingredients ) =
+    let
+        currentIngredients =
+            List.map viewIngredient <| Array.toIndexedList ingredients
+
+        ingredientInput =
+            input
+                [ placeholder "Ny ingrediens..."
+                , onEnter PressedEnterIngredient
+                , onInput ChangedCurrentIngredient
+
+                -- , value fields.currentIngredient
+                ]
+                []
+    in
+    div [ class "ingredient-group" ]
+        [ h3 [] [ text groupName ]
+        , ul [] (currentIngredients ++ [ ingredientInput ])
+        ]
+
+
+viewIngredient : ( Int, String ) -> Html Msg
+viewIngredient ( idx, ingredient ) =
+    li []
+        [ input
+            [ value ingredient
+            , onInput (ChangedIngredient idx)
             ]
             []
         ]
@@ -164,15 +197,9 @@ viewInstructionsInput fields =
 viewIngredientsInput : Form -> Html Msg
 viewIngredientsInput fields =
     div [ class "ingredients" ]
-        [ h3 [] [ text "Ingredients" ]
-        , input
-            [ placeholder "Ingredienser"
-            , onEnter PressedEnterIngredient
-            , onInput EnteredCurrentIngredient
-            , value fields.currentIngredient
-            ]
-            []
-        , ul [] (List.map viewIngredient <| Array.toIndexedList fields.ingredients)
+        [ h2 [] [ text "Ingredients" ]
+        , div [] (List.map viewIngredientGroupInput <| Dict.toList fields.ingredients)
+        , input [ placeholder "Ny underrubrik" ] []
         ]
 
 
@@ -201,7 +228,7 @@ viewTagsInput fields =
         [ input
             [ placeholder "Tags"
             , onEnter PressedEnterTag
-            , onInput EnteredCurrentTag
+            , onInput ChangedCurrentTag
             , value fields.currentTag
             ]
             []
@@ -228,23 +255,12 @@ viewTag tag =
     li [] [ text tag ]
 
 
-viewIngredient : ( Int, String ) -> Html Msg
-viewIngredient ( idx, ingredient ) =
-    li []
-        [ input
-            [ value ingredient
-            , onInput (EnteredIngredient idx)
-            ]
-            []
-        ]
-
-
 viewDescriptionInput : Form -> Html Msg
 viewDescriptionInput fields =
     div [ class "description" ]
         [ textarea
             [ placeholder "Description"
-            , onInput EnteredDescription
+            , onInput ChangedDescription
             , value fields.description
             ]
             []
@@ -256,7 +272,7 @@ viewTitleInput fields =
     div [ class "title" ]
         [ input
             [ placeholder "Recipe Title"
-            , onInput EnteredTitle
+            , onInput ChangedTitle
             , value fields.title
             ]
             []
@@ -271,7 +287,7 @@ viewQuantityInput fields =
             [ id "quantity"
             , placeholder "Quantity"
             , type_ "number"
-            , onInput EnteredQuantity
+            , onInput ChangedQuantity
             , value (String.fromInt fields.quantity)
             , min "1"
             ]
@@ -283,17 +299,41 @@ viewQuantityInput fields =
 -- UPDATE
 
 
+type alias Ingredient =
+    String
+
+
+type IngredientIndex
+    = GroupIndex Int
+    | CurrentIngredient
+
+
+type alias GroupIndex =
+    String
+
+
+
+-- A tag index is either current input or an existing one using int as the index
+
+
+type TagIndex
+    = CurrentTag
+    | Int
+
+
 type Msg
     = ClickedSave
-    | EnteredTitle String
-    | EnteredDescription String
-    | EnteredInstructions String
-    | EnteredQuantity String
-    | EnteredCurrentTag String
-    | EnteredCurrentIngredient String
-    | PressedEnterTag
-    | PressedEnterIngredient
-    | EnteredIngredient Int String
+      -- Singular fields, we know which one has change - because there is only one
+    | ChangedTitle String
+    | ChangedDescription String
+    | ChangedInstructions String
+    | ChangedQuantity String
+      -- Multiple inputs for each type of field - we need an index to determine which field in the model to update
+    | ChangedTag TagIndex String
+    | PressedEnterTag TagIndex
+    | ChangedIngredient IngredientIndex Ingredient
+    | PressedEnterIngredient IngredientIndex
+      -- Msg:s from the server
     | CompletedCreate (Result MyError (Recipe Full))
     | CompletedRecipeLoad (Result Http.Error (Recipe Full))
     | CompletedEdit (Result Http.Error (Recipe Full))
@@ -307,23 +347,23 @@ update msg model =
                 |> save
                 |> Tuple.mapFirst (\status -> { model | status = status })
 
-        EnteredTitle title ->
+        ChangedTitle title ->
             updateForm (\form -> { form | title = title }) model
 
-        EnteredDescription description ->
+        ChangedDescription description ->
             updateForm (\form -> { form | description = description }) model
 
-        EnteredInstructions instructions ->
+        ChangedInstructions instructions ->
             updateForm (\form -> { form | instructions = instructions }) model
 
-        EnteredQuantity quantity ->
+        ChangedQuantity quantity ->
             let
                 quantityInt =
                     Maybe.withDefault 0 <| String.toInt quantity
             in
             updateForm (\form -> { form | quantity = quantityInt }) model
 
-        EnteredCurrentTag currentTag ->
+        ChangedCurrentTag currentTag ->
             updateForm (\form -> { form | currentTag = currentTag }) model
 
         PressedEnterTag ->
@@ -336,7 +376,7 @@ update msg model =
                 )
                 model
 
-        EnteredCurrentIngredient currentIngredient ->
+        ChangedCurrentIngredient currentIngredient ->
             updateForm (\form -> { form | currentIngredient = currentIngredient }) model
 
         PressedEnterIngredient ->
@@ -349,7 +389,7 @@ update msg model =
                 )
                 model
 
-        EnteredIngredient idx ingredient ->
+        ChangedIngredient idx ingredient ->
             updateForm (\form -> { form | ingredients = Array.set idx ingredient form.ingredients }) model
 
         CompletedCreate (Ok recipe) ->
