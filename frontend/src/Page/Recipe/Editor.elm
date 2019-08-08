@@ -52,8 +52,7 @@ type alias Form =
     , quantity : Int
     , tags : Set String
     , currentTag : String
-    , currentIngredient : String
-    , ingredients : Dict String (Array String)
+    , ingredients : Dict String ( String, Array String )
     }
 
 
@@ -68,8 +67,7 @@ initNew session =
                 , quantity = 1
                 , tags = Set.empty
                 , currentTag = ""
-                , currentIngredient = ""
-                , ingredients = Array.empty
+                , ingredients = Dict.empty
                 }
       }
     , Cmd.none
@@ -148,6 +146,48 @@ viewForm fields =
         ]
 
 
+viewIngredientsInput : Form -> Html Msg
+viewIngredientsInput fields =
+    div [ class "ingredients" ]
+        [ h2 [] [ text "Ingredients" ]
+        , div [] (List.map viewIngredientGroupInput <| Dict.toList fields.ingredients)
+
+        -- , input [ placeholder "Ny underrubrik" ] []
+        ]
+
+
+viewIngredientGroupInput : ( String, ( String, Array String ) ) -> Html Msg
+viewIngredientGroupInput ( groupName, ( currentInput, ingredients ) ) =
+    let
+        currentIngredients =
+            List.map viewIngredient <| List.map (\t -> ( groupName, t )) <| Array.toIndexedList ingredients
+
+        ingredientInput =
+            input
+                [ placeholder "Ny ingrediens..."
+                , onEnter (PressedEnterIngredient groupName)
+                , onInput (ChangedIngredient groupName CurrentIngredient)
+                , value currentInput
+                ]
+                []
+    in
+    div [ class "ingredient-group" ]
+        [ h3 [] [ text groupName ]
+        , ul [] (currentIngredients ++ [ ingredientInput ])
+        ]
+
+
+viewIngredient : ( GroupIndex, ( Int, String ) ) -> Html Msg
+viewIngredient ( groupIdx, ( idx, ingredient ) ) =
+    li []
+        [ input
+            [ value ingredient
+            , onInput (ChangedIngredient groupIdx (IngredientIndex idx))
+            ]
+            []
+        ]
+
+
 viewInstructionsInput : Form -> Html Msg
 viewInstructionsInput fields =
     div [ class "instructions" ]
@@ -158,48 +198,6 @@ viewInstructionsInput fields =
             , value fields.instructions
             ]
             []
-        ]
-
-
-viewIngredientGroupInput : ( String, Array String ) -> Html Msg
-viewIngredientGroupInput ( groupName, ingredients ) =
-    let
-        currentIngredients =
-            List.map viewIngredient <| Array.toIndexedList ingredients
-
-        ingredientInput =
-            input
-                [ placeholder "Ny ingrediens..."
-                , onEnter PressedEnterIngredient
-                , onInput ChangedCurrentIngredient
-
-                -- , value fields.currentIngredient
-                ]
-                []
-    in
-    div [ class "ingredient-group" ]
-        [ h3 [] [ text groupName ]
-        , ul [] (currentIngredients ++ [ ingredientInput ])
-        ]
-
-
-viewIngredient : ( Int, String ) -> Html Msg
-viewIngredient ( idx, ingredient ) =
-    li []
-        [ input
-            [ value ingredient
-            , onInput (ChangedIngredient idx)
-            ]
-            []
-        ]
-
-
-viewIngredientsInput : Form -> Html Msg
-viewIngredientsInput fields =
-    div [ class "ingredients" ]
-        [ h2 [] [ text "Ingredients" ]
-        , div [] (List.map viewIngredientGroupInput <| Dict.toList fields.ingredients)
-        , input [ placeholder "Ny underrubrik" ] []
         ]
 
 
@@ -228,7 +226,7 @@ viewTagsInput fields =
         [ input
             [ placeholder "Tags"
             , onEnter PressedEnterTag
-            , onInput ChangedCurrentTag
+            , onInput (ChangedTag CurrentTag)
             , value fields.currentTag
             ]
             []
@@ -304,7 +302,7 @@ type alias Ingredient =
 
 
 type IngredientIndex
-    = GroupIndex Int
+    = IngredientIndex Int
     | CurrentIngredient
 
 
@@ -330,9 +328,9 @@ type Msg
     | ChangedQuantity String
       -- Multiple inputs for each type of field - we need an index to determine which field in the model to update
     | ChangedTag TagIndex String
-    | PressedEnterTag TagIndex
-    | ChangedIngredient IngredientIndex Ingredient
-    | PressedEnterIngredient IngredientIndex
+    | PressedEnterTag
+    | ChangedIngredient GroupIndex IngredientIndex Ingredient
+    | PressedEnterIngredient GroupIndex
       -- Msg:s from the server
     | CompletedCreate (Result MyError (Recipe Full))
     | CompletedRecipeLoad (Result Http.Error (Recipe Full))
@@ -363,8 +361,11 @@ update msg model =
             in
             updateForm (\form -> { form | quantity = quantityInt }) model
 
-        ChangedCurrentTag currentTag ->
+        ChangedTag CurrentTag currentTag ->
             updateForm (\form -> { form | currentTag = currentTag }) model
+
+        ChangedTag idx tag ->
+            Debug.todo "Not yet implemented"
 
         PressedEnterTag ->
             updateForm
@@ -376,21 +377,26 @@ update msg model =
                 )
                 model
 
-        ChangedCurrentIngredient currentIngredient ->
-            updateForm (\form -> { form | currentIngredient = currentIngredient }) model
-
-        PressedEnterIngredient ->
+        ChangedIngredient group CurrentIngredient ingredient ->
             updateForm
                 (\form ->
-                    { form
-                        | ingredients = Array.push form.currentIngredient form.ingredients
-                        , currentIngredient = ""
-                    }
+                    { form | ingredients = Dict.update group (updateCurrentForGroup ingredient) form.ingredients }
                 )
                 model
 
-        ChangedIngredient idx ingredient ->
-            updateForm (\form -> { form | ingredients = Array.set idx ingredient form.ingredients }) model
+        ChangedIngredient group (IngredientIndex idx) ingredient ->
+            updateForm
+                (\form ->
+                    { form | ingredients = Dict.update group (updateIngredientInGroup idx ingredient) form.ingredients }
+                )
+                model
+
+        PressedEnterIngredient group ->
+            updateForm
+                (\form ->
+                    { form | ingredients = Dict.update group addIngredientToGroup form.ingredients }
+                )
+                model
 
         CompletedCreate (Ok recipe) ->
             ( model
@@ -420,8 +426,7 @@ update msg model =
                         , quantity = quantity
                         , tags = Set.fromList tags
                         , currentTag = ""
-                        , currentIngredient = ""
-                        , ingredients = Array.empty -- TODO: fill in ingredients from recipe
+                        , ingredients = Dict.empty -- TODO: fill in ingredients from recipe
                         }
             in
             ( { model | status = status }, Cmd.none )
@@ -437,6 +442,36 @@ update msg model =
 
         CompletedEdit (Err error) ->
             Debug.todo "CompletedEdit not yet implemented"
+
+
+updateCurrentForGroup : String -> Maybe ( String, Array String ) -> Maybe ( String, Array String )
+updateCurrentForGroup newCurrent oldGroup =
+    case oldGroup of
+        Just ( current, ingredients ) ->
+            Just ( newCurrent, ingredients )
+
+        Nothing ->
+            Nothing
+
+
+addIngredientToGroup : Maybe ( String, Array String ) -> Maybe ( String, Array String )
+addIngredientToGroup oldGroup =
+    case oldGroup of
+        Just ( current, ingredients ) ->
+            Just ( "", Array.push current ingredients )
+
+        Nothing ->
+            Nothing
+
+
+updateIngredientInGroup : Int -> String -> Maybe ( String, Array String ) -> Maybe ( String, Array String )
+updateIngredientInGroup idx ingredient oldGroup =
+    case oldGroup of
+        Just ( current, ingredients ) ->
+            Just ( current, Array.set idx ingredient ingredients )
+
+        Nothing ->
+            Nothing
 
 
 save : Status -> ( Status, Cmd Msg )
@@ -497,7 +532,7 @@ create form =
             String.fromInt form.quantity
 
         ingredientDict =
-            Dict.fromList [ ( "ingredients", Array.toList form.ingredients ) ]
+            Dict.map (\k ( _, ingredients ) -> Array.toList ingredients) form.ingredients
 
         recipe =
             Encode.object
