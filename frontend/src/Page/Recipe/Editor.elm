@@ -378,20 +378,47 @@ update msg model =
                 model
 
         ChangedIngredient group CurrentIngredient ingredient ->
+            let
+                updateCurrentForGroup oldGroup =
+                    case oldGroup of
+                        Just ( current, ingredients ) ->
+                            Just ( ingredient, ingredients )
+
+                        Nothing ->
+                            Nothing
+            in
             updateForm
                 (\form ->
-                    { form | ingredients = Dict.update group (updateCurrentForGroup ingredient) form.ingredients }
+                    { form | ingredients = Dict.update group updateCurrentForGroup form.ingredients }
                 )
                 model
 
         ChangedIngredient group (IngredientIndex idx) ingredient ->
+            let
+                updateIngredientInGroup oldGroup =
+                    case oldGroup of
+                        Just ( current, ingredients ) ->
+                            Just ( current, Array.set idx ingredient ingredients )
+
+                        Nothing ->
+                            Nothing
+            in
             updateForm
                 (\form ->
-                    { form | ingredients = Dict.update group (updateIngredientInGroup idx ingredient) form.ingredients }
+                    { form | ingredients = Dict.update group updateIngredientInGroup form.ingredients }
                 )
                 model
 
         PressedEnterIngredient group ->
+            let
+                addIngredientToGroup oldGroup =
+                    case oldGroup of
+                        Just ( current, ingredients ) ->
+                            Just ( "", Array.push current ingredients )
+
+                        Nothing ->
+                            Nothing
+            in
             updateForm
                 (\form ->
                     { form | ingredients = Dict.update group addIngredientToGroup form.ingredients }
@@ -442,36 +469,6 @@ update msg model =
 
         CompletedEdit (Err error) ->
             Debug.todo "CompletedEdit not yet implemented"
-
-
-updateCurrentForGroup : String -> Maybe ( String, Array String ) -> Maybe ( String, Array String )
-updateCurrentForGroup newCurrent oldGroup =
-    case oldGroup of
-        Just ( current, ingredients ) ->
-            Just ( newCurrent, ingredients )
-
-        Nothing ->
-            Nothing
-
-
-addIngredientToGroup : Maybe ( String, Array String ) -> Maybe ( String, Array String )
-addIngredientToGroup oldGroup =
-    case oldGroup of
-        Just ( current, ingredients ) ->
-            Just ( "", Array.push current ingredients )
-
-        Nothing ->
-            Nothing
-
-
-updateIngredientInGroup : Int -> String -> Maybe ( String, Array String ) -> Maybe ( String, Array String )
-updateIngredientInGroup idx ingredient oldGroup =
-    case oldGroup of
-        Just ( current, ingredients ) ->
-            Just ( current, Array.set idx ingredient ingredients )
-
-        Nothing ->
-            Nothing
 
 
 save : Status -> ( Status, Cmd Msg )
