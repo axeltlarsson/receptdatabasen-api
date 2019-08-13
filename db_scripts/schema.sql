@@ -109,7 +109,59 @@ AS $$
   END;
 $$ LANGUAGE 'plpgsql';
 
+CREATE FUNCTION api.update_recipe()
+RETURNS TRIGGER
+AS $$
+  DECLARE recipe_id int;
+  DECLARE recipe_created_at timestamptz;
+  DECLARE recipe_updated_at timestamptz;
+  DECLARE g text;
+  DECLARE ingredients json;
+  DECLARE ingredient_group_id int;
+  DECLARE ingredient text;
+
+  BEGIN
+    -- update the recipe
+    UPDATE data.recipes
+    SET title = new.title, description = new.description, instructions = new.instructions,
+        tags = new.tags, quantity = new.quantity
+    WHERE id = new.id
+      RETURNING id, created_at, updated_at INTO recipe_id, recipe_created_at, recipe_updated_at;
+
+    IF new.ingredients IS NULL THEN
+      RAISE EXCEPTION 'A recipe must have ingredients!';
+    END IF;
+
+    -- Delete all ingredient_groups (cascades to ingredients)
+    DELETE FROM data.ingredient_groups WHERE data.ingredient_groups.recipe_id = new.id;
+    -- Insert the new ingredient groups
+    FOR g, ingredients IN SELECT * FROM json_each(new.ingredients) LOOP
+      INSERT INTO data.ingredient_groups (name, recipe_id)
+        VALUES (g, recipe_id)
+        RETURNING id INTO ingredient_group_id;
+
+        IF ingredients IS NULL OR json_array_length(ingredients) = 0 THEN
+          RAISE EXCEPTION 'Ingredient group "%" must not be empty!', g;
+        END IF;
+      -- Insert the ingredients in each ingredient group
+      FOR ingredient IN SELECT * FROM json_array_elements_text(ingredients) LOOP
+        INSERT INTO data.ingredients (contents, ingredient_group_id)
+        VALUES (ingredient, ingredient_group_id);
+      END LOOP;
+
+    END LOOP;
+
+    new.id = recipe_id;
+    new.created_at = recipe_created_at;
+    new.updated_at = recipe_updated_at;
+    RETURN new;
+  END;
+$$ LANGUAGE 'plpgsql';
+
 CREATE TRIGGER insert_recipe
 INSTEAD OF INSERT ON api.recipes
-FOR EACH ROW
-EXECUTE PROCEDURE api.insert_recipe();
+FOR EACH ROW EXECUTE PROCEDURE api.insert_recipe();
+
+CREATE TRIGGER update_recipe
+INSTEAD OF UPDATE ON api.recipes
+FOR EACH ROW EXECUTE PROCEDURE api.update_recipe();

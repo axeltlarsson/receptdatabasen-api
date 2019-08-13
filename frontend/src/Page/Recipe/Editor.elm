@@ -52,8 +52,12 @@ type alias Form =
     , quantity : Int
     , tags : Set String
     , currentTag : String
-    , ingredients : Dict String ( String, Array String )
+    , ingredients : Dict String ( CurrentInput, Array String )
     }
+
+
+type alias CurrentInput =
+    String
 
 
 initNew : Session -> ( Model, Cmd msg )
@@ -444,6 +448,9 @@ update msg model =
                 { description, instructions, tags, quantity, ingredients } =
                     Recipe.contents recipe
 
+                addCurrentInput _ ingredientList =
+                    ( "", Array.fromList ingredientList )
+
                 status =
                     Editing (Recipe.slug recipe)
                         []
@@ -453,7 +460,7 @@ update msg model =
                         , quantity = quantity
                         , tags = Set.fromList tags
                         , currentTag = ""
-                        , ingredients = Dict.empty -- TODO: fill in ingredients from recipe
+                        , ingredients = Dict.map addCurrentInput ingredients
                         }
             in
             ( { model | status = status }, Cmd.none )
@@ -468,7 +475,7 @@ update msg model =
             )
 
         CompletedEdit (Err error) ->
-            Debug.todo "CompletedEdit not yet implemented"
+            Debug.todo "CompletedEdit Error handling not yet implemented"
 
 
 save : Status -> ( Status, Cmd Msg )
@@ -476,6 +483,9 @@ save status =
     case status of
         EditingNew _ form ->
             ( Creating form, create form )
+
+        Editing slug _ form ->
+            ( Saving slug form, edit slug form )
 
         _ ->
             ( status, Cmd.none )
@@ -517,13 +527,20 @@ myErrorAsString error =
             ""
 
 
-url : String
-url =
+createUrl : String
+createUrl =
     Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] []
 
 
-create : Form -> Cmd Msg
-create form =
+editUrl : Slug -> String
+editUrl slug =
+    Url.Builder.crossOrigin "http://localhost:3000"
+        [ "recipes" ]
+        [ Url.Builder.string "title" (String.concat [ "eq.", Slug.toString slug ]) ]
+
+
+httpBodyFromForm : Form -> Http.Body
+httpBodyFromForm form =
     let
         quantityString =
             String.fromInt form.quantity
@@ -540,17 +557,38 @@ create form =
                 , ( "tags", Encode.set Encode.string form.tags )
                 , ( "ingredients", Encode.dict identity (Encode.list Encode.string) ingredientDict )
                 ]
-
-        body =
-            Http.jsonBody recipe
     in
+    Http.jsonBody recipe
+
+
+edit : Slug -> Form -> Cmd Msg
+edit slug form =
     Http.request
-        { url = url
+        { url = editUrl slug
+        , method = "PATCH"
+        , timeout = Nothing
+        , tracker = Nothing
+        , headers =
+            [ Http.header "Prefer" "return=representation"
+            , Http.header "Accept" "application/vnd.pgrst.object+json"
+            ]
+        , body = httpBodyFromForm form
+        , expect = expectJson CompletedCreate Recipe.fullDecoder
+        }
+
+
+create : Form -> Cmd Msg
+create form =
+    Http.request
+        { url = createUrl
         , method = "POST"
         , timeout = Nothing
         , tracker = Nothing
-        , headers = [ Http.header "Prefer" "return=representation", Http.header "Accept" "application/vnd.pgrst.object+json" ]
-        , body = body
+        , headers =
+            [ Http.header "Prefer" "return=representation"
+            , Http.header "Accept" "application/vnd.pgrst.object+json"
+            ]
+        , body = httpBodyFromForm form
         , expect = expectJson CompletedCreate Recipe.fullDecoder
         }
 

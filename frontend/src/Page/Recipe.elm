@@ -8,6 +8,7 @@ import Json.Decode as Decoder exposing (Decoder, list)
 import Markdown
 import Recipe exposing (Full, Metadata, Recipe, contents, fullDecoder, metadata)
 import Recipe.Slug as Slug exposing (Slug)
+import Route
 import Session exposing (Session)
 import Url exposing (Url)
 import Url.Builder
@@ -92,6 +93,7 @@ viewRecipe recipe =
         , h2 [] [ text "Instruktioner" ]
         , p [] [ Markdown.toHtmlWith mdOptions [ class "ingredients" ] instructions ]
         , p [] [ text <| String.concat [ "Skapad: ", createdAt ] ]
+        , a [ Route.href (Route.EditRecipe (Recipe.slug recipe)) ] [ text "Ändra recept" ]
         ]
 
 
