@@ -3,6 +3,7 @@ module Page.Recipe exposing (Model, Msg, init, toSession, update, view)
 import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes exposing (class)
+import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decoder exposing (Decoder, list)
 import Markdown
@@ -94,6 +95,7 @@ viewRecipe recipe =
         , p [] [ Markdown.toHtmlWith mdOptions [ class "ingredients" ] instructions ]
         , p [] [ text <| String.concat [ "Skapad: ", createdAt ] ]
         , a [ Route.href (Route.EditRecipe (Recipe.slug recipe)) ] [ text "Ändra recept" ]
+        , button [ onClick ClickedDelete ] [ text "Delete" ]
         ]
 
 
@@ -151,6 +153,8 @@ viewError error =
 
 type Msg
     = LoadedRecipe (Result Http.Error (Recipe Full))
+    | ClickedDelete
+    | Deleted (Result Http.Error ())
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -160,6 +164,23 @@ update msg model =
             ( { model | recipe = Loaded recipe }, Cmd.none )
 
         LoadedRecipe (Err error) ->
+            ( { model | recipe = Failed error }, Cmd.none )
+
+        ClickedDelete ->
+            case model.recipe of
+                Loaded recipe ->
+                    ( model, delete (Recipe.slug recipe) )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        Deleted (Ok _) ->
+            ( model
+            , Route.RecipeList
+                |> Route.replaceUrl (Session.navKey model.session)
+            )
+
+        Deleted (Err error) ->
             ( { model | recipe = Failed error }, Cmd.none )
 
 
@@ -182,6 +203,19 @@ getRecipe slug =
         , headers = [ Http.header "Accept" "application/vnd.pgrst.object+json" ]
         , body = Http.emptyBody
         , expect = Http.expectJson LoadedRecipe Recipe.fullDecoder
+        }
+
+
+delete : Slug -> Cmd Msg
+delete slug =
+    Http.request
+        { url = url slug ++ Slug.toString slug
+        , method = "DELETE"
+        , timeout = Nothing
+        , tracker = Nothing
+        , headers = []
+        , body = Http.emptyBody
+        , expect = Http.expectWhatever Deleted
         }
 
 
