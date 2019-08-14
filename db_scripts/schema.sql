@@ -129,7 +129,7 @@ AS $$
     WHERE id = new.id
       RETURNING id, created_at, updated_at INTO recipe_id, recipe_created_at, recipe_updated_at;
 
-    IF new.ingredients IS NULL OR new.ingredients::json = '{}'::text THEN
+    IF new.ingredients IS NULL OR new.ingredients::text = '{}'::text THEN
       RAISE EXCEPTION 'A recipe must have ingredients!';
     END IF;
 
