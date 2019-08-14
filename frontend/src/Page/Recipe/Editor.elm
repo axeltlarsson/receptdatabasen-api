@@ -49,7 +49,7 @@ type alias Form =
     { title : String
     , description : String
     , instructions : String
-    , quantity : Int
+    , portions : Int
     , tags : Set String
     , newTagInput : String
     , newGroupInput : String
@@ -73,7 +73,7 @@ initNew session =
                 { title = ""
                 , description = ""
                 , instructions = ""
-                , quantity = 1
+                , portions = 1
                 , tags = Set.empty
                 , newTagInput = ""
                 , newGroupInput = ""
@@ -147,7 +147,7 @@ viewForm fields =
     form [ onSubmit ClickedSave ]
         [ viewTitleInput fields
         , viewDescriptionInput fields
-        , viewQuantityInput fields
+        , viewPortionsInput fields
         , viewTagsInput fields
         , viewIngredientsInput fields
         , viewInstructionsInput fields
@@ -296,16 +296,16 @@ viewTitleInput fields =
         ]
 
 
-viewQuantityInput : Form -> Html Msg
-viewQuantityInput fields =
-    div [ class "quantity" ]
-        [ label [ for "quantity-input" ] [ text "Enter quantity" ]
+viewPortionsInput : Form -> Html Msg
+viewPortionsInput fields =
+    div [ class "portions" ]
+        [ label [ for "portions-input" ] [ text "Enter portions" ]
         , input
-            [ id "quantity"
-            , placeholder "Quantity"
+            [ id "portions"
+            , placeholder "Portioner"
             , type_ "number"
-            , onInput ChangedQuantity
-            , value (String.fromInt fields.quantity)
+            , onInput ChangedPortions
+            , value (String.fromInt fields.portions)
             , min "1"
             ]
             []
@@ -345,7 +345,7 @@ type Msg
     | ChangedTitle String
     | ChangedDescription String
     | ChangedInstructions String
-    | ChangedQuantity String
+    | ChangedPortions String
       -- Multiple inputs for each type of field - we need an index to determine which field in the model to update
     | ChangedTag TagIndex String
     | PressedEnterTag
@@ -376,12 +376,12 @@ update msg model =
         ChangedInstructions instructions ->
             updateForm (\form -> { form | instructions = instructions }) model
 
-        ChangedQuantity quantity ->
+        ChangedPortions portions ->
             let
-                quantityInt =
-                    Maybe.withDefault 0 <| String.toInt quantity
+                portionsInt =
+                    Maybe.withDefault 0 <| String.toInt portions
             in
-            updateForm (\form -> { form | quantity = quantityInt }) model
+            updateForm (\form -> { form | portions = portionsInt }) model
 
         ChangedTag CurrentTag tag ->
             updateForm (\form -> { form | newTagInput = tag }) model
@@ -463,7 +463,7 @@ update msg model =
                 { id, title } =
                     Recipe.metadata recipe
 
-                { description, instructions, tags, quantity, ingredients } =
+                { description, instructions, tags, portions, ingredients } =
                     Recipe.contents recipe
 
                 addCurrentInput ( groupName, ingredientList ) =
@@ -478,7 +478,7 @@ update msg model =
                         { title = Slug.toString title
                         , description = description
                         , instructions = instructions
-                        , quantity = quantity
+                        , portions = portions
                         , tags = Set.fromList tags
                         , newTagInput = ""
                         , newGroupInput = ""
@@ -585,8 +585,8 @@ editUrl slug =
 httpBodyFromForm : Form -> Http.Body
 httpBodyFromForm form =
     let
-        quantityString =
-            String.fromInt form.quantity
+        portionsString =
+            String.fromInt form.portions
 
         ingredientTuple ( groupName, current, ingredients ) =
             -- TODO: add current to ingredients but filter out empty ingredients
@@ -602,7 +602,7 @@ httpBodyFromForm form =
                 [ ( "title", Encode.string form.title )
                 , ( "description", Encode.string form.description )
                 , ( "instructions", Encode.string form.instructions )
-                , ( "quantity", Encode.string quantityString )
+                , ( "portions", Encode.string portionsString )
                 , ( "tags", Encode.set Encode.string form.tags )
                 , ( "ingredients", Encode.dict identity (Encode.list Encode.string) ingredientDict )
                 ]

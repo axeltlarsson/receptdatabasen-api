@@ -111,7 +111,9 @@ update msg model =
 
 url : String
 url =
-    Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] []
+    Url.Builder.crossOrigin "http://localhost:3000"
+        [ "recipes" ]
+        [ Url.Builder.string "select" "id,title,created_at,updated_at" ]
 
 
 getRecipes : Cmd Msg

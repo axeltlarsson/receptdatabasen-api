@@ -2,11 +2,11 @@ CREATE SCHEMA data;
 
 CREATE TABLE data.recipes(
   id            SERIAL PRIMARY KEY,
-  title         TEXT NOT NULL UNIQUE CHECK (length(title) >= 3),
-  description   TEXT,
-  instructions  TEXT NOT NULL CHECK (length(instructions) >= 5),
+  title         TEXT NOT NULL UNIQUE CHECK (length(title) >= 3 AND length(title) < 512),
+  description   TEXT CHECK (description = NULL OR length(description) < 500),
+  instructions  TEXT NOT NULL CHECK (length(instructions) >= 5 AND length(instructions) <= 4000),
   tags          TEXT[] DEFAULT '{}',
-  quantity      INTEGER CHECK (quantity > 0),
+  portions      INTEGER CHECK (portions > 0 and portions <= 100),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -79,8 +79,8 @@ AS $$
 
   BEGIN
     -- Insert the recipe
-    INSERT INTO data.recipes (title, description, instructions, tags, quantity)
-            VALUES (new.title, new.description, new.instructions, new.tags, new.quantity)
+    INSERT INTO data.recipes (title, description, instructions, tags, portions)
+            VALUES (new.title, new.description, new.instructions, new.tags, new.portions)
               RETURNING id, created_at, updated_at INTO recipe_id, recipe_created_at, recipe_updated_at;
 
     IF new.ingredients IS NULL OR new.ingredients::text = '{}'::text THEN
@@ -125,7 +125,7 @@ AS $$
     -- update the recipe
     UPDATE data.recipes
     SET title = new.title, description = new.description, instructions = new.instructions,
-        tags = new.tags, quantity = new.quantity
+        tags = new.tags, portions = new.portions
     WHERE id = new.id
       RETURNING id, created_at, updated_at INTO recipe_id, recipe_created_at, recipe_updated_at;
 

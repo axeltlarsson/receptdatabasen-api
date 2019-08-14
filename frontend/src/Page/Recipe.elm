@@ -78,17 +78,17 @@ viewRecipe recipe =
         { title, id, createdAt } =
             Recipe.metadata recipe
 
-        { description, quantity, ingredients, instructions } =
+        { description, portions, ingredients, instructions } =
             Recipe.contents recipe
 
-        quantityStr =
-            String.fromInt quantity
+        portionsStr =
+            String.fromInt portions
     in
     div []
         [ h1 [] [ text (Slug.toString title) ]
         , p [] [ text <| String.concat [ "Recipe id: ", String.fromInt id ] ]
         , p [] [ text description ]
-        , p [] [ text <| String.concat [ "För ", quantityStr, " personer" ] ]
+        , p [] [ text <| String.concat [ portionsStr, " portioner" ] ]
         , h2 [] [ text "Ingredienser" ]
         , viewIngredientsDict ingredients
         , h2 [] [ text "Instruktioner" ]

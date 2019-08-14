@@ -43,7 +43,7 @@ type alias Contents =
     { description : String
     , instructions : String
     , tags : List String
-    , quantity : Int
+    , portions : Int
     , ingredients : Dict String (List String)
     }
 
@@ -93,7 +93,7 @@ xDecoder =
         (field "description" string)
         (field "instructions" string)
         (field "tags" (list string))
-        (field "quantity" int)
+        (field "portions" int)
         (field "ingredients" (dict (list string)))
 
 
