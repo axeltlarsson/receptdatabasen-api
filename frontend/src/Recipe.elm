@@ -1,4 +1,4 @@
-module Recipe exposing (Full, Metadata, Preview, Recipe(..), contents, fullDecoder, metadata, previewDecoder, slug)
+module Recipe exposing (Full, Metadata, Preview, Recipe(..), contents, fetch, fullDecoder, metadata, previewDecoder, slug)
 
 {- The interface to the Recipe data structure.
 
@@ -10,8 +10,11 @@ module Recipe exposing (Full, Metadata, Preview, Recipe(..), contents, fullDecod
 -}
 
 import Dict exposing (Dict)
+import Http exposing (Expect)
 import Json.Decode as Decoder exposing (Decoder, dict, field, index, int, list, map2, map8, maybe, string, value)
 import Recipe.Slug as Slug exposing (Slug)
+import Url
+import Url.Builder
 
 
 
@@ -107,3 +110,21 @@ fullDecoder =
     Decoder.map2 Recipe
         metadataDecoder
         contentsDecoder
+
+
+fetchUrl : String
+fetchUrl =
+    Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] [ Url.Builder.string "title" "eq." ]
+
+
+fetch : Slug -> (Result Http.Error (Recipe Full) -> msg) -> Cmd msg
+fetch recipeSlug toMsg =
+    Http.request
+        { url = fetchUrl ++ Slug.toString recipeSlug
+        , method = "GET"
+        , timeout = Nothing
+        , tracker = Nothing
+        , headers = [ Http.header "Accept" "application/vnd.pgrst.object+json" ]
+        , body = Http.emptyBody
+        , expect = Http.expectJson toMsg fullDecoder
+        }

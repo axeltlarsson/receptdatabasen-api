@@ -9,13 +9,12 @@ import Html.Events exposing (keyCode, onInput, onSubmit, preventDefaultOn)
 import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
-import Recipe exposing (Full, Recipe, fullDecoder)
+import Recipe exposing (Full, Recipe, fetch, fullDecoder)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
 import Session exposing (Session)
 import Set exposing (Set)
 import Task
-import Url
 import Url.Builder
 
 
@@ -42,7 +41,7 @@ type Status
 
 type Problem
     = InvalidEntry ValidatedField String
-    | ServerError String
+    | ServerProblem String
 
 
 type alias Form =
@@ -89,26 +88,8 @@ initEdit session slug =
     ( { session = session
       , status = Loading slug
       }
-    , fetchRecipe slug
+    , Recipe.fetch slug (CompletedRecipeLoad slug)
     )
-
-
-fetchUrl : Slug -> String
-fetchUrl slug =
-    Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] [ Url.Builder.string "title" "eq." ]
-
-
-fetchRecipe : Slug -> Cmd Msg
-fetchRecipe slug =
-    Http.request
-        { url = fetchUrl slug ++ Slug.toString slug
-        , method = "GET"
-        , timeout = Nothing
-        , tracker = Nothing
-        , headers = [ Http.header "Accept" "application/vnd.pgrst.object+json" ]
-        , body = Http.emptyBody
-        , expect = Http.expectJson CompletedRecipeLoad Recipe.fullDecoder
-        }
 
 
 
@@ -127,7 +108,7 @@ view model =
             Creating form ->
                 viewForm form
 
-            -- Editing an exisiting recipe
+            -- Editing an existing recipe
             Loading slug ->
                 text "Loading"
 
@@ -154,6 +135,66 @@ viewForm fields =
         , button []
             [ text "Save" ]
         ]
+
+
+viewTitleInput : Form -> Html Msg
+viewTitleInput fields =
+    div [ class "title" ]
+        [ input
+            [ placeholder "Recipe Title"
+            , onInput ChangedTitle
+            , value fields.title
+            ]
+            []
+        ]
+
+
+viewDescriptionInput : Form -> Html Msg
+viewDescriptionInput fields =
+    div [ class "description" ]
+        [ textarea
+            [ placeholder "Description"
+            , onInput ChangedDescription
+            , value fields.description
+            ]
+            []
+        ]
+
+
+viewPortionsInput : Form -> Html Msg
+viewPortionsInput fields =
+    div [ class "portions" ]
+        [ label [ for "portions-input" ] [ text "Enter portions" ]
+        , input
+            [ id "portions"
+            , placeholder "Portioner"
+            , type_ "number"
+            , onInput ChangedPortions
+            , value (String.fromInt fields.portions)
+            , min "1"
+            ]
+            []
+        ]
+
+
+viewTagsInput : Form -> Html Msg
+viewTagsInput fields =
+    div [ class "tags" ]
+        [ input
+            [ placeholder "Tags"
+            , onEnter PressedEnterTag
+            , onInput (ChangedTag CurrentTag)
+            , value fields.newTagInput
+            ]
+            []
+        , ul []
+            (List.map viewTag <| Set.toList fields.tags)
+        ]
+
+
+viewTag : String -> Html Msg
+viewTag tag =
+    li [] [ text tag ]
 
 
 viewIngredientsInput : Form -> Html Msg
@@ -233,25 +274,10 @@ viewProblem problem =
                 InvalidEntry _ message ->
                     message
 
-                ServerError message ->
+                ServerProblem message ->
                     message
     in
     li [] [ code [ style "background-color" "red", style "color" "white" ] [ text errorMessage ] ]
-
-
-viewTagsInput : Form -> Html Msg
-viewTagsInput fields =
-    div [ class "tags" ]
-        [ input
-            [ placeholder "Tags"
-            , onEnter PressedEnterTag
-            , onInput (ChangedTag CurrentTag)
-            , value fields.newTagInput
-            ]
-            []
-        , ul []
-            (List.map viewTag <| Set.toList fields.tags)
-        ]
 
 
 onEnter : Msg -> Attribute Msg
@@ -267,57 +293,8 @@ onEnter msg =
     preventDefaultOn "keydown" (Decode.andThen isEnter keyCode)
 
 
-viewTag : String -> Html Msg
-viewTag tag =
-    li [] [ text tag ]
-
-
-viewDescriptionInput : Form -> Html Msg
-viewDescriptionInput fields =
-    div [ class "description" ]
-        [ textarea
-            [ placeholder "Description"
-            , onInput ChangedDescription
-            , value fields.description
-            ]
-            []
-        ]
-
-
-viewTitleInput : Form -> Html Msg
-viewTitleInput fields =
-    div [ class "title" ]
-        [ input
-            [ placeholder "Recipe Title"
-            , onInput ChangedTitle
-            , value fields.title
-            ]
-            []
-        ]
-
-
-viewPortionsInput : Form -> Html Msg
-viewPortionsInput fields =
-    div [ class "portions" ]
-        [ label [ for "portions-input" ] [ text "Enter portions" ]
-        , input
-            [ id "portions"
-            , placeholder "Portioner"
-            , type_ "number"
-            , onInput ChangedPortions
-            , value (String.fromInt fields.portions)
-            , min "1"
-            ]
-            []
-        ]
-
-
 
 -- UPDATE
-
-
-type alias Ingredient =
-    String
 
 
 type IngredientIndex
@@ -328,10 +305,6 @@ type IngredientIndex
 type GroupIndex
     = GroupIndex Int
     | NewGroupInput
-
-
-
--- A tag index is either current input or an existing one using int as the index
 
 
 type TagIndex
@@ -349,14 +322,14 @@ type Msg
       -- Multiple inputs for each type of field - we need an index to determine which field in the model to update
     | ChangedTag TagIndex String
     | PressedEnterTag
-    | ChangedIngredient Int IngredientIndex Ingredient
+    | ChangedIngredient Int IngredientIndex String
     | PressedEnterIngredient Int
     | ChangedGroup GroupIndex String
     | PressedEnterGroup
       -- Msg:s from the server
-    | CompletedCreate (Result MyError (Recipe Full))
-    | CompletedRecipeLoad (Result Http.Error (Recipe Full))
-    | CompletedEdit (Result Http.Error (Recipe Full))
+    | CompletedCreate (Result ServerError (Recipe Full))
+    | CompletedRecipeLoad Slug (Result Http.Error (Recipe Full))
+    | CompletedEdit (Result ServerError (Recipe Full))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -447,18 +420,7 @@ update msg model =
                 model
 
         -- Server events
-        CompletedCreate (Ok recipe) ->
-            ( model
-            , Route.Recipe (Recipe.slug recipe)
-                |> Route.replaceUrl (Session.navKey model.session)
-            )
-
-        CompletedCreate (Err error) ->
-            ( { model | status = savingError error model.status }
-            , Cmd.none
-            )
-
-        CompletedRecipeLoad (Ok recipe) ->
+        CompletedRecipeLoad _ (Ok recipe) ->
             let
                 { id, title } =
                     Recipe.metadata recipe
@@ -487,8 +449,19 @@ update msg model =
             in
             ( { model | status = status }, Cmd.none )
 
-        CompletedRecipeLoad (Err error) ->
-            Debug.todo "completedRecipeLoad isn't impleted"
+        CompletedRecipeLoad slug (Err error) ->
+            ( { model | status = LoadingFailed slug }, Cmd.none )
+
+        CompletedCreate (Ok recipe) ->
+            ( model
+            , Route.Recipe (Recipe.slug recipe)
+                |> Route.replaceUrl (Session.navKey model.session)
+            )
+
+        CompletedCreate (Err error) ->
+            ( { model | status = savingError error model.status }
+            , Cmd.none
+            )
 
         CompletedEdit (Ok recipe) ->
             ( model
@@ -497,7 +470,9 @@ update msg model =
             )
 
         CompletedEdit (Err error) ->
-            Debug.todo "CompletedEdit Error handling not yet implemented"
+            ( { model | status = savingError error model.status }
+            , Cmd.none
+            )
 
 
 type alias Group =
@@ -521,6 +496,32 @@ updateIngredients ingredients idx updateFun =
     Array.set idx updated ingredients
 
 
+updateForm : (Form -> Form) -> Model -> ( Model, Cmd Msg )
+updateForm transform model =
+    let
+        newModel =
+            case model.status of
+                Loading _ ->
+                    model
+
+                LoadingFailed _ ->
+                    model
+
+                Saving slug form ->
+                    { model | status = Saving slug (transform form) }
+
+                Editing slug errors form ->
+                    { model | status = Editing slug errors (transform form) }
+
+                EditingNew errors form ->
+                    { model | status = EditingNew errors (transform form) }
+
+                Creating form ->
+                    { model | status = Creating (transform form) }
+    in
+    ( newModel, Cmd.none )
+
+
 save : Status -> ( Status, Cmd Msg )
 save status =
     case status of
@@ -534,36 +535,39 @@ save status =
             ( status, Cmd.none )
 
 
-savingError : MyError -> Status -> Status
+savingError : ServerError -> Status -> Status
 savingError error status =
     let
         problems =
-            [ ServerError ("Error saving " ++ myErrorAsString error) ]
+            [ ServerProblem ("Error saving " ++ serverErrorToString error) ]
     in
     case status of
         Creating form ->
             EditingNew problems form
 
+        Saving slug form ->
+            Editing slug problems form
+
         _ ->
             status
 
 
-myErrorAsString : MyError -> String
-myErrorAsString error =
+serverErrorToString : ServerError -> String
+serverErrorToString error =
     case error of
-        MyError (Http.BadUrl str) ->
+        ServerError (Http.BadUrl str) ->
             "BadUrl" ++ str
 
-        MyError Http.NetworkError ->
+        ServerError Http.NetworkError ->
             "NetworkError"
 
-        MyErrorWithBody (Http.BadStatus status) body ->
+        ServerErrorWithBody (Http.BadStatus status) body ->
             "BadStatus " ++ String.fromInt status ++ body
 
-        MyError (Http.BadBody str) ->
+        ServerError (Http.BadBody str) ->
             "BadBody: " ++ str
 
-        MyError Http.Timeout ->
+        ServerError Http.Timeout ->
             "Timeout"
 
         _ ->
@@ -622,7 +626,7 @@ edit slug form =
             , Http.header "Accept" "application/vnd.pgrst.object+json"
             ]
         , body = httpBodyFromForm form
-        , expect = expectJson CompletedCreate Recipe.fullDecoder
+        , expect = expectJsonWithBody CompletedEdit Recipe.fullDecoder
         }
 
 
@@ -638,31 +642,31 @@ create form =
             , Http.header "Accept" "application/vnd.pgrst.object+json"
             ]
         , body = httpBodyFromForm form
-        , expect = expectJson CompletedCreate Recipe.fullDecoder
+        , expect = expectJsonWithBody CompletedCreate Recipe.fullDecoder
         }
 
 
-type MyError
-    = MyError Http.Error
-    | MyErrorWithBody Http.Error String
+type ServerError
+    = ServerError Http.Error
+    | ServerErrorWithBody Http.Error String
 
 
-expectJson : (Result MyError a -> Msg) -> Decoder a -> Expect Msg
-expectJson toMsg decoder =
+expectJsonWithBody : (Result ServerError a -> Msg) -> Decoder a -> Expect Msg
+expectJsonWithBody toMsg decoder =
     Http.expectStringResponse toMsg <|
         \response ->
             case response of
                 Http.BadUrl_ urll ->
-                    Err (MyError (Http.BadUrl urll))
+                    Err (ServerError (Http.BadUrl urll))
 
                 Http.Timeout_ ->
-                    Err (MyError Http.Timeout)
+                    Err (ServerError Http.Timeout)
 
                 Http.NetworkError_ ->
-                    Err (MyError Http.NetworkError)
+                    Err (ServerError Http.NetworkError)
 
                 Http.BadStatus_ metadata body ->
-                    Err (MyErrorWithBody (Http.BadStatus metadata.statusCode) body)
+                    Err (ServerErrorWithBody (Http.BadStatus metadata.statusCode) body)
 
                 Http.GoodStatus_ metadata body ->
                     case Decode.decodeString decoder body of
@@ -670,34 +674,7 @@ expectJson toMsg decoder =
                             Ok value
 
                         Err err ->
-                            -- TODO: Http.BadBody is quite misleading - the decoding failed, not the request...
-                            Err (MyError (Http.BadBody (Decode.errorToString err)))
-
-
-updateForm : (Form -> Form) -> Model -> ( Model, Cmd Msg )
-updateForm transform model =
-    let
-        newModel =
-            case model.status of
-                Loading _ ->
-                    model
-
-                LoadingFailed _ ->
-                    model
-
-                Saving slug form ->
-                    { model | status = Saving slug (transform form) }
-
-                Editing slug errors form ->
-                    { model | status = Editing slug errors (transform form) }
-
-                EditingNew errors form ->
-                    { model | status = EditingNew errors (transform form) }
-
-                Creating form ->
-                    { model | status = Creating (transform form) }
-    in
-    ( newModel, Cmd.none )
+                            Err (ServerError (Http.BadBody (Decode.errorToString err)))
 
 
 type TrimmedForm
