@@ -32,11 +32,27 @@ type Status recipe
 
 init : Session -> Slug -> ( Model, Cmd Msg )
 init session slug =
-    ( { recipe = Loading
-      , session = session
-      }
-    , Recipe.fetch slug LoadedRecipe
-    )
+    let
+        maybeRecipe =
+            Session.recipe session
+
+        newSession =
+            Session.Session (Session.navKey session)
+    in
+    case maybeRecipe of
+        Just recipe ->
+            ( { recipe = Loaded recipe
+              , session = newSession
+              }
+            , Cmd.none
+            )
+
+        Nothing ->
+            ( { recipe = Loading
+              , session = newSession
+              }
+            , Recipe.fetch slug LoadedRecipe
+            )
 
 
 

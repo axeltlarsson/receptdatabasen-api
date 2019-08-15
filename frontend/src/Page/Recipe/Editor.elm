@@ -12,7 +12,7 @@ import Json.Encode as Encode
 import Recipe exposing (Full, Recipe, fetch, fullDecoder)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
-import Session exposing (Session)
+import Session exposing (Session(..))
 import Set exposing (Set)
 import Task
 import Url.Builder
@@ -453,7 +453,7 @@ update msg model =
             ( { model | status = LoadingFailed slug }, Cmd.none )
 
         CompletedCreate (Ok recipe) ->
-            ( model
+            ( { model | session = SessionWithRecipe recipe (Session.navKey model.session) }
             , Route.Recipe (Recipe.slug recipe)
                 |> Route.replaceUrl (Session.navKey model.session)
             )
@@ -464,7 +464,7 @@ update msg model =
             )
 
         CompletedEdit (Ok recipe) ->
-            ( model
+            ( { model | session = SessionWithRecipe recipe (Session.navKey model.session) }
             , Route.Recipe (Recipe.slug recipe)
                 |> Route.replaceUrl (Session.navKey model.session)
             )
