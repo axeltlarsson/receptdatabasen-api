@@ -98,7 +98,7 @@ initEdit session slug =
 
 view : Model -> { title : String, content : Html Msg }
 view model =
-    { title = "New Recipe"
+    { title = "Skapa nytt recept"
     , content =
         case model.status of
             -- Creating a new recipe
@@ -110,10 +110,10 @@ view model =
 
             -- Editing an existing recipe
             Loading slug ->
-                text "Loading"
+                text "Laddar..."
 
             LoadingFailed slug ->
-                text ("Failed to load" ++ Slug.toString slug)
+                text ("Kunde ej ladda in recept: " ++ Slug.toString slug)
 
             Editing slug probs form ->
                 div [] [ viewForm form, viewProblems probs ]
@@ -133,7 +133,7 @@ viewForm fields =
         , viewIngredientsInput fields
         , viewInstructionsInput fields
         , button []
-            [ text "Save" ]
+            [ text "Spara" ]
         ]
 
 
@@ -141,7 +141,7 @@ viewTitleInput : Form -> Html Msg
 viewTitleInput fields =
     div [ class "title" ]
         [ input
-            [ placeholder "Recipe Title"
+            [ placeholder "Namen på receptet..."
             , onInput ChangedTitle
             , value fields.title
             ]
@@ -153,7 +153,7 @@ viewDescriptionInput : Form -> Html Msg
 viewDescriptionInput fields =
     div [ class "description" ]
         [ textarea
-            [ placeholder "Description"
+            [ placeholder "Beskrivning..."
             , onInput ChangedDescription
             , value fields.description
             ]
@@ -164,7 +164,7 @@ viewDescriptionInput fields =
 viewPortionsInput : Form -> Html Msg
 viewPortionsInput fields =
     div [ class "portions" ]
-        [ label [ for "portions-input" ] [ text "Enter portions" ]
+        [ label [ for "portions-input" ] [ text "Ange antal portioner" ]
         , input
             [ id "portions"
             , placeholder "Portioner"
@@ -181,7 +181,7 @@ viewTagsInput : Form -> Html Msg
 viewTagsInput fields =
     div [ class "tags" ]
         [ input
-            [ placeholder "Tags"
+            [ placeholder "Ny tagg..."
             , onEnter PressedEnterTag
             , onInput (ChangedTag CurrentTag)
             , value fields.newTagInput
@@ -200,10 +200,10 @@ viewTag tag =
 viewIngredientsInput : Form -> Html Msg
 viewIngredientsInput fields =
     div [ class "ingredients" ]
-        [ h2 [] [ text "Ingredients" ]
+        [ h2 [] [ text "Ingredienser" ]
         , div [] (List.map viewIngredientGroupInput <| Array.toIndexedList fields.ingredients)
         , input
-            [ placeholder "Ny underrubrik"
+            [ placeholder "Ny underrubrik..."
             , onEnter PressedEnterGroup
             , onInput (ChangedGroup NewGroupInput)
             , value fields.newGroupInput
@@ -251,9 +251,9 @@ viewIngredient ( groupIdx, ( idx, ingredient ) ) =
 viewInstructionsInput : Form -> Html Msg
 viewInstructionsInput fields =
     div [ class "instructions" ]
-        [ h3 [] [ text "Instructions" ]
+        [ h3 [] [ text "Instruktioner" ]
         , textarea
-            [ placeholder "Instruktioner"
+            [ placeholder "Instruktioner..."
             , onInput ChangedInstructions
             , value fields.instructions
             ]
