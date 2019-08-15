@@ -35,7 +35,7 @@ init session slug =
     ( { recipe = Loading
       , session = session
       }
-    , getRecipe slug
+    , Recipe.fetch slug LoadedRecipe
     )
 
 
@@ -47,19 +47,19 @@ view : Model -> { title : String, content : Html Msg }
 view model =
     case model.recipe of
         Loading ->
-            { title = "Loading recipe"
+            { title = "Laddar..."
             , content = text ""
             }
 
         Failed err ->
-            { title = "Failed to load"
+            { title = "Kunde ej hämta recept"
             , content =
                 viewError err
             }
 
         NotFound ->
-            { title = "Not found"
-            , content = text "Not found"
+            { title = "404"
+            , content = text "Kunde ej hitta receptet"
             }
 
         Loaded recipe ->
@@ -86,7 +86,7 @@ viewRecipe recipe =
     in
     div []
         [ h1 [] [ text (Slug.toString title) ]
-        , p [] [ text <| String.concat [ "Recipe id: ", String.fromInt id ] ]
+        , p [] [ text <| String.concat [ "Recept-id: ", String.fromInt id ] ]
         , p [] [ text description ]
         , p [] [ text <| String.concat [ portionsStr, " portioner" ] ]
         , h2 [] [ text "Ingredienser" ]
@@ -95,7 +95,7 @@ viewRecipe recipe =
         , p [] [ Markdown.toHtmlWith mdOptions [ class "ingredients" ] instructions ]
         , p [] [ text <| String.concat [ "Skapad: ", createdAt ] ]
         , a [ Route.href (Route.EditRecipe (Recipe.slug recipe)) ] [ text "Ändra recept" ]
-        , button [ onClick ClickedDelete ] [ text "Delete" ]
+        , button [ onClick ClickedDelete ] [ text "Radera" ]
         ]
 
 
@@ -169,7 +169,7 @@ update msg model =
         ClickedDelete ->
             case model.recipe of
                 Loaded recipe ->
-                    ( model, delete (Recipe.slug recipe) )
+                    ( model, Recipe.delete (Recipe.slug recipe) Deleted )
 
                 _ ->
                     ( model, Cmd.none )
@@ -186,40 +186,6 @@ update msg model =
 
 
 -- HTTP
-
-
-url : Slug -> String
-url slug =
-    Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] [ Url.Builder.string "title" "eq." ]
-
-
-getRecipe : Slug -> Cmd Msg
-getRecipe slug =
-    Http.request
-        { url = url slug ++ Slug.toString slug
-        , method = "GET"
-        , timeout = Nothing
-        , tracker = Nothing
-        , headers = [ Http.header "Accept" "application/vnd.pgrst.object+json" ]
-        , body = Http.emptyBody
-        , expect = Http.expectJson LoadedRecipe Recipe.fullDecoder
-        }
-
-
-delete : Slug -> Cmd Msg
-delete slug =
-    Http.request
-        { url = url slug ++ Slug.toString slug
-        , method = "DELETE"
-        , timeout = Nothing
-        , tracker = Nothing
-        , headers = []
-        , body = Http.emptyBody
-        , expect = Http.expectWhatever Deleted
-        }
-
-
-
 -- EXPORT
 
 

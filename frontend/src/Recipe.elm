@@ -1,4 +1,4 @@
-module Recipe exposing (Full, Metadata, Preview, Recipe(..), contents, fetch, fullDecoder, metadata, previewDecoder, slug)
+module Recipe exposing (Full, Metadata, Preview, Recipe(..), contents, delete, fetch, fullDecoder, metadata, previewDecoder, slug)
 
 {- The interface to the Recipe data structure.
 
@@ -112,19 +112,36 @@ fullDecoder =
         contentsDecoder
 
 
-fetchUrl : String
-fetchUrl =
+
+-- HTTP
+
+
+url : String
+url =
     Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] [ Url.Builder.string "title" "eq." ]
 
 
 fetch : Slug -> (Result Http.Error (Recipe Full) -> msg) -> Cmd msg
 fetch recipeSlug toMsg =
     Http.request
-        { url = fetchUrl ++ Slug.toString recipeSlug
+        { url = url ++ Slug.toString recipeSlug
         , method = "GET"
         , timeout = Nothing
         , tracker = Nothing
         , headers = [ Http.header "Accept" "application/vnd.pgrst.object+json" ]
         , body = Http.emptyBody
         , expect = Http.expectJson toMsg fullDecoder
+        }
+
+
+delete : Slug -> (Result Http.Error () -> msg) -> Cmd msg
+delete recipeSlug toMsg =
+    Http.request
+        { url = url ++ Slug.toString recipeSlug
+        , method = "DELETE"
+        , timeout = Nothing
+        , tracker = Nothing
+        , headers = []
+        , body = Http.emptyBody
+        , expect = Http.expectWhatever toMsg
         }
