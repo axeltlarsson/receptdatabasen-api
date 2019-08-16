@@ -266,7 +266,16 @@ viewInstructionsInput fields problems =
 
 viewProblems : List Problem -> Html Msg
 viewProblems problems =
-    ul [ class "error-messages" ] (List.map viewProblem problems)
+    let
+        serverProblem problem =
+            case problem of
+                ServerProblem _ ->
+                    True
+
+                _ ->
+                    False
+    in
+    ul [ class "error-messages" ] (List.map viewProblem <| List.filter serverProblem problems)
 
 
 
