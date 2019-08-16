@@ -16,6 +16,7 @@ import Session exposing (Session(..))
 import Set exposing (Set)
 import Task
 import Url.Builder
+import Validate exposing (Valid, Validator, ifBlank, ifNotInt)
 
 
 
@@ -103,10 +104,10 @@ view model =
         case model.status of
             -- Creating a new recipe
             EditingNew probs form ->
-                div [] [ viewForm form, viewProblems probs ]
+                div [] [ viewForm form probs, viewProblems probs ]
 
             Creating form ->
-                viewForm form
+                viewForm form []
 
             -- Editing an existing recipe
             Loading slug ->
@@ -116,29 +117,29 @@ view model =
                 text ("Kunde ej ladda in recept: " ++ Slug.toString slug)
 
             Editing slug probs form ->
-                div [] [ viewForm form, viewProblems probs ]
+                div [] [ viewForm form probs, viewProblems probs ]
 
             Saving slug form ->
-                viewForm form
+                viewForm form []
     }
 
 
-viewForm : Form -> Html Msg
-viewForm fields =
+viewForm : Form -> List Problem -> Html Msg
+viewForm fields problems =
     form [ onSubmit ClickedSave ]
-        [ viewTitleInput fields
+        [ viewTitleInput fields problems
         , viewDescriptionInput fields
         , viewPortionsInput fields
         , viewTagsInput fields
         , viewIngredientsInput fields
-        , viewInstructionsInput fields
+        , viewInstructionsInput fields problems
         , button []
             [ text "Spara" ]
         ]
 
 
-viewTitleInput : Form -> Html Msg
-viewTitleInput fields =
+viewTitleInput : Form -> List Problem -> Html Msg
+viewTitleInput fields problems =
     div [ class "title" ]
         [ input
             [ placeholder "Namen på receptet..."
@@ -146,6 +147,7 @@ viewTitleInput fields =
             , value fields.title
             ]
             []
+        , viewFieldErrors Title problems
         ]
 
 
@@ -248,8 +250,8 @@ viewIngredient ( groupIdx, ( idx, ingredient ) ) =
         ]
 
 
-viewInstructionsInput : Form -> Html Msg
-viewInstructionsInput fields =
+viewInstructionsInput : Form -> List Problem -> Html Msg
+viewInstructionsInput fields problems =
     div [ class "instructions" ]
         [ h3 [] [ text "Instruktioner" ]
         , textarea
@@ -258,12 +260,53 @@ viewInstructionsInput fields =
             , value fields.instructions
             ]
             []
+        , viewFieldErrors Instructions problems
         ]
 
 
 viewProblems : List Problem -> Html Msg
 viewProblems problems =
     ul [ class "error-messages" ] (List.map viewProblem problems)
+
+
+
+{--
+Filter list of problems to render only InvalidEntry for the given ValidatedField
+That way you can call this function next to the each field,
+e.g. `viewFieldErrors Title problems` next to the `title` input
+and, `viewFieldErrors Description problems` next to the `description` input and so on.
+--}
+
+
+viewFieldErrors : ValidatedField -> List Problem -> Html Msg
+viewFieldErrors field problems =
+    let
+        invalidEntry problem =
+            case problem of
+                InvalidEntry entry msg ->
+                    entry == field
+
+                ServerProblem msg ->
+                    False
+
+        invalidEntries =
+            List.filter invalidEntry problems
+
+        message problem =
+            case problem of
+                InvalidEntry entry msg ->
+                    msg
+
+                ServerProblem msg ->
+                    msg
+    in
+    div [ class "invalid-entry" ]
+        (List.map
+            (\problem ->
+                code [ style "background-color" "red", style "color" "white" ] [ text (message problem) ]
+            )
+            invalidEntries
+        )
 
 
 viewProblem : Problem -> Html msg
@@ -526,10 +569,20 @@ save : Status -> ( Status, Cmd Msg )
 save status =
     case status of
         EditingNew _ form ->
-            ( Creating form, create form )
+            case Validate.validate formValidator (trimFields form) of
+                Ok validForm ->
+                    ( Creating form, create (Validate.fromValid validForm) )
+
+                Err problems ->
+                    ( EditingNew problems form, Cmd.none )
 
         Editing slug _ form ->
-            ( Saving slug form, edit slug form )
+            case Validate.validate formValidator (trimFields form) of
+                Ok validForm ->
+                    ( Saving slug form, edit slug (Validate.fromValid validForm) )
+
+                Err problems ->
+                    ( Editing slug problems form, Cmd.none )
 
         _ ->
             ( status, Cmd.none )
@@ -586,8 +639,8 @@ editUrl slug =
         [ Url.Builder.string "title" (String.concat [ "eq.", Slug.toString slug ]) ]
 
 
-httpBodyFromForm : Form -> Http.Body
-httpBodyFromForm form =
+httpBodyFromForm : TrimmedForm -> Http.Body
+httpBodyFromForm (Trimmed form) =
     let
         portionsString =
             String.fromInt form.portions
@@ -614,7 +667,7 @@ httpBodyFromForm form =
     Http.jsonBody recipe
 
 
-edit : Slug -> Form -> Cmd Msg
+edit : Slug -> TrimmedForm -> Cmd Msg
 edit slug form =
     Http.request
         { url = editUrl slug
@@ -630,7 +683,7 @@ edit slug form =
         }
 
 
-create : Form -> Cmd Msg
+create : TrimmedForm -> Cmd Msg
 create form =
     Http.request
         { url = createUrl
@@ -681,9 +734,36 @@ type TrimmedForm
     = Trimmed Form
 
 
+trimFields : Form -> TrimmedForm
+trimFields form =
+    Trimmed
+        { title = String.trim form.title
+        , description = String.trim form.description
+        , instructions = String.trim form.instructions
+        , portions = form.portions
+        , tags = Set.map String.trim form.tags
+        , newTagInput = form.newTagInput
+        , newGroupInput = form.newGroupInput
+        , ingredients = form.ingredients
+        }
+
+
 type ValidatedField
     = Title
-    | Body
+    | Instructions
+
+
+formValidator : Validator Problem TrimmedForm
+formValidator =
+    Validate.all
+        [ ifBlank (\(Trimmed f) -> f.title) (invalid Title "Titeln får ej vara tom")
+        , ifBlank (\(Trimmed f) -> f.instructions) (invalid Instructions "Instruktioner måste anges")
+        ]
+
+
+invalid : ValidatedField -> String -> Problem
+invalid field problem =
+    InvalidEntry field problem
 
 
 toSession : Model -> Session
