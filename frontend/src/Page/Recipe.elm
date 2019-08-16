@@ -34,7 +34,7 @@ init : Session -> Slug -> ( Model, Cmd Msg )
 init session slug =
     let
         maybeRecipe =
-            Session.recipe session
+            Maybe.andThen (matchingSlug slug) (Session.recipe session)
 
         newSession =
             Session.Session (Session.navKey session)
@@ -53,6 +53,20 @@ init session slug =
               }
             , Recipe.fetch slug LoadedRecipe
             )
+
+
+matchingSlug : Slug -> Recipe Full -> Maybe (Recipe Full)
+matchingSlug slug recipe =
+    let
+        slugDecoded =
+            Maybe.withDefault "" <| Url.percentDecode <| Slug.toString slug
+    in
+    if Slug.toString (Recipe.slug recipe) == slugDecoded then
+        Just
+            recipe
+
+    else
+        Nothing
 
 
 
