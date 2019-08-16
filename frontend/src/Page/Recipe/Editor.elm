@@ -201,7 +201,7 @@ form =
                     }
                 }
     in
-    Form.succeed (\title description instructions portions -> RecipeDetails title description instructions portions)
+    Form.succeed RecipeDetails
         |> Form.append titleField
         |> Form.append descriptionField
         |> Form.append instructionsField
@@ -259,7 +259,6 @@ update msg model =
             ( { model | status = updateStatus model.status }, Cmd.none )
 
         Save recipeDetails ->
-            -- TODO: pass in recipeDetails to save
             model.status
                 |> save recipeDetails
                 |> Tuple.mapFirst (\status -> { model | status = status })
