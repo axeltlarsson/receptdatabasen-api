@@ -11,6 +11,7 @@ import Html.Events exposing (keyCode, onInput, onSubmit, preventDefaultOn)
 import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
+import Page.Recipe.Editor.TagForm as TagForm
 import Recipe exposing (Full, Recipe, fetch, fullDecoder)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
@@ -50,27 +51,17 @@ type alias Values =
     , description : String
     , instructions : String
     , portions : String
-
-    -- , tags : Set String
-    -- , newTagInput : String
-    -- , newGroupInput : String
-    -- , ingredients : Array ( GroupName, NewIngredientInput, Array String )
+    , tags : List TagForm.Values
     }
 
 
 type alias RecipeDetails =
     { title : String
-    , description : String -- Maybe String ?
+    , description : Maybe String -- Maybe String ?
     , instructions : String
     , portions : String
+    , tags : List TagForm.Tag
     }
-
-
-
--- type alias NewIngredientInput =
--- String
--- type alias GroupName =
--- String
 
 
 initNew : Session -> ( Model, Cmd msg )
@@ -82,11 +73,7 @@ initNew session =
                  , description = ""
                  , instructions = ""
                  , portions = "1"
-
-                 -- , tags = Set.empty
-                 -- , newTagInput = ""
-                 -- , newGroupInput = ""
-                 -- , ingredients = Array.fromList [ ( "Ingredienser", "", Array.empty ) ]
+                 , tags = [ TagForm.blank ]
                  }
                     |> Form.View.idle
                 )
@@ -141,7 +128,7 @@ viewForm model =
         { onChange = FormChanged
         , action = "Spara"
         , loading = "Sparar..."
-        , validation = Form.View.ValidateOnBlur
+        , validation = Form.View.ValidateOnSubmit
         }
         (Form.map Save form)
         model
@@ -203,9 +190,23 @@ form =
     in
     Form.succeed RecipeDetails
         |> Form.append titleField
-        |> Form.append descriptionField
+        |> Form.append (Form.optional descriptionField)
         |> Form.append instructionsField
         |> Form.append portionsField
+        |> Form.append
+            (Form.list
+                { default =
+                    TagForm.blank
+                , value = .tags
+                , update = \value values -> { values | tags = value }
+                , attributes =
+                    { label = "Taggar"
+                    , add = Just "Lägg till tagg"
+                    , delete = Just "Radera"
+                    }
+                }
+                TagForm.form
+            )
 
 
 onEnter : Msg -> Attribute Msg
@@ -256,7 +257,8 @@ update msg model =
                         _ ->
                             status
             in
-            ( { model | status = updateStatus model.status }, Cmd.none )
+            Debug.log (Debug.toString newFormModel)
+                ( { model | status = updateStatus model.status }, Cmd.none )
 
         Save recipeDetails ->
             model.status
@@ -284,8 +286,8 @@ update msg model =
                          , description = description
                          , instructions = instructions
                          , portions = String.fromInt portions
+                         , tags = List.map TagForm.Values tags
 
-                         -- , tags = Set.fromList tags
                          -- , newTagInput = ""
                          -- , newGroupInput = ""
                          -- , ingredients = ingredientsArray
@@ -399,7 +401,9 @@ httpBodyFromValues recipeDetails =
         recipe =
             Encode.object
                 [ ( "title", Encode.string recipeDetails.title )
-                , ( "description", Encode.string recipeDetails.description )
+
+                -- TODO: do note encode description at all if empty
+                , ( "description", Encode.string <| Maybe.withDefault "" recipeDetails.description )
                 , ( "instructions", Encode.string recipeDetails.instructions )
                 , ( "portions", Encode.string recipeDetails.portions )
 
