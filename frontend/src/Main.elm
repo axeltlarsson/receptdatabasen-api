@@ -10,6 +10,7 @@ import Page.NotFound
 import Page.Recipe as Recipe
 import Page.Recipe.Editor as Editor
 import Page.RecipeList as RecipeList
+import Page.Test as Test
 import Recipe.Slug as Slug exposing (Slug)
 import Route exposing (Route)
 import Session exposing (Session)
@@ -26,6 +27,7 @@ type Model
     | Redirect Session
     | NotFound Session
     | Editor (Maybe Slug) Editor.Model
+    | Test Test.Model
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -64,6 +66,9 @@ view model =
         Editor _ editor ->
             viewPage Page.Editor GotEditorMsg (Editor.view editor)
 
+        Test test ->
+            viewPage Page.Test GotTestMsg (Test.view test)
+
 
 viewLinks : Html msg
 viewLinks =
@@ -89,6 +94,7 @@ type Msg
     | GotRecipeMsg Recipe.Msg
     | GotRecipeListMsg RecipeList.Msg
     | GotEditorMsg Editor.Msg
+    | GotTestMsg Test.Msg
 
 
 toSession : Model -> Session
@@ -108,6 +114,9 @@ toSession page =
 
         Editor _ editor ->
             Editor.toSession editor
+
+        Test test ->
+            Test.toSession test
 
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -135,6 +144,10 @@ changeRouteTo maybeRoute model =
         Just (Route.EditRecipe slug) ->
             Editor.initEdit session slug
                 |> updateWith (Editor (Just slug)) GotEditorMsg model
+
+        Just Route.Test ->
+            Test.init session
+                |> updateWith Test GotTestMsg model
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -164,6 +177,10 @@ update msg model =
         ( GotEditorMsg subMsg, Editor slug editor ) ->
             Editor.update subMsg editor
                 |> updateWith (Editor slug) GotEditorMsg model
+
+        ( GotTestMsg subMsg, Test test ) ->
+            Test.update subMsg test
+                |> updateWith Test GotTestMsg model
 
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page
