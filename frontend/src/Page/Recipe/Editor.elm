@@ -142,7 +142,7 @@ viewTitleInput : Form -> List Problem -> Html Msg
 viewTitleInput fields problems =
     div [ class "title" ]
         [ input
-            [ placeholder "Namen på receptet..."
+            [ placeholder "Namn på receptet..."
             , onInput ChangedTitle
             , value fields.title
             ]
