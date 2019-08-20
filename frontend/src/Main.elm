@@ -131,23 +131,23 @@ changeRouteTo maybeRoute model =
 
         Just (Route.Recipe slug) ->
             Recipe.init session slug
-                |> updateWith Recipe GotRecipeMsg model
+                |> updateWith Recipe GotRecipeMsg
 
         Just Route.RecipeList ->
             RecipeList.init session
-                |> updateWith RecipeList GotRecipeListMsg model
+                |> updateWith RecipeList GotRecipeListMsg
 
         Just Route.NewRecipe ->
             Editor.initNew session
-                |> updateWith (Editor Nothing) GotEditorMsg model
+                |> updateWith (Editor Nothing) GotEditorMsg
 
         Just (Route.EditRecipe slug) ->
             Editor.initEdit session slug
-                |> updateWith (Editor (Just slug)) GotEditorMsg model
+                |> updateWith (Editor (Just slug)) GotEditorMsg
 
         Just Route.Test ->
             Test.init session
-                |> updateWith Test GotTestMsg model
+                |> updateWith Test GotTestMsg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -168,27 +168,31 @@ update msg model =
 
         ( GotRecipeMsg subMsg, Recipe recipe ) ->
             Recipe.update subMsg recipe
-                |> updateWith Recipe GotRecipeMsg model
+                |> updateWith Recipe GotRecipeMsg
 
         ( GotRecipeListMsg subMsg, RecipeList recipes ) ->
             RecipeList.update subMsg recipes
-                |> updateWith RecipeList GotRecipeListMsg model
+                |> updateWith RecipeList GotRecipeListMsg
 
         ( GotEditorMsg subMsg, Editor slug editor ) ->
             Editor.update subMsg editor
-                |> updateWith (Editor slug) GotEditorMsg model
+                |> updateWith (Editor slug) GotEditorMsg
 
         ( GotTestMsg subMsg, Test test ) ->
             Test.update subMsg test
-                |> updateWith Test GotTestMsg model
+                |> updateWith Test GotTestMsg
 
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page
             ( model, Cmd.none )
 
 
-updateWith : (subModel -> Model) -> (subMsg -> Msg) -> Model -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
-updateWith toModel toMsg model ( subModel, subCmd ) =
+updateWith :
+    (subModel -> Model)
+    -> (subMsg -> Msg)
+    -> ( subModel, Cmd subMsg )
+    -> ( Model, Cmd Msg )
+updateWith toModel toMsg ( subModel, subCmd ) =
     ( toModel subModel
     , Cmd.map toMsg subCmd
     )
