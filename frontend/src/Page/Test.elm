@@ -27,7 +27,11 @@ init session =
     Form.init |> updateWith (formToModel session) FormMsg
 
 
-updateWith : (subModel -> Model) -> (subMsg -> Msg) -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
+updateWith :
+    (subModel -> Model)
+    -> (subMsg -> Msg)
+    -> ( subModel, Cmd subMsg )
+    -> ( Model, Cmd Msg )
 updateWith toModel toMsg ( subModel, subCmd ) =
     ( toModel subModel
     , Cmd.map toMsg subCmd

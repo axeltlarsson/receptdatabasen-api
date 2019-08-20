@@ -14,8 +14,7 @@
             "elm/regex": "1.0.0",
             "elm/url": "1.0.0",
             "elm-explorations/markdown": "1.0.0",
-            "etaque/elm-form": "4.0.0",
-            "rtfeldman/elm-validate": "4.0.1"
+            "etaque/elm-form": "4.0.0"
         },
         "indirect": {
             "elm/bytes": "1.0.8",

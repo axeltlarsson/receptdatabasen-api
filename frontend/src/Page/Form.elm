@@ -1,5 +1,6 @@
-module Page.Form exposing (Model, Msg, init, update, view)
+module Page.Form exposing (Model, Msg, fromRecipe, init, update, view)
 
+import Dict
 import Form exposing (Form)
 import Form.Error exposing (ErrorValue(..))
 import Form.Field as Field exposing (Field)
@@ -9,6 +10,8 @@ import Html exposing (..)
 import Html.Attributes exposing (class, max, min, placeholder, value)
 import Html.Events exposing (keyCode, onClick, onInput, preventDefaultOn)
 import Json.Decode as Decode
+import Recipe
+import Recipe.Slug as Slug
 import Regex
 
 
@@ -16,7 +19,7 @@ import Regex
 -- MODEL
 
 
-type alias Recipe =
+type alias RecipeDetails =
     { title : String
     , description : Maybe String
     , portions : Int
@@ -36,7 +39,7 @@ type alias IngredientGroup =
 
 
 type alias RecipeForm =
-    Form () Recipe
+    Form () RecipeDetails
 
 
 type alias Model =
@@ -65,9 +68,41 @@ initialForm =
         validate
 
 
-validate : Validation () Recipe
+fromRecipe : Recipe.Recipe Recipe.Full -> RecipeForm
+fromRecipe recipe =
+    let
+        { id, title } =
+            Recipe.metadata recipe
+
+        { description, instructions, tags, portions, ingredients } =
+            Recipe.contents recipe
+    in
+    Form.initial
+        [ ( "title", Field.string <| Slug.toString title )
+        , ( "description", Field.string description )
+        , ( "portions", Field.string <| String.fromInt portions )
+        , ( "ingredients", Field.list <| Dict.foldl ingredientFields [] ingredients )
+        , ( "tags", Field.list <| List.map Field.string tags )
+
+        -- , ("newTagInput", Field.value Field.EmptyField)
+        ]
+        validate
+
+
+ingredientFields : String -> List String -> List Field.Field -> List Field.Field
+ingredientFields group ingredients groups =
+    Field.group
+        [ ( "group", Field.string group )
+        , ( "ingredients"
+          , Field.list <| List.map Field.string ingredients
+          )
+        ]
+        :: groups
+
+
+validate : Validation () RecipeDetails
 validate =
-    succeed Recipe
+    succeed RecipeDetails
         -- TODO: validate title uniqueness (async against server)
         |> andMap (field "title" (string |> andThen (minLength 3) |> andThen (maxLength 512)))
         -- TODO: maybe removes the error...
