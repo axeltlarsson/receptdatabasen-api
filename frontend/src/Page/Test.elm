@@ -15,18 +15,17 @@ import Session exposing (Session)
 
 
 -- MODEL
--- expected form output
 
 
 type alias RecipeForm =
     { title : String
     , description : Maybe String
     , portions : Int
-    , tags : List String
     , instructions : String
-    , newTagInput : String
     , ingredients : List IngredientGroup
     , newIngredientGroupInput : String
+    , tags : List String
+    , newTagInput : String
     }
 
 
@@ -64,10 +63,6 @@ init session =
     ( { session = session, form = initialForm }, Cmd.none )
 
 
-
--- setup form validation
-
-
 validate : Validation () RecipeForm
 validate =
     succeed RecipeForm
@@ -76,11 +71,12 @@ validate =
         -- TODO: maybe removes the error...
         |> andMap (field "description" (maybe (string |> andThen (maxLength 500))))
         |> andMap (field "portions" (int |> andThen (minInt 1) |> andThen (maxInt 100)))
-        |> andMap (field "tags" (list string))
+        -- TODO: check non-empty tags/ingredients and trimming and such
         |> andMap (field "instructions" (string |> andThen (minLength 5) |> andThen (maxLength 4000)))
-        |> andMap (field "newTagInput" string)
         |> andMap (field "ingredients" (list validateIngredientGroups))
         |> andMap (field "newIngredientGroupInput" string)
+        |> andMap (field "tags" (list string))
+        |> andMap (field "newTagInput" string)
 
 
 validateIngredientGroups : Validation () IngredientGroup
@@ -122,20 +118,20 @@ viewForm form =
         portions =
             Form.getFieldAsString "portions" form
 
-        tags =
-            Form.getListIndexes "tags" form
-
         instructions =
             Form.getFieldAsString "instructions" form
-
-        newTagInput =
-            Form.getFieldAsString "newTagInput" form
 
         ingredients =
             Form.getListIndexes "ingredients" form
 
         newIngredientGroupInput =
             Form.getFieldAsString "newIngredientGroupInput" form
+
+        tags =
+            Form.getListIndexes "tags" form
+
+        newTagInput =
+            Form.getFieldAsString "newTagInput" form
     in
     div [ class "todo-list" ]
         [ div [ class "title" ]
@@ -154,19 +150,6 @@ viewForm form =
             [ Input.textArea instructions [ placeholder "Instruktioner..." ]
             , errorFor instructions
             ]
-        , div [ class "tags" ] <|
-            List.append [ h3 [] [ text "Taggar" ] ]
-                (List.map
-                    (viewTag form)
-                    tags
-                )
-        , div [ class "new-tag-input" ]
-            [ Input.textInput newTagInput
-                [ placeholder "Ny tagg"
-                , onEnter (Form.Append "tags")
-                ]
-            , errorFor newTagInput
-            ]
         , div [ class "ingredients" ] <|
             List.append [ h3 [] [ text "Ingredienser" ] ]
                 (List.map
@@ -180,27 +163,24 @@ viewForm form =
                 ]
             , errorFor newIngredientGroupInput
             ]
+        , div [ class "tags" ] <|
+            List.append [ h3 [] [ text "Taggar" ] ]
+                (List.map
+                    (viewTag form)
+                    tags
+                )
+        , div [ class "new-tag-input" ]
+            [ Input.textInput newTagInput
+                [ placeholder "Ny tagg"
+                , onEnter (Form.Append "tags")
+                ]
+            , errorFor newTagInput
+            ]
         , button
             [ class "submit"
             , onClick Form.Submit
             ]
             [ text "Spara" ]
-        ]
-
-
-viewTag : Form () RecipeForm -> Int -> Html Form.Msg
-viewTag form i =
-    div
-        [ class "tag" ]
-        [ Input.textInput
-            (Form.getFieldAsString ("tags." ++ String.fromInt i) form)
-            [ onEnter (Form.Append "tags")
-            ]
-        , button
-            [ class "remove"
-            , onClick (Form.RemoveItem "tags" i)
-            ]
-            [ text "Remove" ]
         ]
 
 
@@ -251,6 +231,22 @@ viewIngredients form groupIndex i =
         ]
 
 
+viewTag : Form () RecipeForm -> Int -> Html Form.Msg
+viewTag form i =
+    div
+        [ class "tag" ]
+        [ Input.textInput
+            (Form.getFieldAsString ("tags." ++ String.fromInt i) form)
+            [ onEnter (Form.Append "tags")
+            ]
+        , button
+            [ class "remove"
+            , onClick (Form.RemoveItem "tags" i)
+            ]
+            [ text "Remove" ]
+        ]
+
+
 onEnter : msg -> Attribute msg
 onEnter msg =
     let
@@ -286,16 +282,16 @@ errorString error msg =
             msg ++ " är ogiltig"
 
 
+
+-- UPDATE
+
+
 type Msg
     = FormMsg Form.Msg
 
 
-
--- TODO: use this or not?
-
-
-appendWithDefault : Form () RecipeForm -> String -> String -> String -> Form () RecipeForm
-appendWithDefault form inputFieldName listName destination =
+appendPrefilledValue : Form () RecipeForm -> String -> String -> String -> Form () RecipeForm
+appendPrefilledValue form inputFieldName listName destination =
     let
         newValue =
             Maybe.withDefault "" (Form.getFieldAsString inputFieldName form).value
@@ -325,15 +321,15 @@ update msg ({ form } as model) =
         FormMsg (Form.Append listName) ->
             case listName of
                 "tags" ->
-                    ( { model | form = appendWithDefault form "newTagInput" "tags" "" }, Cmd.none )
+                    ( { model | form = appendPrefilledValue form "newTagInput" "tags" "" }, Cmd.none )
 
                 "ingredients" ->
-                    ( { model | form = appendWithDefault form "newIngredientGroupInput" "ingredients" ".group" }, Cmd.none )
+                    ( { model | form = appendPrefilledValue form "newIngredientGroupInput" "ingredients" ".group" }, Cmd.none )
 
-                otherListName ->
+                nestedIngredients ->
                     let
                         nestedIndex =
-                            nestedIngredientIndex otherListName
+                            nestedIngredientIndex nestedIngredients
                     in
                     case nestedIndex of
                         Just i ->
@@ -341,7 +337,7 @@ update msg ({ form } as model) =
                                 inputFieldName =
                                     "ingredients." ++ i ++ ".newIngredientInput"
                             in
-                            ( { model | form = appendWithDefault form inputFieldName otherListName "" }, Cmd.none )
+                            ( { model | form = appendPrefilledValue form inputFieldName nestedIngredients "" }, Cmd.none )
 
                         _ ->
                             ( model, Cmd.none )
