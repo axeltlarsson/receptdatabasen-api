@@ -9,6 +9,7 @@ import Html exposing (..)
 import Html.Attributes exposing (class, max, min, placeholder, value)
 import Html.Events exposing (keyCode, onClick, onInput, preventDefaultOn)
 import Json.Decode as Decode
+import Regex
 import Session exposing (Session)
 
 
@@ -25,12 +26,14 @@ type alias RecipeForm =
     , instructions : String
     , newTagInput : String
     , ingredients : List IngredientGroup
+    , newIngredientGroupInput : String
     }
 
 
 type alias IngredientGroup =
     { group : String
     , ingredients : List String
+    , newIngredientInput : String
     }
 
 
@@ -40,13 +43,29 @@ type alias Model =
     }
 
 
-
--- setup form validation
+initialForm : Form () RecipeForm
+initialForm =
+    Form.initial
+        [ ( "portions", Field.string "4" )
+        , ( "ingredients"
+          , Field.list
+                [ Field.group
+                    [ ( "group", Field.string "Ingredienser" )
+                    , ( "newIngredientInput", Field.value Field.EmptyField )
+                    ]
+                ]
+          )
+        ]
+        validate
 
 
 init : Session -> ( Model, Cmd Msg )
 init session =
-    ( { session = session, form = Form.initial [] validate }, Cmd.none )
+    ( { session = session, form = initialForm }, Cmd.none )
+
+
+
+-- setup form validation
 
 
 validate : Validation () RecipeForm
@@ -61,6 +80,7 @@ validate =
         |> andMap (field "instructions" (string |> andThen (minLength 5) |> andThen (maxLength 4000)))
         |> andMap (field "newTagInput" string)
         |> andMap (field "ingredients" (list validateIngredientGroups))
+        |> andMap (field "newIngredientGroupInput" string)
 
 
 validateIngredientGroups : Validation () IngredientGroup
@@ -68,11 +88,11 @@ validateIngredientGroups =
     succeed IngredientGroup
         |> andMap (field "group" string)
         |> andMap (field "ingredients" (list string))
+        |> andMap (field "newIngredientInput" string)
 
 
 
--- TODO: ignore probably?
--- render form with Input helpers
+-- VIEW
 
 
 view : Model -> { title : String, content : Html Msg }
@@ -113,6 +133,9 @@ viewForm form =
 
         ingredients =
             Form.getListIndexes "ingredients" form
+
+        newIngredientGroupInput =
+            Form.getFieldAsString "newIngredientGroupInput" form
     in
     div [ class "todo-list" ]
         [ div [ class "title" ]
@@ -142,15 +165,21 @@ viewForm form =
                 [ placeholder "Ny tagg"
                 , onEnter (Form.Append "tags")
                 ]
-            , errorFor title
+            , errorFor newTagInput
             ]
-        , div [ class "ingrediens" ] <|
+        , div [ class "ingredients" ] <|
             List.append [ h3 [] [ text "Ingredienser" ] ]
                 (List.map
                     (viewIngredientGroup form)
                     ingredients
                 )
-        , button [ onClick (Form.Append "ingredients") ] [ text "New ingredient group" ]
+        , div [ class "new-ingredient-group" ]
+            [ Input.textInput newIngredientGroupInput
+                [ placeholder "Ny ingrediensgrupp"
+                , onEnter (Form.Append "ingredients")
+                ]
+            , errorFor newIngredientGroupInput
+            ]
         , button
             [ class "submit"
             , onClick Form.Submit
@@ -190,16 +219,16 @@ viewIngredientGroup form i =
             (Form.getFieldAsString (groupIndex ++ ".group") form)
             [ placeholder "Grupp" ]
         , button
-            [ class "remove"
+            [ class "remove-group"
             , onClick (Form.RemoveItem "ingredients" i)
             ]
-            [ text "Remove" ]
-        , button
-            [ class "add-ingredient"
-            , onClick (Form.Append (groupIndex ++ ".ingredients"))
-            ]
-            [ text "Add ingredient" ]
+            [ text "Ta bort grupp" ]
         , div [ class "ingredients" ] (List.map (viewIngredients form groupIndex) ingredients)
+        , Input.textInput (Form.getFieldAsString (groupIndex ++ ".newIngredientInput") form)
+            [ class "add-ingredient"
+            , placeholder "Ny ingrediens"
+            , onEnter (Form.Append (groupIndex ++ ".ingredients"))
+            ]
         ]
 
 
@@ -214,7 +243,11 @@ viewIngredients form groupIndex i =
         [ Input.textInput
             (Form.getFieldAsString index form)
             []
-        , button [ class "remove", onClick (Form.RemoveItem (groupIndex ++ ".ingredients") i) ] [ text "remove" ]
+        , button
+            [ class "remove-ingredient"
+            , onClick (Form.RemoveItem (groupIndex ++ ".ingredients") i)
+            ]
+            [ text "Ta bort ingrediens" ]
         ]
 
 
@@ -261,58 +294,77 @@ type Msg
 -- TODO: use this or not?
 
 
-appendWithDefault : Form () RecipeForm -> String -> String -> Form () RecipeForm
-appendWithDefault form inputField list =
+appendWithDefault : Form () RecipeForm -> String -> String -> String -> Form () RecipeForm
+appendWithDefault form inputFieldName listName destination =
     let
         newValue =
-            Maybe.withDefault "" (Form.getFieldAsString inputField form).value
+            Maybe.withDefault "" (Form.getFieldAsString inputFieldName form).value
 
         appendedForm =
-            Form.update validate (Form.Append list) form
+            Form.update validate (Form.Append listName) form
 
         index =
-            (List.length <| Form.getListIndexes list appendedForm) - 1
+            (List.length <| Form.getListIndexes listName appendedForm) - 1
 
         inputMsg =
-            Form.Input (String.concat [ list, ".", String.fromInt index ]) Form.Text (Field.String newValue)
+            Form.Input (String.concat [ listName, ".", String.fromInt index, destination ]) Form.Text (Field.String newValue)
 
         resetMsg =
-            Form.Input inputField Form.Text (Field.String "")
+            Form.Input inputFieldName Form.Text (Field.String "")
     in
-    appendedForm |> Form.update validate inputMsg |> Form.update validate resetMsg
+    if String.isEmpty newValue then
+        form
+
+    else
+        appendedForm |> Form.update validate inputMsg |> Form.update validate resetMsg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg ({ form } as model) =
     case msg of
-        FormMsg (Form.Append "tags") ->
-            let
-                newTagInput =
-                    Form.getFieldAsString "newTagInput" form
+        FormMsg (Form.Append listName) ->
+            case listName of
+                "tags" ->
+                    ( { model | form = appendWithDefault form "newTagInput" "tags" "" }, Cmd.none )
 
-                newTagInputStr =
-                    Maybe.withDefault "" newTagInput.value
+                "ingredients" ->
+                    ( { model | form = appendWithDefault form "newIngredientGroupInput" "ingredients" ".group" }, Cmd.none )
 
-                appendedForm =
-                    Form.update validate (Form.Append "tags") form
+                otherListName ->
+                    let
+                        nestedIndex =
+                            nestedIngredientIndex otherListName
+                    in
+                    case nestedIndex of
+                        Just i ->
+                            let
+                                inputFieldName =
+                                    "ingredients." ++ i ++ ".newIngredientInput"
+                            in
+                            ( { model | form = appendWithDefault form inputFieldName otherListName "" }, Cmd.none )
 
-                tags =
-                    (List.length <| Form.getListIndexes "tags" appendedForm) - 1
-
-                inputMsg =
-                    Form.Input ("tags." ++ String.fromInt tags) Form.Text (Field.String newTagInputStr)
-
-                resetMsg =
-                    Form.Input "newTagInput" Form.Text (Field.String "")
-            in
-            if String.isEmpty newTagInputStr then
-                ( model, Cmd.none )
-
-            else
-                ( { model | form = appendedForm |> Form.update validate inputMsg |> Form.update validate resetMsg }, Cmd.none )
+                        _ ->
+                            ( model, Cmd.none )
 
         FormMsg formMsg ->
             ( { model | form = Form.update validate formMsg form }, Cmd.none )
+
+
+nestedIngredientIndex : String -> Maybe String
+nestedIngredientIndex str =
+    let
+        regex =
+            Maybe.withDefault Regex.never <| Regex.fromString "ingredients.(\\d+).ingredients"
+
+        matches =
+            List.map .submatches <| Regex.find regex str
+    in
+    case matches of
+        [ [ Just i ] ] ->
+            Just i
+
+        _ ->
+            Nothing
 
 
 toSession : Model -> Session
