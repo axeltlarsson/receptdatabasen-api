@@ -24,6 +24,13 @@ type alias RecipeForm =
     , tags : List String
     , instructions : String
     , newTagInput : String
+    , ingredients : List IngredientGroup
+    }
+
+
+type alias IngredientGroup =
+    { group : String
+    , ingredients : List String
     }
 
 
@@ -53,6 +60,14 @@ validate =
         |> andMap (field "tags" (list string))
         |> andMap (field "instructions" (string |> andThen (minLength 5) |> andThen (maxLength 4000)))
         |> andMap (field "newTagInput" string)
+        |> andMap (field "ingredients" (list validateIngredientGroups))
+
+
+validateIngredientGroups : Validation () IngredientGroup
+validateIngredientGroups =
+    succeed IngredientGroup
+        |> andMap (field "group" string)
+        |> andMap (field "ingredients" (list string))
 
 
 
@@ -95,6 +110,9 @@ viewForm form =
 
         newTagInput =
             Form.getFieldAsString "newTagInput" form
+
+        ingredients =
+            Form.getListIndexes "ingredients" form
     in
     div [ class "todo-list" ]
         [ div [ class "title" ]
@@ -119,13 +137,20 @@ viewForm form =
                     (viewTag form)
                     tags
                 )
-        , div [ class "title" ]
+        , div [ class "new-tag-input" ]
             [ Input.textInput newTagInput
                 [ placeholder "Ny tagg"
                 , onEnter (Form.Append "tags")
                 ]
             , errorFor title
             ]
+        , div [ class "ingrediens" ] <|
+            List.append [ h3 [] [ text "Ingredienser" ] ]
+                (List.map
+                    (viewIngredientGroup form)
+                    ingredients
+                )
+        , button [ onClick (Form.Append "ingredients") ] [ text "New ingredient group" ]
         , button
             [ class "submit"
             , onClick Form.Submit
@@ -147,6 +172,49 @@ viewTag form i =
             , onClick (Form.RemoveItem "tags" i)
             ]
             [ text "Remove" ]
+        ]
+
+
+viewIngredientGroup : Form () RecipeForm -> Int -> Html Form.Msg
+viewIngredientGroup form i =
+    let
+        groupIndex =
+            "ingredients." ++ String.fromInt i
+
+        ingredients =
+            Form.getListIndexes (groupIndex ++ ".ingredients") form
+    in
+    div
+        [ class "ingredient-group" ]
+        [ Input.textInput
+            (Form.getFieldAsString (groupIndex ++ ".group") form)
+            [ placeholder "Grupp" ]
+        , button
+            [ class "remove"
+            , onClick (Form.RemoveItem "ingredients" i)
+            ]
+            [ text "Remove" ]
+        , button
+            [ class "add-ingredient"
+            , onClick (Form.Append (groupIndex ++ ".ingredients"))
+            ]
+            [ text "Add ingredient" ]
+        , div [ class "ingredients" ] (List.map (viewIngredients form groupIndex) ingredients)
+        ]
+
+
+viewIngredients : Form () RecipeForm -> String -> Int -> Html Form.Msg
+viewIngredients form groupIndex i =
+    let
+        index =
+            groupIndex ++ ".ingredients." ++ String.fromInt i
+    in
+    div
+        [ class "ingredient" ]
+        [ Input.textInput
+            (Form.getFieldAsString index form)
+            []
+        , button [ class "remove", onClick (Form.RemoveItem (groupIndex ++ ".ingredients") i) ] [ text "remove" ]
         ]
 
 
@@ -189,6 +257,31 @@ type Msg
     = FormMsg Form.Msg
 
 
+
+-- TODO: use this or not?
+
+
+appendWithDefault : Form () RecipeForm -> String -> String -> Form () RecipeForm
+appendWithDefault form inputField list =
+    let
+        newValue =
+            Maybe.withDefault "" (Form.getFieldAsString inputField form).value
+
+        appendedForm =
+            Form.update validate (Form.Append list) form
+
+        index =
+            (List.length <| Form.getListIndexes list appendedForm) - 1
+
+        inputMsg =
+            Form.Input (String.concat [ list, ".", String.fromInt index ]) Form.Text (Field.String newValue)
+
+        resetMsg =
+            Form.Input inputField Form.Text (Field.String "")
+    in
+    appendedForm |> Form.update validate inputMsg |> Form.update validate resetMsg
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg ({ form } as model) =
     case msg of
@@ -208,8 +301,15 @@ update msg ({ form } as model) =
 
                 inputMsg =
                     Form.Input ("tags." ++ String.fromInt tags) Form.Text (Field.String newTagInputStr)
+
+                resetMsg =
+                    Form.Input "newTagInput" Form.Text (Field.String "")
             in
-            ( { model | form = appendedForm |> Form.update validate inputMsg }, Cmd.none )
+            if String.isEmpty newTagInputStr then
+                ( model, Cmd.none )
+
+            else
+                ( { model | form = appendedForm |> Form.update validate inputMsg |> Form.update validate resetMsg }, Cmd.none )
 
         FormMsg formMsg ->
             ( { model | form = Form.update validate formMsg form }, Cmd.none )
