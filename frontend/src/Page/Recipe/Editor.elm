@@ -108,24 +108,11 @@ view model =
 
 
 type Msg
-    = ClickedSave
-    | FormMsg Form.Msg
+    = FormMsg Form.Msg
       -- Msg:s from the server
     | CompletedCreate (Result ServerError (Recipe Full))
     | CompletedRecipeLoad Slug (Result Http.Error (Recipe Full))
     | CompletedEdit (Result ServerError (Recipe Full))
-
-
-
-{--
-      -   EditingNew (List Problem) Form.Model
-      - | Creating Form.Model
-      -   -- Edit Recipe
-      - | Loading Slug
-      - | LoadingFailed Slug
-      - | Editing Slug (List Problem) Form.Model
-      - | Saving Slug Form.Model
-      --}
 
 
 formToModel : Model -> Form.Model -> Model
@@ -150,99 +137,87 @@ formToModel { status, session } form =
     }
 
 
-formFromModel : Model -> Maybe Form.Model
-formFromModel { status } =
-    case status of
-        EditingNew probs form ->
-            Just form
-
-        _ ->
-            Nothing
-
-
-
-{--
-      - = ClickedSave
-      - | FormMsg Form.Msg
-      -   -- Msg:s from the server
-      - | CompletedCreate (Result ServerError (Recipe Full))
-      - | CompletedRecipeLoad Slug (Result Http.Error (Recipe Full))
-      --}
-
-
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg ({ status, session } as model) =
     case msg of
-        FormMsg subMsg ->
-            case formFromModel model of
-                Just form ->
-                    Form.update subMsg form |> updateWith formToModel FormMsg
+        FormMsg Form.Submit ->
+            case Form.toJson model of
+                Just jsonForm ->
+                    jsonForm
+                        |> save status
+                        |> Tuple.mapFirst (\newStatus -> { model | status = newStatus })
 
                 Nothing ->
                     ( model, Cmd.none )
 
+        FormMsg subMsg ->
+            case status of
+                EditingNew _ form ->
+                    Debug.log ("editor - " ++ Debug.toString subMsg)
+                        Form.update
+                        subMsg
+                        form
+                        |> updateWith (formToModel model) FormMsg
+
+                Creating form ->
+                    Debug.log ("editor - " ++ Debug.toString subMsg)
+                        Form.update
+                        subMsg
+                        form
+                        |> updateWith (formToModel model) FormMsg
+
+                _ ->
+                    Debug.log "editor - disallowed edit!"
+                        -- Disallow editing the form in all other situations
+                        ( model, Cmd.none )
+
+        -- Server events
+        CompletedRecipeLoad _ (Ok recipe) ->
+            let
+                newStatus =
+                    Editing (Recipe.slug recipe)
+                        []
+                        (Form.fromRecipe recipe)
+            in
+            ( { model | status = newStatus }, Cmd.none )
+
+        CompletedRecipeLoad slug (Err error) ->
+            ( { model | status = LoadingFailed slug }, Cmd.none )
+
+        CompletedCreate (Ok recipe) ->
+            ( { model | session = SessionWithRecipe recipe (Session.navKey model.session) }
+            , Route.Recipe (Recipe.slug recipe)
+                |> Route.replaceUrl (Session.navKey model.session)
+            )
+
+        CompletedCreate (Err error) ->
+            ( { model | status = savingError error model.status }
+            , Cmd.none
+            )
+
+        CompletedEdit (Ok recipe) ->
+            ( { model | session = SessionWithRecipe recipe (Session.navKey model.session) }
+            , Route.Recipe (Recipe.slug recipe)
+                |> Route.replaceUrl (Session.navKey model.session)
+            )
+
+        CompletedEdit (Err error) ->
+            ( { model | status = savingError error model.status }
+            , Cmd.none
+            )
+
+
+save : Status -> Encode.Value -> ( Status, Cmd Msg )
+save status jsonForm =
+    case status of
+        EditingNew _ form ->
+            ( Creating form, create jsonForm )
+
+        Editing slug _ form ->
+            ( Saving slug form, edit slug jsonForm )
+
         _ ->
-            ( model, Cmd.none )
-
-
-
-{--
-  -         ClickedSave ->
-  -             model.status
-  -                 |> save
-  -                 |> Tuple.mapFirst (\status -> { model | status = status })
-  - 
-  --}
--- Server events
-{--
-  -         CompletedRecipeLoad _ (Ok recipe) ->
-  -             let
-  -                 status =
-  -                     Editing (Recipe.slug recipe)
-  -                         []
-  -                         Form.fromRecipe
-  -                         recipe
-  -             in
-  -             ( { model | status = status }, Cmd.none )
-  - 
-  -         CompletedRecipeLoad slug (Err error) ->
-  -             ( { model | status = LoadingFailed slug }, Cmd.none )
-  - 
-  -         CompletedCreate (Ok recipe) ->
-  -             ( { model | session = SessionWithRecipe recipe (Session.navKey model.session) }
-  -             , Route.Recipe (Recipe.slug recipe)
-  -                 |> Route.replaceUrl (Session.navKey model.session)
-  -             )
-  - 
-  -         CompletedCreate (Err error) ->
-  -             ( { model | status = savingError error model.status }
-  -             , Cmd.none
-  -             )
-  - 
-  -         CompletedEdit (Ok recipe) ->
-  -             ( { model | session = SessionWithRecipe recipe (Session.navKey model.session) }
-  -             , Route.Recipe (Recipe.slug recipe)
-  -                 |> Route.replaceUrl (Session.navKey model.session)
-  -             )
-  - 
-  -         CompletedEdit (Err error) ->
-  -             ( { model | status = savingError error model.status }
-  -             , Cmd.none
-  -             )
-  --}
-{--
-  - save : Status -> ( Status, Cmd Msg )
-  - save status =
-  -     case status of
-  -         EditingNew _ form ->
-  -             ( Creating form, create form )
-  - 
-  -         Editing slug _ form ->
-  -             ( Saving slug form, edit slug form )
-  - 
-  -         _ ->
-  -             ( status, Cmd.none )
-  --}
+            ( status, Cmd.none )
 
 
 savingError : ServerError -> Status -> Status
@@ -296,67 +271,36 @@ editUrl slug =
         [ Url.Builder.string "title" (String.concat [ "eq.", Slug.toString slug ]) ]
 
 
+edit : Slug -> Encode.Value -> Cmd Msg
+edit slug jsonForm =
+    Http.request
+        { url = editUrl slug
+        , method = "PATCH"
+        , timeout = Nothing
+        , tracker = Nothing
+        , headers =
+            [ Http.header "Prefer" "return=representation"
+            , Http.header "Accept" "application/vnd.pgrst.object+json"
+            ]
+        , body = Http.jsonBody jsonForm
+        , expect = expectJsonWithBody CompletedEdit Recipe.fullDecoder
+        }
 
-{--
-  - httpBodyFromForm : TrimmedForm -> Http.Body
-  - httpBodyFromForm (Trimmed form) =
-  -     let
-  -         portionsString =
-  -             String.fromInt form.portions
-  - 
-  -         ingredientTuple ( groupName, current, ingredients ) =
-  -             -- TODO: add current to ingredients but filter out empty ingredients
-  -             -- <| Array.filter (\x -> String.length x > 0) <| Array.push current
-  -             -- this should be done somewhere...
-  -             ( groupName, Array.toList ingredients )
-  - 
-  -         ingredientDict =
-  -             Dict.fromList <| Array.toList <| Array.map ingredientTuple form.ingredients
-  - 
-  -         recipe =
-  -             Encode.object
-  -                 [ ( "title", Encode.string form.title )
-  -                 , ( "description", Encode.string form.description )
-  -                 , ( "instructions", Encode.string form.instructions )
-  -                 , ( "portions", Encode.string portionsString )
-  -                 , ( "tags", Encode.set Encode.string form.tags )
-  -                 , ( "ingredients", Encode.dict identity (Encode.list Encode.string) ingredientDict )
-  -                 ]
-  -     in
-  -     Http.jsonBody recipe
-  - 
-  - 
-  - edit : Slug -> TrimmedForm -> Cmd Msg
-  - edit slug form =
-  -     Http.request
-  -         { url = editUrl slug
-  -         , method = "PATCH"
-  -         , timeout = Nothing
-  -         , tracker = Nothing
-  -         , headers =
-  -             [ Http.header "Prefer" "return=representation"
-  -             , Http.header "Accept" "application/vnd.pgrst.object+json"
-  -             ]
-  -         , body = httpBodyFromForm form
-  -         , expect = expectJsonWithBody CompletedEdit Recipe.fullDecoder
-  -         }
-  - 
-  - 
-  - create : TrimmedForm -> Cmd Msg
-  - create form =
-  -     Http.request
-  -         { url = createUrl
-  -         , method = "POST"
-  -         , timeout = Nothing
-  -         , tracker = Nothing
-  -         , headers =
-  -             [ Http.header "Prefer" "return=representation"
-  -             , Http.header "Accept" "application/vnd.pgrst.object+json"
-  -             ]
-  -         , body = httpBodyFromForm form
-  -         , expect = expectJsonWithBody CompletedCreate Recipe.fullDecoder
-  -         }
-  --}
+
+create : Encode.Value -> Cmd Msg
+create jsonForm =
+    Http.request
+        { url = createUrl
+        , method = "POST"
+        , timeout = Nothing
+        , tracker = Nothing
+        , headers =
+            [ Http.header "Prefer" "return=representation"
+            , Http.header "Accept" "application/vnd.pgrst.object+json"
+            ]
+        , body = Http.jsonBody jsonForm
+        , expect = expectJsonWithBody CompletedCreate Recipe.fullDecoder
+        }
 
 
 type ServerError

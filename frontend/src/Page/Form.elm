@@ -1,4 +1,4 @@
-module Page.Form exposing (Model, Msg, fromRecipe, init, update, view)
+module Page.Form exposing (Model, Msg(..), fromRecipe, init, toJson, update, view)
 
 import Dict
 import Form exposing (Form)
@@ -10,9 +10,11 @@ import Html exposing (..)
 import Html.Attributes exposing (class, max, min, placeholder, value)
 import Html.Events exposing (keyCode, onClick, onInput, preventDefaultOn)
 import Json.Decode as Decode
+import Json.Encode as Encode
 import Recipe
 import Recipe.Slug as Slug
 import Regex
+import Set
 
 
 
@@ -68,7 +70,7 @@ initialForm =
         validate
 
 
-fromRecipe : Recipe.Recipe Recipe.Full -> RecipeForm
+fromRecipe : Recipe.Recipe Recipe.Full -> Model
 fromRecipe recipe =
     let
         { id, title } =
@@ -76,17 +78,20 @@ fromRecipe recipe =
 
         { description, instructions, tags, portions, ingredients } =
             Recipe.contents recipe
-    in
-    Form.initial
-        [ ( "title", Field.string <| Slug.toString title )
-        , ( "description", Field.string description )
-        , ( "portions", Field.string <| String.fromInt portions )
-        , ( "ingredients", Field.list <| Dict.foldl ingredientFields [] ingredients )
-        , ( "tags", Field.list <| List.map Field.string tags )
 
-        -- , ("newTagInput", Field.value Field.EmptyField)
-        ]
-        validate
+        recipeForm =
+            Form.initial
+                [ ( "title", Field.string <| Slug.toString title )
+                , ( "description", Field.string description )
+                , ( "portions", Field.string <| String.fromInt portions )
+                , ( "ingredients", Field.list <| Dict.foldl ingredientFields [] ingredients )
+                , ( "tags", Field.list <| List.map Field.string tags )
+
+                -- , ("newTagInput", Field.value Field.EmptyField)
+                ]
+                validate
+    in
+    { form = recipeForm }
 
 
 ingredientFields : String -> List String -> List Field.Field -> List Field.Field
@@ -111,9 +116,9 @@ validate =
         -- TODO: check non-empty tags/ingredients and trimming and such
         |> andMap (field "instructions" (string |> andThen (minLength 5) |> andThen (maxLength 4000)))
         |> andMap (field "ingredients" (list validateIngredientGroups))
-        |> andMap (field "newIngredientGroupInput" string)
+        |> andMap (field "newIngredientGroupInput" emptyString)
         |> andMap (field "tags" (list string))
-        |> andMap (field "newTagInput" string)
+        |> andMap (field "newTagInput" emptyString)
 
 
 validateIngredientGroups : Validation () IngredientGroup
@@ -121,7 +126,7 @@ validateIngredientGroups =
     succeed IngredientGroup
         |> andMap (field "group" string)
         |> andMap (field "ingredients" (list string))
-        |> andMap (field "newIngredientInput" string)
+        |> andMap (field "newIngredientInput" emptyString)
 
 
 view : Model -> Html Msg
@@ -352,10 +357,18 @@ update msg ({ form } as model) =
         FormMsg (Form.Append listName) ->
             case listName of
                 "tags" ->
-                    ( { model | form = appendPrefilledValue form "newTagInput" "tags" "" }, Cmd.none )
+                    ( { model
+                        | form = appendPrefilledValue form "newTagInput" "tags" ""
+                      }
+                    , Cmd.none
+                    )
 
                 "ingredients" ->
-                    ( { model | form = appendPrefilledValue form "newIngredientGroupInput" "ingredients" ".group" }, Cmd.none )
+                    ( { model
+                        | form = appendPrefilledValue form "newIngredientGroupInput" "ingredients" ".group"
+                      }
+                    , Cmd.none
+                    )
 
                 nestedIngredients ->
                     let
@@ -368,13 +381,52 @@ update msg ({ form } as model) =
                                 inputFieldName =
                                     "ingredients." ++ i ++ ".newIngredientInput"
                             in
-                            ( { model | form = appendPrefilledValue form inputFieldName nestedIngredients "" }, Cmd.none )
+                            ( { model
+                                | form = appendPrefilledValue form inputFieldName nestedIngredients ""
+                              }
+                            , Cmd.none
+                            )
 
                         _ ->
                             ( model, Cmd.none )
 
         FormMsg formMsg ->
             ( { model | form = Form.update validate formMsg form }, Cmd.none )
+
+
+toJson : Model -> Maybe Encode.Value
+toJson { form } =
+    let
+        portionsString recipe =
+            String.fromInt recipe.portions
+
+        ingredientTuple { group, ingredients, newIngredientInput } =
+            ( group, ingredients )
+
+        ingredientDict recipe =
+            Dict.fromList <| List.map ingredientTuple recipe.ingredients
+
+        maybeAddDescription l recipe =
+            case recipe.description of
+                Just descr ->
+                    l ++ [ ( "description", Encode.string descr ) ]
+
+                Nothing ->
+                    l
+    in
+    Maybe.map
+        (\recipe ->
+            Encode.object <|
+                maybeAddDescription
+                    [ ( "title", Encode.string recipe.title )
+                    , ( "instructions", Encode.string recipe.instructions )
+                    , ( "portions", Encode.string (portionsString recipe) )
+                    , ( "tags", Encode.set Encode.string <| Set.fromList recipe.tags )
+                    , ( "ingredients", Encode.dict identity (Encode.list Encode.string) (ingredientDict recipe) )
+                    ]
+                    recipe
+        )
+        (Form.getOutput form)
 
 
 nestedIngredientIndex : String -> Maybe String
