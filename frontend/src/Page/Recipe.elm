@@ -26,7 +26,7 @@ type alias Model =
 type Status recipe
     = Loading
     | Loaded recipe
-    | Failed Http.Error
+    | Failed Recipe.ServerError
     | NotFound
 
 
@@ -84,7 +84,7 @@ view model =
         Failed err ->
             { title = "Kunde ej hämta recept"
             , content =
-                viewError err
+                text <| Recipe.serverErrorToString err
             }
 
         NotFound ->
@@ -158,31 +158,12 @@ viewIngredient ingredient =
     li [] [ text ingredient ]
 
 
-viewError : Http.Error -> Html Msg
-viewError error =
-    case error of
-        Http.BadUrl str ->
-            text str
-
-        Http.NetworkError ->
-            text "NetworkError"
-
-        Http.BadStatus status ->
-            text ("BadStatus " ++ String.fromInt status)
-
-        Http.BadBody str ->
-            text ("BadBody " ++ str)
-
-        Http.Timeout ->
-            text "Timeout"
-
-
 
 -- UPDATE
 
 
 type Msg
-    = LoadedRecipe (Result Http.Error (Recipe Full))
+    = LoadedRecipe (Result Recipe.ServerError (Recipe Full))
     | ClickedDelete
     | Deleted (Result Http.Error ())
 
@@ -211,7 +192,7 @@ update msg model =
             )
 
         Deleted (Err error) ->
-            ( { model | recipe = Failed error }, Cmd.none )
+            ( { model | recipe = Failed (Recipe.ServerError error) }, Cmd.none )
 
 
 
