@@ -1,4 +1,4 @@
-module Page.Form exposing (Model, Msg(..), fromRecipe, init, toJson, update, view)
+module Page.Recipe.Form exposing (Model, Msg(..), fromRecipe, init, toJson, update, view)
 
 import Dict
 import Form exposing (Form)

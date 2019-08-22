@@ -7,7 +7,7 @@ import Html.Events exposing (keyCode, onInput, onSubmit, preventDefaultOn)
 import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
-import Page.Form as Form
+import Page.Recipe.Form as Form
 import Recipe exposing (Full, Recipe, fetch, fullDecoder)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
