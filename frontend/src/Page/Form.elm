@@ -15,6 +15,7 @@ import Recipe
 import Recipe.Slug as Slug
 import Regex
 import Set
+import Task
 
 
 
@@ -324,6 +325,7 @@ errorString error msg =
 
 type Msg
     = FormMsg Form.Msg
+    | SubmitValidForm Encode.Value
 
 
 appendPrefilledValue : RecipeForm -> String -> String -> String -> RecipeForm
@@ -390,8 +392,19 @@ update msg ({ form } as model) =
                         _ ->
                             ( model, Cmd.none )
 
+        FormMsg Form.Submit ->
+            case toJson model of
+                Just jsonForm ->
+                    ( model, Task.succeed (SubmitValidForm jsonForm) |> Task.perform identity )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
         FormMsg formMsg ->
             ( { model | form = Form.update validate formMsg form }, Cmd.none )
+
+        SubmitValidForm _ ->
+            ( model, Cmd.none )
 
 
 toJson : Model -> Maybe Encode.Value

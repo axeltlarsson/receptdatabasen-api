@@ -12,7 +12,6 @@ import Recipe exposing (Full, Recipe, fetch, fullDecoder)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
 import Session exposing (Session(..))
-import Task
 import Url.Builder
 
 
@@ -140,44 +139,30 @@ formToModel { status, session } form =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg ({ status, session } as model) =
     case msg of
-        FormMsg Form.Submit ->
-            case Form.toJson model of
-                Just jsonForm ->
-                    jsonForm
-                        |> save status
-                        |> Tuple.mapFirst (\newStatus -> { model | status = newStatus })
-
-                Nothing ->
-                    ( model, Cmd.none )
+        FormMsg (Form.SubmitValidForm jsonForm) ->
+            jsonForm
+                |> save status
+                |> Tuple.mapFirst (\newStatus -> { model | status = newStatus })
 
         FormMsg subMsg ->
             case status of
                 EditingNew _ form ->
-                    Debug.log ("editor - " ++ Debug.toString subMsg)
-                        Form.update
-                        subMsg
-                        form
+                    Form.update subMsg form
                         |> updateWith (formToModel model) FormMsg
 
                 Creating form ->
-                    Debug.log ("editor - " ++ Debug.toString subMsg)
-                        Form.update
-                        subMsg
-                        form
+                    Form.update subMsg form
                         |> updateWith (formToModel model) FormMsg
 
                 _ ->
-                    Debug.log "editor - disallowed edit!"
-                        -- Disallow editing the form in all other situations
-                        ( model, Cmd.none )
+                    -- Disallow editing the form in all other situations
+                    ( model, Cmd.none )
 
         -- Server events
         CompletedRecipeLoad _ (Ok recipe) ->
             let
                 newStatus =
-                    Editing (Recipe.slug recipe)
-                        []
-                        (Form.fromRecipe recipe)
+                    Editing (Recipe.slug recipe) [] (Form.fromRecipe recipe)
             in
             ( { model | status = newStatus }, Cmd.none )
 
