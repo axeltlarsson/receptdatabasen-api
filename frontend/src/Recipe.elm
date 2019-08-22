@@ -154,7 +154,7 @@ fetch recipeSlug toMsg =
 delete : Slug -> (Result Http.Error () -> msg) -> Cmd msg
 delete recipeSlug toMsg =
     Http.request
-        { url = url [] ++ Slug.toString recipeSlug
+        { url = url [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
         , method = "DELETE"
         , timeout = Nothing
         , tracker = Nothing
