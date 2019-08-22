@@ -10,7 +10,7 @@ import Markdown
 import Recipe exposing (Full, Metadata, Recipe, contents, fullDecoder, metadata)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
-import Session exposing (Session)
+import Session exposing (Session(..))
 import Url exposing (Url)
 import Url.Builder
 
@@ -33,13 +33,10 @@ type Status recipe
 init : Session -> Slug -> ( Model, Cmd Msg )
 init session slug =
     let
-        maybeRecipe =
-            Maybe.andThen (matchingSlug slug) (Session.recipe session)
-
         newSession =
             Session.Session (Session.navKey session)
     in
-    case maybeRecipe of
+    case Session.recipe session slug of
         Just recipe ->
             ( { recipe = Loaded recipe
               , session = newSession
@@ -53,20 +50,6 @@ init session slug =
               }
             , Recipe.fetch slug LoadedRecipe
             )
-
-
-matchingSlug : Slug -> Recipe Full -> Maybe (Recipe Full)
-matchingSlug slug recipe =
-    let
-        slugDecoded =
-            Maybe.withDefault "" <| Url.percentDecode <| Slug.toString slug
-    in
-    if Slug.toString (Recipe.slug recipe) == slugDecoded then
-        Just
-            recipe
-
-    else
-        Nothing
 
 
 
@@ -172,7 +155,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         LoadedRecipe (Ok recipe) ->
-            ( { model | recipe = Loaded recipe }, Cmd.none )
+            ( { model | recipe = Loaded recipe, session = SessionWithRecipe recipe (Session.navKey model.session) }, Cmd.none )
 
         LoadedRecipe (Err error) ->
             ( { model | recipe = Failed error }, Cmd.none )

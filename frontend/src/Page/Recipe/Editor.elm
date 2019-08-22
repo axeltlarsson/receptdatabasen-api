@@ -64,11 +64,24 @@ updateWith toModel toMsg ( subModel, subCmd ) =
 
 initEdit : Session -> Slug -> ( Model, Cmd Msg )
 initEdit session slug =
-    ( { session = session
-      , status = Loading slug
-      }
-    , Recipe.fetch slug (CompletedRecipeLoad slug)
-    )
+    let
+        newSession =
+            Session.Session (Session.navKey session)
+    in
+    case Session.recipe session slug of
+        Just recipe ->
+            ( { session = newSession
+              , status = Editing slug [] <| Form.fromRecipe recipe
+              }
+            , Cmd.none
+            )
+
+        Nothing ->
+            ( { session = newSession
+              , status = Loading slug
+              }
+            , Recipe.fetch slug (CompletedRecipeLoad slug)
+            )
 
 
 
