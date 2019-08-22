@@ -17,7 +17,6 @@ type Route
     | RecipeList
     | NewRecipe
     | EditRecipe Slug
-    | Test
 
 
 parser : Parser (Route -> a) a
@@ -27,7 +26,6 @@ parser =
         , map RecipeList Parser.top
         , map NewRecipe (s "editor")
         , map EditRecipe (s "editor" </> Slug.urlParser)
-        , map Test (s "test")
         ]
 
 
@@ -70,8 +68,5 @@ routeToString page =
 
                 EditRecipe slug ->
                     [ "editor", Url.percentEncode (Slug.toString slug) ]
-
-                Test ->
-                    [ "test" ]
     in
     "/" ++ String.join "/" pieces

@@ -13,7 +13,6 @@ type Page
     | RecipeList
     | Editor
     | Other
-    | Test
 
 
 {-| Takes a page's Html and frames it with header and footer.
@@ -40,7 +39,6 @@ viewMenu page =
     in
     [ linkTo Route.NewRecipe [ text "New Recipe" ]
     , linkTo Route.RecipeList [ text "Recipe List" ]
-    , linkTo Route.Test [ text "Test" ]
     ]
 
 
@@ -60,9 +58,6 @@ isActive page route =
             True
 
         ( Editor, Route.NewRecipe ) ->
-            True
-
-        ( Test, Route.Test ) ->
             True
 
         _ ->
