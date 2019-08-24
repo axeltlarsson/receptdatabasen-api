@@ -42,7 +42,11 @@ type alias IngredientGroup =
 
 
 type alias RecipeForm =
-    Form () RecipeDetails
+    Form CustomError RecipeDetails
+
+
+type CustomError
+    = EmptyList
 
 
 type alias Model =
@@ -87,8 +91,7 @@ fromRecipe recipe =
                 , ( "portions", Field.string <| String.fromInt portions )
                 , ( "ingredients", Field.list <| Dict.foldl ingredientFields [] ingredients )
                 , ( "tags", Field.list <| List.map Field.string tags )
-
-                -- , ("newTagInput", Field.value Field.EmptyField)
+                , ( "newTagInput", Field.value Field.EmptyField )
                 ]
                 validate
     in
@@ -106,28 +109,63 @@ ingredientFields group ingredients groups =
         :: groups
 
 
-validate : Validation () RecipeDetails
+validate : Validation CustomError RecipeDetails
 validate =
     succeed RecipeDetails
         -- TODO: validate title uniqueness (async against server)
-        |> andMap (field "title" (string |> andThen (minLength 3) |> andThen (maxLength 512)))
-        -- TODO: maybe removes the error...
-        |> andMap (field "description" (maybe (string |> andThen (maxLength 500))))
+        |> andMap (field "title" (trimmedString |> andThen (minLength 3) |> andThen (maxLength 512)))
+        |> andMap
+            (field "description"
+                (oneOf
+                    [ emptyString |> Validate.map (\_ -> Nothing)
+                    , trimmedString |> andThen (maxLength 500) |> Validate.map Just
+                    ]
+                )
+            )
         |> andMap (field "portions" (int |> andThen (minInt 1) |> andThen (maxInt 100)))
-        -- TODO: check non-empty tags/ingredients and trimming and such
-        |> andMap (field "instructions" (string |> andThen (minLength 5) |> andThen (maxLength 4000)))
-        |> andMap (field "ingredients" (list validateIngredientGroups))
+        |> andMap (field "instructions" (trimmedString |> andThen (minLength 5) |> andThen (maxLength 4000)))
+        |> andMap (field "ingredients" (nonEmptyList validateIngredientGroups))
         |> andMap (field "newIngredientGroupInput" emptyString)
-        |> andMap (field "tags" (list string))
+        |> andMap (field "tags" (list trimmedString))
         |> andMap (field "newTagInput" emptyString)
 
 
-validateIngredientGroups : Validation () IngredientGroup
+trimmedString : Field -> Result (Form.Error.Error e) String
+trimmedString field =
+    (string |> Validate.map String.trim |> andThen nonEmpty) field
+
+
+nonEmptyList : Validation CustomError a -> Validation CustomError (List a)
+nonEmptyList validation =
+    let
+        notEmpty list_ =
+            case list_ of
+                [] ->
+                    Err (Form.Error.value <| Form.Error.CustomError EmptyList)
+
+                _ ->
+                    Ok list_
+    in
+    Validate.customValidation (list validation) notEmpty
+        |> mapError (always (Form.Error.value (Form.Error.CustomError EmptyList)))
+
+
+validateIngredientGroups : Validation CustomError IngredientGroup
 validateIngredientGroups =
     succeed IngredientGroup
-        |> andMap (field "group" string)
-        |> andMap (field "ingredients" (list string))
+        |> andMap (field "group" trimmedString)
+        |> andMap (field "ingredients" (nonEmptyList trimmedString))
         |> andMap (field "newIngredientInput" emptyString)
+
+
+errorFor : Form.FieldState CustomError a -> Html Form.Msg
+errorFor field =
+    case field.liveError of
+        Just error ->
+            div [ class "error" ] [ text (errorString error field.path) ]
+
+        Nothing ->
+            text ""
 
 
 view : Model -> Html Msg
@@ -138,14 +176,6 @@ view { form } =
 viewForm : RecipeForm -> Html Form.Msg
 viewForm form =
     let
-        errorFor field =
-            case field.liveError of
-                Just error ->
-                    div [ class "error" ] [ text (errorString error field.path) ]
-
-                Nothing ->
-                    text ""
-
         title =
             Form.getFieldAsString "title" form
 
@@ -160,6 +190,9 @@ viewForm form =
 
         ingredients =
             Form.getListIndexes "ingredients" form
+
+        ingredientGroups =
+            Form.getFieldAsString "ingredients" form
 
         newIngredientGroupInput =
             Form.getFieldAsString "newIngredientGroupInput" form
@@ -192,6 +225,7 @@ viewForm form =
                 (List.map
                     (viewFormIngredientGroup form)
                     ingredients
+                    |> List.append [ errorFor ingredientGroups ]
                 )
         , div [ class "new-ingredient-group" ]
             [ Input.textInput newIngredientGroupInput
@@ -224,6 +258,9 @@ viewForm form =
 viewFormIngredientGroup : RecipeForm -> Int -> Html Form.Msg
 viewFormIngredientGroup form i =
     let
+        groupField =
+            Form.getFieldAsString (groupIndex ++ ".group") form
+
         groupIndex =
             "ingredients." ++ String.fromInt i
 
@@ -232,9 +269,9 @@ viewFormIngredientGroup form i =
     in
     div
         [ class "ingredient-group" ]
-        [ Input.textInput
-            (Form.getFieldAsString (groupIndex ++ ".group") form)
+        [ Input.textInput groupField
             [ placeholder "Grupp" ]
+        , errorFor groupField
         , button
             [ class "remove-group"
             , onClick (Form.RemoveItem "ingredients" i)
@@ -297,26 +334,29 @@ onEnter msg =
     preventDefaultOn "keydown" (Decode.andThen isEnter keyCode)
 
 
-errorString : ErrorValue e -> String -> String
+errorString : ErrorValue CustomError -> String -> String
 errorString error msg =
     case error of
         Empty ->
-            msg ++ " får ej vara tom"
+            "fältet får ej vara tomt"
 
         SmallerIntThan i ->
-            msg ++ " måste vara minst " ++ String.fromInt i
+            "måste vara minst " ++ String.fromInt i
 
         GreaterIntThan i ->
-            msg ++ " får vara max " ++ String.fromInt i
+            "får vara max " ++ String.fromInt i
 
         ShorterStringThan i ->
-            msg ++ " måste vara minst " ++ String.fromInt i
+            "måste vara minst " ++ String.fromInt i
 
         LongerStringThan i ->
-            msg ++ " måste vara minst " ++ String.fromInt i
+            "får vara max " ++ String.fromInt i ++ " tecken lång"
+
+        Form.Error.CustomError EmptyList ->
+            "får ej vara tom"
 
         _ ->
-            msg ++ " är ogiltig"
+            "är ogiltig"
 
 
 
@@ -400,9 +440,10 @@ update msg ({ form } as model) =
                     )
 
                 Nothing ->
-                    ( { model | form = Form.update validate Form.Submit form }
-                    , Cmd.none
-                    )
+                    Debug.log (Debug.toString <| Form.getErrors form)
+                        ( { model | form = Form.update validate Form.Submit form }
+                        , Cmd.none
+                        )
 
         FormMsg formMsg ->
             ( { model | form = Form.update validate formMsg form }, Cmd.none )
