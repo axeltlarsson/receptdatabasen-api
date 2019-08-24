@@ -395,10 +395,14 @@ update msg ({ form } as model) =
         FormMsg Form.Submit ->
             case toJson model of
                 Just jsonForm ->
-                    ( model, Task.succeed (SubmitValidForm jsonForm) |> Task.perform identity )
+                    ( { model | form = Form.update validate Form.Submit form }
+                    , Task.succeed (SubmitValidForm jsonForm) |> Task.perform identity
+                    )
 
                 Nothing ->
-                    ( model, Cmd.none )
+                    ( { model | form = Form.update validate Form.Submit form }
+                    , Cmd.none
+                    )
 
         FormMsg formMsg ->
             ( { model | form = Form.update validate formMsg form }, Cmd.none )

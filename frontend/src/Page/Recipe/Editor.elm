@@ -8,7 +8,7 @@ import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Page.Recipe.Form as Form
-import Recipe exposing (Full, Recipe, fullDecoder)
+import Recipe exposing (Full, Recipe, ServerError, fullDecoder)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
 import Session exposing (Session(..))
@@ -27,17 +27,13 @@ type alias Model =
 
 type Status
     = -- New Recipe
-      EditingNew (List Problem) Form.Model
+      EditingNew (Maybe ServerError) Form.Model
     | Creating Form.Model
       -- Edit Recipe
     | Loading Slug
     | LoadingFailed Slug
-    | Editing Slug (List Problem) Form.Model
+    | Editing Slug (Maybe ServerError) Form.Model
     | Saving Slug Form.Model
-
-
-type Problem
-    = ServerProblem String
 
 
 initNew : Session -> ( Model, Cmd Msg )
@@ -45,7 +41,7 @@ initNew session =
     let
         toModel subModel =
             { session = session
-            , status = EditingNew [] subModel
+            , status = EditingNew Nothing subModel
             }
     in
     Form.init |> updateWith toModel FormMsg
@@ -71,7 +67,7 @@ initEdit session slug =
     case Session.recipe session slug of
         Just recipe ->
             ( { session = newSession
-              , status = Editing slug [] <| Form.fromRecipe recipe
+              , status = Editing slug Nothing <| Form.fromRecipe recipe
               }
             , Cmd.none
             )
@@ -91,32 +87,61 @@ initEdit session slug =
 view : Model -> { title : String, content : Html Msg }
 view model =
     let
-        skeleton children =
-            div [ class "editor" ] [ Html.map FormMsg children ]
+        skeleton prob children =
+            div [ class "editor" ]
+                (List.append
+                    [ Html.map FormMsg children ]
+                    [ viewServerError prob ]
+                )
     in
     { title = "Skapa nytt recept"
     , content =
         case model.status of
             -- Creating a new recipe
-            EditingNew probs form ->
-                skeleton <| Form.view form
+            EditingNew serverError form ->
+                skeleton serverError <| Form.view form
 
             Creating form ->
-                skeleton <| Form.view form
+                skeleton Nothing <| Form.view form
 
             -- Editing an existing recipe
             Loading slug ->
-                skeleton <| text "Laddar..."
+                skeleton Nothing <| text "Laddar..."
 
             LoadingFailed slug ->
-                skeleton <| text ("Kunde ej ladda in recept: " ++ Slug.toString slug)
+                skeleton Nothing <| text ("Kunde ej ladda in recept: " ++ Slug.toString slug)
 
-            Editing slug probs form ->
-                skeleton <| Form.view form
+            Editing slug serverError form ->
+                skeleton serverError <| Form.view form
 
             Saving slug form ->
-                skeleton <| Form.view form
+                skeleton Nothing <| Form.view form
     }
+
+
+viewServerError : Maybe ServerError -> Html Msg
+viewServerError maybeError =
+    let
+        maybeErrorStr =
+            Maybe.map Recipe.serverErrorToString maybeError
+
+        skeleton children =
+            div
+                [ class "server-error"
+                , style "background" "red"
+                , style "color" "white"
+                ]
+                children
+    in
+    case maybeErrorStr of
+        Just errorStr ->
+            skeleton
+                [ p [] [ text "Något gick fel när servern försökte spara receptet" ]
+                , code [] [ text errorStr ]
+                ]
+
+        Nothing ->
+            skeleton []
 
 
 type Msg
@@ -132,14 +157,14 @@ formToModel { status, session } form =
     let
         newStatus =
             case status of
-                EditingNew probs _ ->
-                    EditingNew probs form
+                EditingNew serverError _ ->
+                    EditingNew serverError form
 
                 Creating _ ->
                     Creating form
 
-                Editing slug probs _ ->
-                    Editing slug probs form
+                Editing slug serverError _ ->
+                    Editing slug serverError form
 
                 s ->
                     s
@@ -175,7 +200,7 @@ update msg ({ status, session } as model) =
         CompletedRecipeLoad _ (Ok recipe) ->
             let
                 newStatus =
-                    Editing (Recipe.slug recipe) [] (Form.fromRecipe recipe)
+                    Editing (Recipe.slug recipe) Nothing (Form.fromRecipe recipe)
             in
             ( { model | status = newStatus }, Cmd.none )
 
@@ -218,18 +243,14 @@ save status jsonForm =
             ( status, Cmd.none )
 
 
-savingError : Recipe.ServerError -> Status -> Status
+savingError : ServerError -> Status -> Status
 savingError error status =
-    let
-        problems =
-            [ ServerProblem ("Error saving " ++ Recipe.serverErrorToString error) ]
-    in
     case status of
         Creating form ->
-            EditingNew problems form
+            EditingNew (Just error) form
 
         Saving slug form ->
-            Editing slug problems form
+            Editing slug (Just error) form
 
         _ ->
             status
