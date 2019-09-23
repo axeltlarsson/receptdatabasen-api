@@ -433,6 +433,10 @@ update msg ({ form } as model) =
                             ( model, Cmd.none )
 
         FormMsg Form.Submit ->
+            let
+                ( newModel, cmd ) =
+                    autoAppendInputFields model
+            in
             case toJson model of
                 Just jsonForm ->
                     ( { model | form = Form.update validate Form.Submit form }
@@ -440,16 +444,44 @@ update msg ({ form } as model) =
                     )
 
                 Nothing ->
-                    Debug.log (Debug.toString <| Form.getErrors form)
-                        ( { model | form = Form.update validate Form.Submit form }
-                        , Cmd.none
-                        )
+                    ( { newModel | form = Form.update validate Form.Submit newModel.form }
+                    , cmd
+                    )
 
         FormMsg formMsg ->
             ( { model | form = Form.update validate formMsg form }, Cmd.none )
 
         SubmitValidForm _ ->
             ( model, Cmd.none )
+
+
+
+{--
+  - Gather a list of input fields to automatically "submit" in case the user forgets.
+  --}
+
+
+autoAppendInputFields : Model -> ( Model, Cmd Msg )
+autoAppendInputFields ({ form } as model) =
+    let
+        ingredientIndices =
+            Form.getListIndexes "ingredients" form
+                |> List.map (\i -> "ingredients." ++ String.fromInt i ++ ".ingredients")
+
+        appends =
+            "ingredients" :: ("tags" :: ingredientIndices)
+    in
+    applyAppends appends ( model, Cmd.none )
+
+
+applyAppends : List String -> ( Model, Cmd Msg ) -> ( Model, Cmd Msg )
+applyAppends lists ( model, cmd ) =
+    case lists of
+        l :: ls ->
+            update (FormMsg (Form.Append l)) model |> applyAppends ls
+
+        [] ->
+            ( model, cmd )
 
 
 toJson : Model -> Maybe Encode.Value

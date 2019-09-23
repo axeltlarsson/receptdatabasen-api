@@ -106,7 +106,7 @@ AS $$
     new.id = recipe_id;
     new.created_at = recipe_created_at;
     new.updated_at = recipe_updated_at;
-    RETURN new; 
+    RETURN new;
   END;
 $$ LANGUAGE 'plpgsql';
 
