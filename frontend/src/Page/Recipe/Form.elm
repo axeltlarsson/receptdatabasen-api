@@ -89,6 +89,7 @@ fromRecipe recipe =
                 [ ( "title", Field.string <| Slug.toString title )
                 , ( "description", Field.string description )
                 , ( "portions", Field.string <| String.fromInt portions )
+                , ( "instructions", Field.string instructions )
                 , ( "ingredients", Field.list <| Dict.foldl ingredientFields [] ingredients )
                 , ( "tags", Field.list <| List.map Field.string tags )
                 , ( "newTagInput", Field.value Field.EmptyField )
