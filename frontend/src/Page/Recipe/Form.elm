@@ -7,7 +7,7 @@ import Form.Field as Field exposing (Field)
 import Form.Input as Input
 import Form.Validate as Validate exposing (..)
 import Html exposing (..)
-import Html.Attributes exposing (class, max, min, placeholder, value)
+import Html.Attributes exposing (class, disabled, max, min, placeholder, value)
 import Html.Events exposing (keyCode, onClick, onInput, preventDefaultOn)
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -203,6 +203,9 @@ viewForm form =
 
         newTagInput =
             Form.getFieldAsString "newTagInput" form
+
+        disableSave =
+            List.length (Form.getErrors form) > 0 && Form.isSubmitted form
     in
     div [ class "todo-list" ]
         [ div [ class "title" ]
@@ -250,6 +253,7 @@ viewForm form =
             ]
         , button
             [ class "submit"
+            , disabled disableSave
             , onClick Form.Submit
             ]
             [ text "Spara" ]
