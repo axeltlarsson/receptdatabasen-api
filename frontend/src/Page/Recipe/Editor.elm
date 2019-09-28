@@ -188,6 +188,10 @@ update msg ({ status, session } as model) =
                     Form.update subMsg form
                         |> updateWith (formToModel model) FormMsg
 
+                Editing slug _ form ->
+                    Form.update subMsg form
+                        |> updateWith (formToModel model) FormMsg
+
                 Creating form ->
                     Form.update subMsg form
                         |> updateWith (formToModel model) FormMsg

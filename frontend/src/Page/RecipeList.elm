@@ -92,7 +92,7 @@ viewPreviewWithImage title id description createdAt =
                 ]
             ]
         , div [ class "content", style "color" "black" ]
-            [ p [] [ text description ]
+            [ p [] [ text (shortDescription description) ]
             ]
 
         -- , div [ class "card-footer", class "content" ]
@@ -101,6 +101,15 @@ viewPreviewWithImage title id description createdAt =
         -- ]
         -- ]
         ]
+
+
+shortDescription : String -> String
+shortDescription description =
+    if String.length description <= 147 then
+        description
+
+    else
+        String.left 150 description ++ "..."
 
 
 viewPreviewWithoutImage : String -> Int -> String -> String -> Html Msg
