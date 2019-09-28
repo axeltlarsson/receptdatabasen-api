@@ -2,7 +2,7 @@ CREATE SCHEMA data;
 
 CREATE TABLE data.recipes(
   id            SERIAL PRIMARY KEY,
-  title         TEXT NOT NULL UNIQUE CHECK (length(title) >= 3 AND length(title) <= 512),
+  title         TEXT NOT NULL UNIQUE CHECK (length(title) >= 3 AND length(title) <= 100),
   description   TEXT CHECK (description = NULL OR length(description) <= 500),
   instructions  TEXT NOT NULL CHECK (length(instructions) >= 5 AND length(instructions) <= 4000),
   tags          TEXT[] DEFAULT '{}',

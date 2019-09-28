@@ -114,7 +114,7 @@ validate : Validation CustomError RecipeDetails
 validate =
     succeed RecipeDetails
         -- TODO: validate title uniqueness (async against server)
-        |> andMap (field "title" (trimmedString |> andThen (minLength 3) |> andThen (maxLength 512)))
+        |> andMap (field "title" (trimmedString |> andThen (minLength 3) |> andThen (maxLength 100)))
         |> andMap
             (field "description"
                 (oneOf
