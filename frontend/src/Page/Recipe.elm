@@ -88,10 +88,10 @@ view model =
 viewRecipe : Recipe Full -> Html Msg
 viewRecipe recipe =
     let
-        { title, id, createdAt } =
+        { title, description, id, createdAt } =
             Recipe.metadata recipe
 
-        { description, portions, ingredients, instructions } =
+        { portions, ingredients, instructions } =
             Recipe.contents recipe
 
         portionsStr =

@@ -20,7 +20,7 @@ type Page
 view : Page -> { title : String, content : Html msg } -> Document msg
 view page { title, content } =
     { title = title ++ " | Receptdatabasen"
-    , body = viewHeader page :: [ content ]
+    , body = viewHeader page :: [ main_ [ class "" ] [ content ] ]
     }
 
 

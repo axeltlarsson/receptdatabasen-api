@@ -7,4 +7,4 @@ The new SPA Elm frontend for receptdatabasen.
 ## Develop
 `elm reactor`
 or
-`npm install -g elm-live` and then `elm-live src/Main.elm --pushstate`
+`npm install -g elm-live` and then `elm-live src/Main.elm --pushstate -- --output=main.js`

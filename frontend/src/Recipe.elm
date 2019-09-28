@@ -46,6 +46,7 @@ type Recipe a
 type alias Metadata =
     { id : Int
     , title : Slug
+    , description : String
     , createdAt : String
     , updatedAt : String
     }
@@ -60,8 +61,7 @@ type Full
 
 
 type alias Contents =
-    { description : String
-    , instructions : String
+    { instructions : String
     , tags : List String
     , portions : Int
     , ingredients : Dict String (List String)
@@ -93,9 +93,10 @@ slug (Recipe md _) =
 
 metadataDecoder : Decoder Metadata
 metadataDecoder =
-    Decode.map4 Metadata
+    Decode.map5 Metadata
         (field "id" int)
         (field "title" Slug.decoder)
+        (field "description" string)
         (field "created_at" string)
         (field "updated_at" string)
 
@@ -109,8 +110,7 @@ previewDecoder =
 
 xDecoder : Decoder Contents
 xDecoder =
-    Decode.map5 Contents
-        (field "description" string)
+    Decode.map4 Contents
         (field "instructions" string)
         (field "tags" (list string))
         (field "portions" int)

@@ -1,7 +1,7 @@
 module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, view)
 
 import Html exposing (..)
-import Html.Attributes as Attr
+import Html.Attributes exposing (..)
 import Http
 import Json.Decode as Decoder exposing (Decoder, list)
 import Recipe exposing (Preview, Recipe, previewDecoder)
@@ -55,17 +55,91 @@ view model =
         Loaded recipes ->
             { title = "Recipes"
             , content =
-                ul [] (List.map viewPreview recipes)
+                div [ class "row" ] (List.map viewPreview recipes)
             }
 
 
 viewPreview : Recipe Preview -> Html Msg
 viewPreview recipe =
     let
-        { title, id, createdAt } =
+        { title, description, id, createdAt } =
             Recipe.metadata recipe
+
+        titleStr =
+            Slug.toString title
     in
-    li [] [ a [ Route.href (Route.Recipe title) ] [ text (Slug.toString title) ] ]
+    div [ class "col-4" ]
+        [ a [ Route.href (Route.Recipe title) ]
+            [ case id of
+                23 ->
+                    viewPreviewWithoutImage titleStr id description createdAt
+
+                _ ->
+                    viewPreviewWithImage titleStr id description createdAt
+            ]
+        ]
+
+
+viewPreviewWithImage : String -> Int -> String -> String -> Html Msg
+viewPreviewWithImage title id description createdAt =
+    div [ class "card", class "u-flex", class "u-flex-column", class "h-90" ]
+        [ div [ class "card-container" ]
+            [ div [ class "card-image", style "background-image" (imgUrl id) ] []
+            , div [ class "title-container" ]
+                [ p [ class "title" ] [ text title ]
+
+                -- , span [ class "subtitle" ] [ text "by me" ]
+                ]
+            ]
+        , div [ class "content", style "color" "black" ]
+            [ p [] [ text description ]
+            ]
+
+        -- , div [ class "card-footer", class "content" ]
+        -- [ p []
+        -- [ text "tags"
+        -- ]
+        -- ]
+        ]
+
+
+viewPreviewWithoutImage : String -> Int -> String -> String -> Html Msg
+viewPreviewWithoutImage title id description createdAt =
+    div [ class "card" ]
+        [ div [ class "card-head" ]
+            [ p [ class "card-head-title", style "color" "black" ] [ text title ]
+            ]
+        , div [ class "content", style "color" "black" ] [ text description ]
+        ]
+
+
+imgUrl : Int -> String
+imgUrl i =
+    case i of
+        1 ->
+            foodImgUrl "cheese+cake"
+
+        2 ->
+            foodImgUrl "blue+berry+pie"
+
+        25 ->
+            pancakeImgUrl
+
+        26 ->
+            foodImgUrl "spaghetti"
+
+        _ ->
+            foodImgUrl "food"
+
+
+foodImgUrl : String -> String
+foodImgUrl query =
+    "url(https://source.unsplash.com/640x480/?" ++ query ++ ")"
+
+
+pancakeImgUrl : String
+pancakeImgUrl =
+    "url(https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_185874/cf_259/pannkakstarta-med-choklad-och-nutella-724305-stor.jpg)"
 
 
 viewError : Http.Error -> Html Msg
@@ -113,7 +187,7 @@ url : String
 url =
     Url.Builder.crossOrigin "http://localhost:3000"
         [ "recipes" ]
-        [ Url.Builder.string "select" "id,title,created_at,updated_at" ]
+        [ Url.Builder.string "select" "id,title,description,created_at,updated_at" ]
 
 
 getRecipes : Cmd Msg

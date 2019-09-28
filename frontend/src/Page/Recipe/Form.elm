@@ -78,10 +78,10 @@ initialForm =
 fromRecipe : Recipe.Recipe Recipe.Full -> Model
 fromRecipe recipe =
     let
-        { id, title } =
+        { id, title, description } =
             Recipe.metadata recipe
 
-        { description, instructions, tags, portions, ingredients } =
+        { instructions, tags, portions, ingredients } =
             Recipe.contents recipe
 
         recipeForm =
