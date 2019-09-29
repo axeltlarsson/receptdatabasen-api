@@ -114,7 +114,7 @@ validate : Validation CustomError RecipeDetails
 validate =
     succeed RecipeDetails
         -- TODO: validate title uniqueness (async against server)
-        |> andMap (field "title" (trimmedString |> andThen (minLength 3) |> andThen (maxLength 100)))
+        |> andMap (field "title" (trimmedTitle |> andThen (minLength 3) |> andThen (maxLength 100)))
         |> andMap
             (field "description"
                 (oneOf
@@ -134,6 +134,11 @@ validate =
 trimmedString : Field -> Result (Form.Error.Error e) String
 trimmedString field =
     (string |> Validate.map String.trim |> andThen nonEmpty) field
+
+
+trimmedTitle : Field -> Result (Form.Error.Error e) String
+trimmedTitle title =
+    (trimmedString |> Validate.map (String.replace "#" "")) title
 
 
 nonEmptyList : Validation CustomError a -> Validation CustomError (List a)
