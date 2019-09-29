@@ -58,7 +58,7 @@ routeToString page =
         pieces =
             case page of
                 Recipe slug ->
-                    [ "recipe", Url.percentEncode (Slug.toString slug) ]
+                    [ "recipe", Url.percentEncode <| Slug.toString slug ]
 
                 RecipeList ->
                     []
@@ -67,6 +67,6 @@ routeToString page =
                     [ "editor" ]
 
                 EditRecipe slug ->
-                    [ "editor", Url.percentEncode (Slug.toString slug) ]
+                    [ "editor", Url.percentEncode <| Slug.toString slug ]
     in
     "/" ++ String.join "/" pieces

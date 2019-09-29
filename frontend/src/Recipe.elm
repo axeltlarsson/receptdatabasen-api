@@ -181,9 +181,9 @@ create jsonForm toMsg =
 
 
 edit : Slug -> Encode.Value -> (Result ServerError (Recipe Full) -> msg) -> Cmd msg
-edit slug_ jsonForm toMsg =
+edit recipeSlug jsonForm toMsg =
     Http.request
-        { url = url [ Url.Builder.string "title" (String.concat [ "eq.", Slug.toString slug_ ]) ]
+        { url = url [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
         , method = "PATCH"
         , timeout = Nothing
         , tracker = Nothing

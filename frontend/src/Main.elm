@@ -65,20 +65,6 @@ view model =
             viewPage Page.Editor GotEditorMsg (Editor.view editor)
 
 
-viewLinks : Html msg
-viewLinks =
-    ul []
-        [ viewLink "/recipes"
-        , viewLink "/recipes/1"
-        , viewLink "/editor"
-        ]
-
-
-viewLink : String -> Html msg
-viewLink path =
-    li [] [ a [ href path ] [ text path ] ]
-
-
 
 -- UPDATE
 
