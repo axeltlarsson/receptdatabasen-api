@@ -7,8 +7,8 @@ import Form.Field as Field exposing (Field)
 import Form.Input as Input
 import Form.Validate as Validate exposing (..)
 import Html exposing (..)
-import Html.Attributes exposing (class, disabled, max, min, placeholder, value)
-import Html.Events exposing (keyCode, onClick, onInput, preventDefaultOn)
+import Html.Attributes as Attr exposing (class, disabled, max, min, placeholder, value)
+import Html.Events exposing (keyCode, on, onClick, onInput, preventDefaultOn, stopPropagationOn, targetValue)
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Recipe
@@ -212,24 +212,24 @@ viewForm form =
         disableSave =
             List.length (Form.getErrors form) > 0 && Form.isSubmitted form
     in
-    div [ class "todo-list" ]
-        [ div [ class "title" ]
-            [ Input.textInput title [ placeholder "Namn på receptet..." ]
+    div [ class "recipe-forml" ]
+        [ div [ class "input-control", class "title" ]
+            [ Input.textInput title [ class "input-xlarge", placeholder "Namn på receptet..." ]
             , errorFor title
             ]
-        , div [ class "description" ]
+        , div [ class "input-control", class "description" ]
             [ Input.textArea description [ placeholder "Beskrivning..." ]
             , errorFor description
             ]
-        , div [ class "portions" ]
+        , div [ class "input-control", class "portions" ]
             [ Input.baseInput "number" Field.String Form.Text portions [ min "1", max "100" ]
             , errorFor portions
             ]
-        , div [ class "instructions" ]
+        , div [ class "input-control", class "instructions" ]
             [ Input.textArea instructions [ placeholder "Instruktioner..." ]
             , errorFor instructions
             ]
-        , div [ class "ingredients" ] <|
+        , div [ class "form-section", class "ingredients" ] <|
             List.append [ h3 [] [ text "Ingredienser" ] ]
                 (List.map
                     (viewFormIngredientGroup form)
@@ -243,15 +243,16 @@ viewForm form =
                 ]
             , errorFor newIngredientGroupInput
             ]
-        , div [ class "tags" ] <|
+        , div [ class "form-section", class "tags" ] <|
             List.append [ h3 [] [ text "Taggar" ] ]
                 (List.map
                     (viewFormTag form)
                     tags
                 )
         , div [ class "new-tag-input" ]
-            [ Input.textInput newTagInput
+            [ Input.textArea newTagInput
                 [ placeholder "Ny tagg"
+                , onPaste (Form.Append "paste:tags")
                 , onEnter (Form.Append "tags")
                 ]
             , errorFor newTagInput
@@ -277,16 +278,18 @@ viewFormIngredientGroup form i =
         ingredients =
             Form.getListIndexes (groupIndex ++ ".ingredients") form
     in
-    div
-        [ class "ingredient-group" ]
-        [ Input.textInput groupField
-            [ placeholder "Grupp" ]
-        , errorFor groupField
-        , button
-            [ class "remove-group"
-            , onClick (Form.RemoveItem "ingredients" i)
+    div [ class "form-section", class "ingredient-group" ]
+        [ div [ class "form-group" ]
+            [ Input.textInput groupField
+                [ class "form-group-input", class "input-large", placeholder "Grupp" ]
+            , errorFor groupField
+            , button
+                [ class "remove-group"
+                , class "form-group-btn"
+                , onClick (Form.RemoveItem "ingredients" i)
+                ]
+                [ text "Ta bort grupp" ]
             ]
-            [ text "Ta bort grupp" ]
         , div [ class "ingredients" ] (List.map (viewFormIngredients form groupIndex) ingredients)
         , Input.textInput (Form.getFieldAsString (groupIndex ++ ".newIngredientInput") form)
             [ class "add-ingredient"
@@ -303,12 +306,11 @@ viewFormIngredients form groupIndex i =
             groupIndex ++ ".ingredients." ++ String.fromInt i
     in
     div
-        [ class "ingredient" ]
-        [ Input.textInput
-            (Form.getFieldAsString index form)
-            []
+        [ class "form-group", class "ingredient" ]
+        [ Input.textInput (Form.getFieldAsString index form) [ class "form-group-input" ]
         , button
             [ class "remove-ingredient"
+            , class "form-group-btn"
             , onClick (Form.RemoveItem (groupIndex ++ ".ingredients") i)
             ]
             [ text "Ta bort ingrediens" ]
@@ -318,14 +320,15 @@ viewFormIngredients form groupIndex i =
 viewFormTag : RecipeForm -> Int -> Html Form.Msg
 viewFormTag form i =
     div
-        [ class "tag" ]
-        [ Input.textInput
-            (Form.getFieldAsString ("tags." ++ String.fromInt i) form)
+        [ class "form-group", class "tag" ]
+        [ Input.textInput (Form.getFieldAsString ("tags." ++ String.fromInt i) form)
             [ onEnter (Form.Append "tags")
+            , class "form-group-input"
             ]
         , button
             [ class "remove"
             , onClick (Form.RemoveItem "tags" i)
+            , class "form-group-btn"
             ]
             [ text "Remove" ]
         ]
@@ -342,6 +345,16 @@ onEnter msg =
                 Decode.fail "not ENTER"
     in
     preventDefaultOn "keydown" (Decode.andThen isEnter keyCode)
+
+
+onPaste : msg -> Attribute msg
+onPaste tagger =
+    on "paste" <| Decode.succeed tagger
+
+
+splitByNewline : String -> String
+splitByNewline str =
+    String.split "\n" str |> String.join ","
 
 
 errorString : ErrorValue CustomError -> String -> String
@@ -400,7 +413,11 @@ appendPrefilledValue form inputFieldName listName destination =
         form
 
     else
-        appendedForm |> Form.update validate inputMsg |> Form.update validate resetMsg
+        Debug.log
+            ("Appending " ++ newValue)
+            appendedForm
+            |> Form.update validate inputMsg
+            |> Form.update validate resetMsg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -422,25 +439,31 @@ update msg ({ form } as model) =
                     , Cmd.none
                     )
 
-                nestedIngredients ->
+                other ->
                     let
-                        nestedIndex =
-                            nestedIngredientIndex nestedIngredients
+                        maybeNestedIndex =
+                            nestedIngredientIndex other
                     in
-                    case nestedIndex of
+                    case maybeNestedIndex of
                         Just i ->
                             let
                                 inputFieldName =
                                     "ingredients." ++ i ++ ".newIngredientInput"
                             in
-                            ( { model
-                                | form = appendPrefilledValue form inputFieldName nestedIngredients ""
-                              }
-                            , Cmd.none
-                            )
+                            Debug.log ("nested" ++ other)
+                                ( { model
+                                    | form = appendPrefilledValue form inputFieldName other ""
+                                  }
+                                , Cmd.none
+                                )
 
                         _ ->
-                            ( model, Cmd.none )
+                            let
+                                newTagInput =
+                                    (Form.getFieldAsString "newTagInput" form).value
+                            in
+                            Debug.log ("paste?: " ++ other ++ "|" ++ Debug.toString newTagInput ++ "|")
+                                ( model, Cmd.none )
 
         FormMsg Form.Submit ->
             case toJson model of
@@ -481,7 +504,12 @@ update msg ({ form } as model) =
                             ( model, Cmd.none )
 
         FormMsg formMsg ->
-            ( { model | form = Form.update validate formMsg form }, Cmd.none )
+            let
+                newTagInput =
+                    (Form.getFieldAsString "newTagInput" form).value
+            in
+            Debug.log ("msg: |" ++ Debug.toString newTagInput ++ "|")
+                ( { model | form = Form.update validate formMsg form }, Cmd.none )
 
         SubmitValidForm _ ->
             ( model, Cmd.none )
