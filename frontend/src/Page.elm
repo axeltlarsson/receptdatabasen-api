@@ -26,7 +26,7 @@ view page { title, content } =
 
 viewHeader : Page -> Html msg
 viewHeader page =
-    nav [ class "navbar" ]
+    nav [ class "navbar", class "tab-container", class "tabs-depth", class "tabs-fill" ]
         [ ul [ class "nav" ] <| viewMenu page
         ]
 
@@ -44,7 +44,7 @@ viewMenu page =
 
 navbarLink : Page -> Route -> List (Html msg) -> Html msg
 navbarLink page route linkContent =
-    li [ classList [ ( "nav-item", True ), ( "active", isActive page route ) ] ]
+    li [ classList [ ( "nav-item", True ), ( "selected", isActive page route ) ] ]
         [ a [ class "nav-link", Route.href route ] linkContent ]
 
 
