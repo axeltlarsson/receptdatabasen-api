@@ -88,7 +88,7 @@ view : Model -> { title : String, content : Html Msg }
 view model =
     let
         skeleton prob children =
-            div [ class "editor" ]
+            div [ class "content" ]
                 (List.append
                     [ Html.map FormMsg children ]
                     [ viewServerError prob ]

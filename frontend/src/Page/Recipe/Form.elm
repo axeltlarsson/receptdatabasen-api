@@ -212,7 +212,7 @@ viewForm form =
         disableSave =
             List.length (Form.getErrors form) > 0 && Form.isSubmitted form
     in
-    div [ class "recipe-forml" ]
+    div [ class "recipe-form" ]
         [ div [ class "input-control", class "title" ]
             [ Input.textInput title [ class "input-xlarge", placeholder "Namn på receptet..." ]
             , errorFor title
@@ -225,23 +225,29 @@ viewForm form =
             [ Input.baseInput "number" Field.String Form.Text portions [ min "1", max "100" ]
             , errorFor portions
             ]
-        , div [ class "input-control", class "instructions" ]
+        , div [ class "input-control instructions" ]
             [ Input.textArea instructions [ placeholder "Instruktioner..." ]
             , errorFor instructions
             ]
-        , div [ class "form-section", class "ingredients" ] <|
-            List.append [ h3 [] [ text "Ingredienser" ] ]
+        , div [ class "form-section row ingredients" ] <|
+            List.append [ h3 [ class "col-12" ] [ text "Ingredienser" ] ]
                 (List.map
                     (viewFormIngredientGroup form)
                     ingredients
                     |> List.append [ errorFor ingredientGroups ]
                 )
-        , div [ class "new-ingredient-group" ]
+        , div [ class "new-ingredient-group form-group" ]
             [ Input.textInput newIngredientGroupInput
                 [ placeholder "Ny ingrediensgrupp"
                 , onEnter (Form.Append "ingredients")
+                , class "form-group-input"
                 ]
             , errorFor newIngredientGroupInput
+            , button
+                [ class "form-group-btn btn-dark"
+                , onClick (Form.Append "ingredients")
+                ]
+                [ text "+" ]
             ]
         , div [ class "form-section", class "tags" ] <|
             List.append [ h3 [] [ text "Taggar" ] ]
@@ -258,7 +264,7 @@ viewForm form =
             , errorFor newTagInput
             ]
         , button
-            [ class "submit"
+            [ class "submit btn-dark"
             , disabled disableSave
             , onClick Form.Submit
             ]
@@ -278,23 +284,25 @@ viewFormIngredientGroup form i =
         ingredients =
             Form.getListIndexes (groupIndex ++ ".ingredients") form
     in
-    div [ class "form-section", class "ingredient-group" ]
+    div [ class "form-section ingredient-group col-4" ]
         [ div [ class "form-group" ]
             [ Input.textInput groupField
-                [ class "form-group-input", class "input-large", placeholder "Grupp" ]
+                [ class "form-group-input input", placeholder "Grupp" ]
             , errorFor groupField
             , button
-                [ class "remove-group"
-                , class "form-group-btn"
+                [ class "remove-group form-group-btn btn"
                 , onClick (Form.RemoveItem "ingredients" i)
                 ]
-                [ text "Ta bort grupp" ]
+                [ text "X" ]
             ]
-        , div [ class "ingredients" ] (List.map (viewFormIngredients form groupIndex) ingredients)
-        , Input.textInput (Form.getFieldAsString (groupIndex ++ ".newIngredientInput") form)
-            [ class "add-ingredient"
-            , placeholder "Ny ingrediens"
-            , onEnter (Form.Append (groupIndex ++ ".ingredients"))
+        , div [ class "ingredients", class "animated", class "fadeIn" ] (List.map (viewFormIngredients form groupIndex) ingredients)
+        , div [ class "form-group" ]
+            [ Input.textInput (Form.getFieldAsString (groupIndex ++ ".newIngredientInput") form)
+                [ class "form-group-input add-ingredient animated fadeIn"
+                , placeholder "Ny ingrediens"
+                , onEnter (Form.Append (groupIndex ++ ".ingredients"))
+                ]
+            , button [ class "form-group-btn btn-dark" ] [ text "+" ]
             ]
         ]
 
@@ -307,13 +315,13 @@ viewFormIngredients form groupIndex i =
     in
     div
         [ class "form-group", class "ingredient" ]
-        [ Input.textInput (Form.getFieldAsString index form) [ class "form-group-input" ]
+        [ Input.textInput (Form.getFieldAsString index form) [ class "form-group-input animated fadeIn" ]
         , button
             [ class "remove-ingredient"
-            , class "form-group-btn"
+            , class "form-group-btn btn"
             , onClick (Form.RemoveItem (groupIndex ++ ".ingredients") i)
             ]
-            [ text "Ta bort ingrediens" ]
+            [ text "X" ]
         ]
 
 
