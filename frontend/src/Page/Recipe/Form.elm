@@ -255,20 +255,21 @@ viewForm form =
                     (viewFormTag form)
                     tags
                 )
-        , div [ class "new-tag-input" ]
-            [ Input.textArea newTagInput
+        , div [ class "form-section new-tag-input" ]
+            [ Input.textInput newTagInput
                 [ placeholder "Ny tagg"
-                , onPaste (Form.Append "paste:tags")
                 , onEnter (Form.Append "tags")
                 ]
             , errorFor newTagInput
             ]
-        , button
-            [ class "submit btn-dark"
-            , disabled disableSave
-            , onClick Form.Submit
+        , div [ class "form-section" ]
+            [ button
+                [ class "submit btn-dark"
+                , disabled disableSave
+                , onClick Form.Submit
+                ]
+                [ text "Spara" ]
             ]
-            [ text "Spara" ]
         ]
 
 
@@ -355,16 +356,6 @@ onEnter msg =
     preventDefaultOn "keydown" (Decode.andThen isEnter keyCode)
 
 
-onPaste : msg -> Attribute msg
-onPaste tagger =
-    on "paste" <| Decode.succeed tagger
-
-
-splitByNewline : String -> String
-splitByNewline str =
-    String.split "\n" str |> String.join ","
-
-
 errorString : ErrorValue CustomError -> String -> String
 errorString error msg =
     case error of
@@ -421,9 +412,7 @@ appendPrefilledValue form inputFieldName listName destination =
         form
 
     else
-        Debug.log
-            ("Appending " ++ newValue)
-            appendedForm
+        appendedForm
             |> Form.update validate inputMsg
             |> Form.update validate resetMsg
 
@@ -458,20 +447,18 @@ update msg ({ form } as model) =
                                 inputFieldName =
                                     "ingredients." ++ i ++ ".newIngredientInput"
                             in
-                            Debug.log ("nested" ++ other)
-                                ( { model
-                                    | form = appendPrefilledValue form inputFieldName other ""
-                                  }
-                                , Cmd.none
-                                )
+                            ( { model
+                                | form = appendPrefilledValue form inputFieldName other ""
+                              }
+                            , Cmd.none
+                            )
 
                         _ ->
                             let
                                 newTagInput =
                                     (Form.getFieldAsString "newTagInput" form).value
                             in
-                            Debug.log ("paste?: " ++ other ++ "|" ++ Debug.toString newTagInput ++ "|")
-                                ( model, Cmd.none )
+                            ( model, Cmd.none )
 
         FormMsg Form.Submit ->
             case toJson model of
@@ -516,8 +503,7 @@ update msg ({ form } as model) =
                 newTagInput =
                     (Form.getFieldAsString "newTagInput" form).value
             in
-            Debug.log ("msg: |" ++ Debug.toString newTagInput ++ "|")
-                ( { model | form = Form.update validate formMsg form }, Cmd.none )
+            ( { model | form = Form.update validate formMsg form }, Cmd.none )
 
         SubmitValidForm _ ->
             ( model, Cmd.none )
