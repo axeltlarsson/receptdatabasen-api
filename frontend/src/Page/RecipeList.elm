@@ -82,7 +82,7 @@ viewPreview recipe =
 
 viewPreviewWithImage : String -> Int -> String -> String -> Html Msg
 viewPreviewWithImage title id description createdAt =
-    div [ class "card", class "u-flex", class "u-flex-column", class "h-90" ]
+    div [ class "card u-flex u-flex-column h-90" ]
         [ div [ class "card-container" ]
             [ div [ class "card-image", style "background-image" (imgUrl id) ] []
             , div [ class "title-container" ]

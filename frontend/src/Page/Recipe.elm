@@ -2,7 +2,7 @@ module Page.Recipe exposing (Model, Msg, init, toSession, update, view)
 
 import Dict exposing (Dict)
 import Html exposing (..)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, src, style)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decoder exposing (Decoder, list)
@@ -98,18 +98,47 @@ viewRecipe recipe =
             String.fromInt portions
     in
     div []
-        [ h1 [] [ text (Slug.toString title) ]
+        [ viewSplash (Slug.toString title) description
         , p [] [ text <| String.concat [ "Recept-id: ", String.fromInt id ] ]
-        , p [] [ text description ]
         , p [] [ text <| String.concat [ portionsStr, " portioner" ] ]
-        , h2 [] [ text "Ingredienser" ]
         , viewIngredientsDict ingredients
         , h2 [] [ text "Instruktioner" ]
         , p [] [ Markdown.toHtmlWith mdOptions [ class "ingredients" ] instructions ]
         , p [] [ text <| String.concat [ "Skapad: ", createdAt ] ]
-        , a [ Route.href (Route.EditRecipe (Recipe.slug recipe)) ] [ text "Ändra recept" ]
-        , button [ onClick ClickedDelete ] [ text "Radera" ]
+        , span [ class "usquare" ] [ a [ class "utb utb-OLR", Route.href (Route.EditRecipe (Recipe.slug recipe)) ] [ text "Ändra recept" ] ]
+        , button [ onClick ClickedDelete, class "btn btn-danger" ] [ text "Radera" ]
         ]
+
+
+
+{--
+  - <div id="splash-img" class="hero fullscreen hero-img parallax-img">
+  -     <div class="hero-body">
+  -         <div class="content u-text-center">
+  -             <h1 class="uppercase white title">Easily create beautiful splash screens</h1>
+  -             <h3 class="uppercase white sub-title faded">Only 6 lines needed and no additional CSS</h3>
+  -         </div>
+  -     </div>
+  - </div>
+  --}
+
+
+viewSplash : String -> String -> Html Msg
+viewSplash title description =
+    -- h1 [] [ text title ]
+    div [ class "hero fullscreen hero-im parallax-img", style "background" pancakeImgUrl ]
+        [ div [ class "hero-body" ]
+            [ div [ class "content u-text-center" ]
+                [ h1 [ class "white title" ] [ text title ]
+                , h3 [ class "white sub-title faded" ] [ text description ]
+                ]
+            ]
+        ]
+
+
+pancakeImgUrl : String
+pancakeImgUrl =
+    "url(https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_185874/cf_259/pannkakstarta-med-choklad-och-nutella-724305-stor.jpg)"
 
 
 mdOptions : Markdown.Options

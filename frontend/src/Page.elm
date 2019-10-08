@@ -26,7 +26,7 @@ view page { title, content } =
 
 viewHeader : Page -> Html msg
 viewHeader page =
-    nav [ class "navbar", class "tab-container", class "tabs-depth", class "tabs-fill" ]
+    nav [ class "navbar tab-container tabs-depth tabs-fill" ]
         [ ul [ class "nav" ] <| viewMenu page
         ]
 
@@ -37,8 +37,8 @@ viewMenu page =
         linkTo =
             navbarLink page
     in
-    [ linkTo Route.NewRecipe [ text "New Recipe" ]
-    , linkTo Route.RecipeList [ text "Recipe List" ]
+    [ linkTo Route.NewRecipe [ text "Nytt recept" ]
+    , linkTo Route.RecipeList [ text "Alla recept" ]
     ]
 
 

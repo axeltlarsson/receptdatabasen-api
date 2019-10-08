@@ -249,8 +249,8 @@ viewForm form =
                 ]
                 [ text "+" ]
             ]
-        , div [ class "form-section", class "tags" ] <|
-            List.append [ h3 [] [ text "Taggar" ] ]
+        , div [ class "form-section row tags" ] <|
+            List.append [ h3 [ class "col-12" ] [ text "Taggar" ] ]
                 (List.map
                     (viewFormTag form)
                     tags
@@ -285,7 +285,7 @@ viewFormIngredientGroup form i =
         ingredients =
             Form.getListIndexes (groupIndex ++ ".ingredients") form
     in
-    div [ class "form-section ingredient-group col-4" ]
+    div [ class "form-section ingredient-group col-6" ]
         [ div [ class "form-group" ]
             [ Input.textInput groupField
                 [ class "form-group-input input", placeholder "Grupp" ]
@@ -296,7 +296,7 @@ viewFormIngredientGroup form i =
                 ]
                 [ text "X" ]
             ]
-        , div [ class "ingredients", class "animated", class "fadeIn" ] (List.map (viewFormIngredients form groupIndex) ingredients)
+        , div [ class "ingredients animated fadeIn" ] (List.map (viewFormIngredients form groupIndex) ingredients)
         , div [ class "form-group" ]
             [ Input.textInput (Form.getFieldAsString (groupIndex ++ ".newIngredientInput") form)
                 [ class "form-group-input add-ingredient animated fadeIn"
@@ -315,7 +315,7 @@ viewFormIngredients form groupIndex i =
             groupIndex ++ ".ingredients." ++ String.fromInt i
     in
     div
-        [ class "form-group", class "ingredient" ]
+        [ class "form-group ingredient" ]
         [ Input.textInput (Form.getFieldAsString index form) [ class "form-group-input animated fadeIn" ]
         , button
             [ class "remove-ingredient"
@@ -328,18 +328,20 @@ viewFormIngredients form groupIndex i =
 
 viewFormTag : RecipeForm -> Int -> Html Form.Msg
 viewFormTag form i =
-    div
-        [ class "form-group", class "tag" ]
-        [ Input.textInput (Form.getFieldAsString ("tags." ++ String.fromInt i) form)
-            [ onEnter (Form.Append "tags")
-            , class "form-group-input"
+    div [ class "form-section col-4 animated fadeIn" ]
+        [ div
+            [ class "form-group tag" ]
+            [ Input.textInput (Form.getFieldAsString ("tags." ++ String.fromInt i) form)
+                [ onEnter (Form.Append "tags")
+                , class "form-group-input"
+                ]
+            , button
+                [ class "remove"
+                , onClick (Form.RemoveItem "tags" i)
+                , class "form-group-btn"
+                ]
+                [ text "Remove" ]
             ]
-        , button
-            [ class "remove"
-            , onClick (Form.RemoveItem "tags" i)
-            , class "form-group-btn"
-            ]
-            [ text "Remove" ]
         ]
 
 
