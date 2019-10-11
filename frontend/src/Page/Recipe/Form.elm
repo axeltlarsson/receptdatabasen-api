@@ -188,9 +188,6 @@ viewForm form =
         description =
             Form.getFieldAsString "description" form
 
-        portions =
-            Form.getFieldAsString "portions" form
-
         instructions =
             Form.getFieldAsString "instructions" form
 
@@ -206,10 +203,7 @@ viewForm form =
             [ Input.textArea description [ placeholder "Beskrivning..." ]
             , errorFor description
             ]
-        , div [ class "portions input-control" ]
-            [ Input.baseInput "number" Field.String Form.Text portions [ min "1", max "100" ]
-            , errorFor portions
-            ]
+        , div [ class "portions form-section row u-no-padding" ] <| viewPortionsSection form
         , div [ class "instructions input-control" ]
             [ Input.textArea instructions [ placeholder "Instruktioner..." ]
             , errorFor instructions
@@ -225,6 +219,20 @@ viewForm form =
                 [ text "Spara" ]
             ]
         ]
+
+
+viewPortionsSection : RecipeForm -> List (Html Form.Msg)
+viewPortionsSection form =
+    let
+        portions =
+            Form.getFieldAsString "portions" form
+    in
+    [ div [ class "col-1 form-section section-inline" ]
+        [ label [ class "font-normal" ] [ text "Portioner:" ]
+        , Input.baseInput "number" Field.String Form.Text portions [ min "1", max "100" ]
+        , errorFor portions
+        ]
+    ]
 
 
 viewIngredientsSection : RecipeForm -> List (Html Form.Msg)
@@ -249,7 +257,7 @@ viewIngredientsSection form =
     , div [ class "row" ]
         [ div [ class "new-ingredient-group col-12 form-group" ]
             [ Input.textInput newIngredientGroupInput
-                [ placeholder "Ny ingrediensgrupp"
+                [ placeholder "Ny ingrediensgrupp..."
                 , onEnter (Form.Append "ingredients")
                 , class "form-group-input"
                 ]
@@ -291,7 +299,7 @@ viewFormIngredientGroup form i =
         , div [ class "form-group" ]
             [ Input.textInput (Form.getFieldAsString (groupIndex ++ ".newIngredientInput") form)
                 [ class "form-group-input add-ingredient"
-                , placeholder "Ny ingrediens"
+                , placeholder "Ny ingrediens..."
                 , onEnter (Form.Append (groupIndex ++ ".ingredients"))
                 ]
             , button
@@ -339,7 +347,7 @@ viewTagsSection form =
     , div [ class "row" ]
         [ div [ class "form-group col-12 new-tag-input" ]
             [ Input.textInput newTagInput
-                [ placeholder "Ny tagg"
+                [ placeholder "Ny tagg..."
                 , onEnter (Form.Append "tags")
                 , class "form-group-input"
                 ]
