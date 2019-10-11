@@ -194,6 +194,42 @@ viewForm form =
         instructions =
             Form.getFieldAsString "instructions" form
 
+        disableSave =
+            List.length (Form.getErrors form) > 0 && Form.isSubmitted form
+    in
+    div [ class "recipe-form animated fadeIn" ]
+        [ div [ class "title input-control" ]
+            [ Input.textInput title [ class "input-xlarge", placeholder "Namn på receptet..." ]
+            , errorFor title
+            ]
+        , div [ class "description input-control" ]
+            [ Input.textArea description [ placeholder "Beskrivning..." ]
+            , errorFor description
+            ]
+        , div [ class "portions input-control" ]
+            [ Input.baseInput "number" Field.String Form.Text portions [ min "1", max "100" ]
+            , errorFor portions
+            ]
+        , div [ class "instructions input-control" ]
+            [ Input.textArea instructions [ placeholder "Instruktioner..." ]
+            , errorFor instructions
+            ]
+        , div [ class "ingredients form-section animated fadeIn" ] <| viewIngredientsSection form
+        , div [ class "tags form-section" ] <| viewTagsSection form
+        , div [ class "submit form-section" ]
+            [ button
+                [ class "submit btn-dark"
+                , disabled disableSave
+                , onClick Form.Submit
+                ]
+                [ text "Spara" ]
+            ]
+        ]
+
+
+viewIngredientsSection : RecipeForm -> List (Html Form.Msg)
+viewIngredientsSection form =
+    let
         ingredients =
             Form.getListIndexes "ingredients" form
 
@@ -202,41 +238,16 @@ viewForm form =
 
         newIngredientGroupInput =
             Form.getFieldAsString "newIngredientGroupInput" form
-
-        tags =
-            Form.getListIndexes "tags" form
-
-        newTagInput =
-            Form.getFieldAsString "newTagInput" form
-
-        disableSave =
-            List.length (Form.getErrors form) > 0 && Form.isSubmitted form
     in
-    div [ class "recipe-form" ]
-        [ div [ class "input-control", class "title" ]
-            [ Input.textInput title [ class "input-xlarge", placeholder "Namn på receptet..." ]
-            , errorFor title
-            ]
-        , div [ class "input-control", class "description" ]
-            [ Input.textArea description [ placeholder "Beskrivning..." ]
-            , errorFor description
-            ]
-        , div [ class "input-control", class "portions" ]
-            [ Input.baseInput "number" Field.String Form.Text portions [ min "1", max "100" ]
-            , errorFor portions
-            ]
-        , div [ class "input-control instructions" ]
-            [ Input.textArea instructions [ placeholder "Instruktioner..." ]
-            , errorFor instructions
-            ]
-        , div [ class "form-section row ingredients" ] <|
-            List.append [ h3 [ class "col-12" ] [ text "Ingredienser" ] ]
-                (List.map
-                    (viewFormIngredientGroup form)
-                    ingredients
-                    |> List.append [ errorFor ingredientGroups ]
-                )
-        , div [ class "new-ingredient-group form-group" ]
+    [ div [ class "ingredient-groups form-section row" ] <|
+        List.append [ h3 [ class "col-12" ] [ text "Ingredienser" ] ]
+            (List.map
+                (viewFormIngredientGroup form)
+                ingredients
+                |> List.append [ errorFor ingredientGroups ]
+            )
+    , div [ class "row" ]
+        [ div [ class "new-ingredient-group col-12 form-group" ]
             [ Input.textInput newIngredientGroupInput
                 [ placeholder "Ny ingrediensgrupp"
                 , onEnter (Form.Append "ingredients")
@@ -249,28 +260,8 @@ viewForm form =
                 ]
                 [ text "+" ]
             ]
-        , div [ class "form-section row tags" ] <|
-            List.append [ h3 [ class "col-12" ] [ text "Taggar" ] ]
-                (List.map
-                    (viewFormTag form)
-                    tags
-                )
-        , div [ class "form-section new-tag-input" ]
-            [ Input.textInput newTagInput
-                [ placeholder "Ny tagg"
-                , onEnter (Form.Append "tags")
-                ]
-            , errorFor newTagInput
-            ]
-        , div [ class "form-section" ]
-            [ button
-                [ class "submit btn-dark"
-                , disabled disableSave
-                , onClick Form.Submit
-                ]
-                [ text "Spara" ]
-            ]
         ]
+    ]
 
 
 viewFormIngredientGroup : RecipeForm -> Int -> Html Form.Msg
@@ -285,7 +276,7 @@ viewFormIngredientGroup form i =
         ingredients =
             Form.getListIndexes (groupIndex ++ ".ingredients") form
     in
-    div [ class "form-section ingredient-group col-6" ]
+    div [ class "form-section ingredient-group col-6 animated fadeIn" ]
         [ div [ class "form-group" ]
             [ Input.textInput groupField
                 [ class "form-group-input input", placeholder "Grupp" ]
@@ -296,51 +287,85 @@ viewFormIngredientGroup form i =
                 ]
                 [ text "X" ]
             ]
-        , div [ class "ingredients animated fadeIn" ] (List.map (viewFormIngredients form groupIndex) ingredients)
+        , div [ class "ingredients" ] (List.map (viewFormIngredient form groupIndex) ingredients)
         , div [ class "form-group" ]
             [ Input.textInput (Form.getFieldAsString (groupIndex ++ ".newIngredientInput") form)
-                [ class "form-group-input add-ingredient animated fadeIn"
+                [ class "form-group-input add-ingredient"
                 , placeholder "Ny ingrediens"
                 , onEnter (Form.Append (groupIndex ++ ".ingredients"))
                 ]
-            , button [ class "form-group-btn btn-dark" ] [ text "+" ]
+            , button
+                [ class "form-group-btn btn-dark", onClick (Form.Append (groupIndex ++ ".ingredients")) ]
+                [ text "+" ]
             ]
         ]
 
 
-viewFormIngredients : RecipeForm -> String -> Int -> Html Form.Msg
-viewFormIngredients form groupIndex i =
+viewFormIngredient : RecipeForm -> String -> Int -> Html Form.Msg
+viewFormIngredient form groupIndex i =
     let
         index =
             groupIndex ++ ".ingredients." ++ String.fromInt i
     in
     div
-        [ class "form-group ingredient" ]
-        [ Input.textInput (Form.getFieldAsString index form) [ class "form-group-input animated fadeIn" ]
+        [ class "form-group ingredient animated fadeIn" ]
+        [ Input.textInput (Form.getFieldAsString index form) [ class "form-group-input" ]
         , button
-            [ class "remove-ingredient"
-            , class "form-group-btn btn"
+            [ class "remove form-group-btn btn"
             , onClick (Form.RemoveItem (groupIndex ++ ".ingredients") i)
             ]
             [ text "X" ]
         ]
 
 
-viewFormTag : RecipeForm -> Int -> Html Form.Msg
-viewFormTag form i =
-    div [ class "form-section col-4 animated fadeIn" ]
-        [ div
-            [ class "form-group tag" ]
-            [ Input.textInput (Form.getFieldAsString ("tags." ++ String.fromInt i) form)
-                [ onEnter (Form.Append "tags")
+viewTagsSection : RecipeForm -> List (Html Form.Msg)
+viewTagsSection form =
+    let
+        tagsIndcs =
+            Form.getListIndexes "tags" form
+
+        newTagInput =
+            Form.getFieldAsString "newTagInput" form
+
+        tags =
+            List.map (viewFormTag form) tagsIndcs
+    in
+    [ div [ class "form-section row" ]
+        (List.concat
+            [ [ h3 [ class "col-12" ] [ text "Taggar" ] ]
+            , tags
+            ]
+        )
+    , div [ class "row" ]
+        [ div [ class "form-group col-12 new-tag-input" ]
+            [ Input.textInput newTagInput
+                [ placeholder "Ny tagg"
+                , onEnter (Form.Append "tags")
                 , class "form-group-input"
                 ]
+            , errorFor newTagInput
             , button
-                [ class "remove"
-                , onClick (Form.RemoveItem "tags" i)
-                , class "form-group-btn"
+                [ class "form-group-btn btn-dark"
+                , onClick (Form.Append "tags")
                 ]
-                [ text "Remove" ]
+                [ text "+" ]
+            ]
+        ]
+    ]
+
+
+viewFormTag : RecipeForm -> Int -> Html Form.Msg
+viewFormTag form i =
+    div [ class "col-4 animated fadeIn" ]
+        [ div
+            [ class "form-group tagg" ]
+            -- "tagg" to avoid Cirrus conflict with "tag"
+            [ Input.textInput (Form.getFieldAsString ("tags." ++ String.fromInt i) form) [ class "form-group-input" ]
+            , button
+                [ class "remove form-group-btn btn"
+                , onClick (Form.RemoveItem "tags" i)
+                ]
+                [ text "X" ]
             ]
         ]
 
