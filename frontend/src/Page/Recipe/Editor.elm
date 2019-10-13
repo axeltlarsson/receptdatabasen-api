@@ -12,6 +12,7 @@ import Recipe exposing (Full, Recipe, ServerError, fullDecoder)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
 import Session exposing (Session(..))
+import Url exposing (Url)
 import Url.Builder
 
 
@@ -106,10 +107,14 @@ view model =
 
             -- Editing an existing recipe
             Loading slug ->
-                skeleton Nothing <| text "Laddar..."
+                skeleton Nothing loadingSpinner
 
             LoadingFailed slug ->
-                skeleton Nothing <| text ("Kunde ej ladda in recept: " ++ Slug.toString slug)
+                let
+                    title =
+                        Maybe.withDefault "" (Url.percentDecode (Slug.toString slug))
+                in
+                skeleton Nothing <| div [ class "toast toast--error" ] [ h6 [] [ text <| "Kunde ej ladda in recept: " ++ title ] ]
 
             Editing slug serverError form ->
                 skeleton serverError <| Form.view form
@@ -117,6 +122,15 @@ view model =
             Saving slug form ->
                 skeleton Nothing <| Form.view form
     }
+
+
+loadingSpinner : Html Form.Msg
+loadingSpinner =
+    div [ id "hourglass-loader" ]
+        [ div [ id "hourglass-top" ] []
+        , div [ id "hourglass-bottom" ] []
+        , div [ id "hourglass-line" ] []
+        ]
 
 
 viewServerError : Maybe ServerError -> Html Msg
