@@ -24,7 +24,7 @@ type alias Model =
 type Status recipes
     = Loading
     | Loaded recipes
-    | Failed Http.Error
+    | Failed Recipe.ServerError
 
 
 init : Session -> ( Model, Cmd Msg )
@@ -32,7 +32,7 @@ init session =
     ( { session = session
       , recipes = Loading
       }
-    , getRecipes
+    , Recipe.fetchMany LoadedRecipes
     )
 
 
@@ -50,7 +50,9 @@ view model =
 
         Failed err ->
             { title = "Failed to load"
-            , content = viewError err
+            , content =
+                main_ [ class "content" ]
+                    [ Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err) ]
             }
 
         Loaded recipes ->
@@ -152,31 +154,12 @@ pancakeImgUrl =
     "url(https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_185874/cf_259/pannkakstarta-med-choklad-och-nutella-724305-stor.jpg)"
 
 
-viewError : Http.Error -> Html Msg
-viewError error =
-    case error of
-        Http.BadUrl str ->
-            text str
-
-        Http.NetworkError ->
-            text "NetworkError"
-
-        Http.BadStatus status ->
-            text ("BadStatus " ++ String.fromInt status)
-
-        Http.BadBody str ->
-            text ("BadBody " ++ str)
-
-        Http.Timeout ->
-            text "Timeout"
-
-
 
 -- UPDATE
 
 
 type Msg
-    = LoadedRecipes (Result Http.Error (List (Recipe Preview)))
+    = LoadedRecipes (Result Recipe.ServerError (List (Recipe Preview)))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -187,30 +170,6 @@ update msg model =
 
         LoadedRecipes (Err error) ->
             ( { model | recipes = Failed error }, Cmd.none )
-
-
-
--- HTTP
-
-
-url : String
-url =
-    Url.Builder.crossOrigin "http://localhost:3000"
-        [ "recipes" ]
-        [ Url.Builder.string "select" "id,title,description,created_at,updated_at" ]
-
-
-getRecipes : Cmd Msg
-getRecipes =
-    Http.get
-        { url = url
-        , expect = Http.expectJson LoadedRecipes previewsDecoder
-        }
-
-
-previewsDecoder : Decoder (List (Recipe Preview))
-previewsDecoder =
-    list <| Recipe.previewDecoder
 
 
 

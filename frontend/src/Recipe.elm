@@ -9,6 +9,7 @@ module Recipe exposing
     , delete
     , edit
     , fetch
+    , fetchMany
     , fullDecoder
     , metadata
     , previewDecoder
@@ -31,7 +32,7 @@ import Json.Decode as Decode exposing (Decoder, dict, field, index, int, list, m
 import Json.Encode as Encode
 import Recipe.Slug as Slug exposing (Slug)
 import Url
-import Url.Builder
+import Url.Builder exposing (QueryParameter)
 
 
 
@@ -129,11 +130,16 @@ fullDecoder =
         contentsDecoder
 
 
+previewsDecoder : Decoder (List (Recipe Preview))
+previewsDecoder =
+    list <| previewDecoder
+
+
 
 -- HTTP
 
 
-url : List Url.Builder.QueryParameter -> String
+url : List QueryParameter -> String
 url queryParams =
     Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] queryParams
 
@@ -148,6 +154,18 @@ fetch recipeSlug toMsg =
         , headers = [ Http.header "Accept" "application/vnd.pgrst.object+json" ]
         , body = Http.emptyBody
         , expect = expectJsonWithBody toMsg fullDecoder
+        }
+
+
+fetchMany : (Result ServerError (List (Recipe Preview)) -> msg) -> Cmd msg
+fetchMany toMsg =
+    let
+        params =
+            [ Url.Builder.string "select" "id,title,description,created_at,updated_at" ]
+    in
+    Http.get
+        { url = url params
+        , expect = expectJsonWithBody toMsg previewsDecoder
         }
 
 

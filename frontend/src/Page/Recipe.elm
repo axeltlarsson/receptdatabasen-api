@@ -28,7 +28,6 @@ type Status recipe
     = Loading
     | Loaded recipe
     | Failed Recipe.ServerError
-    | NotFound
 
 
 init : Session -> Slug -> ( Model, Cmd Msg )
@@ -68,12 +67,8 @@ view model =
         Failed err ->
             { title = "Kunde ej hämta recept"
             , content =
-                text <| Recipe.serverErrorToString err
-            }
-
-        NotFound ->
-            { title = "404"
-            , content = text "Kunde ej hitta receptet"
+                main_ [ class "content" ]
+                    [ Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err) ]
             }
 
         Loaded recipe ->

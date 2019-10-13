@@ -115,7 +115,7 @@ view model =
                     title =
                         Maybe.withDefault "" (Url.percentDecode (Slug.toString slug))
                 in
-                skeleton Nothing <| Loading.error ("Kunde ej ladda in recept: " ++ title)
+                skeleton Nothing <| Loading.error title "Kunde ej ladda in receptet"
 
             Editing slug serverError form ->
                 skeleton serverError <| Form.view form
@@ -130,24 +130,16 @@ viewServerError maybeError =
     let
         maybeErrorStr =
             Maybe.map Recipe.serverErrorToString maybeError
-
-        skeleton children =
-            div
-                [ class "server-error"
-                , style "background" "red"
-                , style "color" "white"
-                ]
-                children
     in
     case maybeErrorStr of
         Just errorStr ->
-            skeleton
-                [ p [] [ text "Något gick fel när servern försökte spara receptet" ]
+            div [ class "toast toast--error" ]
+                [ h6 [] [ text "Något gick fel när servern försökte spara receptet" ]
                 , code [] [ text errorStr ]
                 ]
 
         Nothing ->
-            skeleton []
+            div [] []
 
 
 type Msg

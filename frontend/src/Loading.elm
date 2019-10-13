@@ -13,7 +13,9 @@ animation =
         ]
 
 
-error : String -> Html msg
-error errorMsg =
+error : String -> String -> Html msg
+error title message =
     div [ class "toast toast--error" ]
-        [ h6 [] [ text errorMsg ] ]
+        [ h6 [] [ text title ]
+        , code [] [ text message ]
+        ]
