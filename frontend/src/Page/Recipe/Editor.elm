@@ -7,6 +7,7 @@ import Html.Events exposing (keyCode, onInput, onSubmit, preventDefaultOn)
 import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
+import Loading
 import Page.Recipe.Form as Form
 import Recipe exposing (Full, Recipe, ServerError, fullDecoder)
 import Recipe.Slug as Slug exposing (Slug)
@@ -107,14 +108,14 @@ view model =
 
             -- Editing an existing recipe
             Loading slug ->
-                skeleton Nothing loadingSpinner
+                skeleton Nothing Loading.animation
 
             LoadingFailed slug ->
                 let
                     title =
                         Maybe.withDefault "" (Url.percentDecode (Slug.toString slug))
                 in
-                skeleton Nothing <| div [ class "toast toast--error" ] [ h6 [] [ text <| "Kunde ej ladda in recept: " ++ title ] ]
+                skeleton Nothing <| Loading.error ("Kunde ej ladda in recept: " ++ title)
 
             Editing slug serverError form ->
                 skeleton serverError <| Form.view form
@@ -122,15 +123,6 @@ view model =
             Saving slug form ->
                 skeleton Nothing <| Form.view form
     }
-
-
-loadingSpinner : Html Form.Msg
-loadingSpinner =
-    div [ id "hourglass-loader" ]
-        [ div [ id "hourglass-top" ] []
-        , div [ id "hourglass-bottom" ] []
-        , div [ id "hourglass-line" ] []
-        ]
 
 
 viewServerError : Maybe ServerError -> Html Msg

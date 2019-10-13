@@ -6,6 +6,7 @@ import Html.Attributes exposing (class, src, style)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decoder exposing (Decoder, list)
+import Loading
 import Markdown
 import Recipe exposing (Full, Metadata, Recipe, contents, fullDecoder, metadata)
 import Recipe.Slug as Slug exposing (Slug)
@@ -61,7 +62,7 @@ view model =
     case model.recipe of
         Loading ->
             { title = "Laddar..."
-            , content = text ""
+            , content = Loading.animation
             }
 
         Failed err ->

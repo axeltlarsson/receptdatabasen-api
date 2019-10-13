@@ -4,6 +4,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Http
 import Json.Decode as Decoder exposing (Decoder, list)
+import Loading
 import Recipe exposing (Preview, Recipe, previewDecoder)
 import Recipe.Slug as Slug exposing (Slug)
 import Route exposing (Route)
@@ -44,7 +45,7 @@ view model =
     case model.recipes of
         Loading ->
             { title = "Recipes"
-            , content = text ""
+            , content = Loading.animation
             }
 
         Failed err ->
