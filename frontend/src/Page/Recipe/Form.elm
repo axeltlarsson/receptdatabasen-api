@@ -7,7 +7,7 @@ import Form.Field as Field exposing (Field)
 import Form.Input as Input
 import Form.Validate as Validate exposing (..)
 import Html exposing (..)
-import Html.Attributes as Attr exposing (class, disabled, max, min, placeholder, value)
+import Html.Attributes as Attr exposing (class, classList, disabled, height, id, max, min, placeholder, value, width)
 import Html.Events exposing (keyCode, on, onClick, onInput, preventDefaultOn, stopPropagationOn, targetValue)
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -168,7 +168,7 @@ errorFor : Form.FieldState CustomError a -> Html Form.Msg
 errorFor field =
     case field.liveError of
         Just error ->
-            div [ class "error" ] [ text (errorString error field.path) ]
+            div [ class "error text-danger" ] [ text (errorString error field.path) ]
 
         Nothing ->
             text ""
@@ -212,7 +212,7 @@ viewForm form =
         , div [ class "tags form-section" ] <| viewTagsSection form
         , div [ class "submit form-section" ]
             [ button
-                [ class "submit btn-dark"
+                [ class "submit btn btn-dark btn-animated"
                 , disabled disableSave
                 , onClick Form.Submit
                 ]
@@ -261,13 +261,13 @@ viewIngredientsSection form =
                 , onEnter (Form.Append "ingredients")
                 , class "form-group-input"
                 ]
-            , errorFor newIngredientGroupInput
             , button
-                [ class "form-group-btn btn-dark"
+                [ class "form-group-btn btn btn-dark btn-animated"
                 , onClick (Form.Append "ingredients")
                 ]
-                [ text "+" ]
+                [ icon "add" ]
             ]
+        , errorFor newIngredientGroupInput
         ]
     ]
 
@@ -287,13 +287,13 @@ viewFormIngredientGroup form i =
     div [ class "form-section ingredient-group col-6 animated fadeIn" ]
         [ div [ class "form-group" ]
             [ Input.textInput groupField
-                [ class "form-group-input input", placeholder "Grupp" ]
+                [ class "form-group-input input font-bold", placeholder "Grupp" ]
             , errorFor groupField
             , button
-                [ class "remove-group form-group-btn btn"
+                [ class "remove-group form-group-btn btn btn-animated"
                 , onClick (Form.RemoveItem "ingredients" i)
                 ]
-                [ text "X" ]
+                [ icon "close" ]
             ]
         , div [ class "ingredients" ] (List.map (viewFormIngredient form groupIndex) ingredients)
         , div [ class "form-group" ]
@@ -303,10 +303,17 @@ viewFormIngredientGroup form i =
                 , onEnter (Form.Append (groupIndex ++ ".ingredients"))
                 ]
             , button
-                [ class "form-group-btn btn-dark", onClick (Form.Append (groupIndex ++ ".ingredients")) ]
-                [ text "+" ]
+                [ class "form-group-btn btn btn-dark btn-animated"
+                , onClick (Form.Append (groupIndex ++ ".ingredients"))
+                ]
+                [ icon "add" ]
             ]
         ]
+
+
+icon : String -> Html Form.Msg
+icon iconStr =
+    i [ class "material-icons" ] [ text iconStr ]
 
 
 viewFormIngredient : RecipeForm -> String -> Int -> Html Form.Msg
@@ -319,10 +326,10 @@ viewFormIngredient form groupIndex i =
         [ class "form-group ingredient animated fadeIn" ]
         [ Input.textInput (Form.getFieldAsString index form) [ class "form-group-input" ]
         , button
-            [ class "remove form-group-btn btn"
+            [ class "remove form-group-btn btn btn-animated"
             , onClick (Form.RemoveItem (groupIndex ++ ".ingredients") i)
             ]
-            [ text "X" ]
+            [ icon "close" ]
         ]
 
 
@@ -351,13 +358,13 @@ viewTagsSection form =
                 , onEnter (Form.Append "tags")
                 , class "form-group-input"
                 ]
-            , errorFor newTagInput
             , button
-                [ class "form-group-btn btn-dark"
+                [ class "form-group-btn btn btn-dark btn-animated"
                 , onClick (Form.Append "tags")
                 ]
-                [ text "+" ]
+                [ icon "add" ]
             ]
+        , errorFor newTagInput
         ]
     ]
 
@@ -370,10 +377,10 @@ viewFormTag form i =
             -- "tagg" to avoid Cirrus conflict with "tag"
             [ Input.textInput (Form.getFieldAsString ("tags." ++ String.fromInt i) form) [ class "form-group-input" ]
             , button
-                [ class "remove form-group-btn btn"
+                [ class "remove form-group-btn btn btn-animated"
                 , onClick (Form.RemoveItem "tags" i)
                 ]
-                [ text "X" ]
+                [ icon "close" ]
             ]
         ]
 
@@ -404,7 +411,7 @@ errorString error msg =
             "får vara max " ++ String.fromInt i
 
         ShorterStringThan i ->
-            "måste vara minst " ++ String.fromInt i
+            "måste vara minst " ++ String.fromInt i ++ " tecken lång"
 
         LongerStringThan i ->
             "får vara max " ++ String.fromInt i ++ " tecken lång"
