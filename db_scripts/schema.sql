@@ -8,8 +8,15 @@ CREATE TABLE data.recipes(
   tags          TEXT[] DEFAULT '{}',
   portions      INTEGER CHECK (portions > 0 and portions <= 100),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  textsearch    TSVECTOR GENERATED ALWAYS AS (
+    to_tsvector('swedish', title || ' ' || coalesce(description, '') || ' ' || instructions)
+    || array_to_tsvector(tags) -- TODO: this is not configured for Swedish and is not properly preprocessed
+  ) STORED
 );
+
+CREATE INDEX recipes_title ON data.recipes (title);
+CREATE INDEX recipes_textsearch_idx ON data.recipes USING GIN (textsearch);
 
 CREATE OR REPLACE FUNCTION set_updated_at_timestamp()
 RETURNS TRIGGER AS $$
@@ -31,18 +38,28 @@ CREATE TABLE data.ingredient_groups(
   name      TEXT NOT NULL,
   UNIQUE(id, recipe_id, name)
 );
+CREATE INDEX ingredient_groups_recipe_id ON data.ingredient_groups (recipe_id);
 
 CREATE TABLE data.ingredients(
   id                  SERIAL PRIMARY KEY,
   ingredient_group_id INTEGER NOT NULL REFERENCES data.ingredient_groups ON DELETE CASCADE,
   contents            TEXT NOT NULL
 );
+CREATE INDEX ingredients_ingredient_group_id ON data.ingredients (ingredient_group_id);
 
 CREATE SCHEMA api;
 
 CREATE OR REPLACE VIEW api.recipes AS (
   SELECT
-    data.recipes.*,
+    id,
+    title,
+    description, 
+    instructions,
+    tags,
+    portions,
+    created_at,
+    updated_at,
+    textsearch AS search,
     (
       SELECT
         json_object_agg(name, ingredients)
