@@ -12,9 +12,12 @@ Will set up the database schema as defined in [schema.sql](./db_scripts/schema.s
 Visit [localhost:8080](http://localhost:8080) to get a Swagger UI.
 Using [httpie](https://httpie.org/doc) it's very easy to interact with the API:
 
-- `http POST :3000/recipes < example_recipe.json` - to create a recipe
+- `http POST :3000/recipes < data/cheese_cake.json` - to create a recipe
 - `http :3000/recipes` - get the list of recipes
 - `http :3000/recipes title=="eq.Cheese Cake"` - get a recipe by title
 - `http PATCH :3000/recipes title=="eq.Cheese Cake" portions:=23 tags:='["efterätt", "dessert"]'` - edit the recipe
-- `http :3000/recipes search=='wfts(swedish).philadelphiaost' select=='title'` - full text search
+- `http :3000/rpc/search search_query='fläsk'` - full text search with prefix matching
 
+
+## Development
+Refresh schema: `docker-compose kill -s "SIGUSR1" server`

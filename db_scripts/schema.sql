@@ -53,7 +53,7 @@ CREATE OR REPLACE VIEW api.recipes AS (
   SELECT
     id,
     title,
-    description, 
+    description,
     instructions,
     tags,
     portions,
@@ -73,7 +73,22 @@ CREATE OR REPLACE VIEW api.recipes AS (
         GROUP BY recipe_id, name
         ORDER BY recipe_id, name
       ) groups
-    ) AS ingredients
+    ) AS ingredients,
+
+    json_to_tsvector('swedish', (
+      SELECT
+        json_object_agg(name, ingredients)
+      FROM (
+        SELECT
+          name,
+          array_to_json(array_agg(ingredients.contents)) AS ingredients
+        FROM data.ingredient_groups AS ingredient_groups
+        LEFT JOIN data.ingredients AS ingredients ON ingredient_groups.id = ingredients.ingredient_group_id
+        WHERE data.recipes.id = ingredient_groups.recipe_id
+        GROUP BY recipe_id, name
+        ORDER BY recipe_id, name
+      ) groups
+   )::json, '["all" ]') AS ingredients_search
   FROM data.recipes
 );
 
@@ -183,3 +198,17 @@ FOR EACH ROW EXECUTE PROCEDURE api.insert_recipe();
 CREATE TRIGGER update_recipe
 INSTEAD OF UPDATE ON api.recipes
 FOR EACH ROW EXECUTE PROCEDURE api.update_recipe();
+
+/*
+ * Search
+ */
+CREATE FUNCTION api.search(search_query text)
+RETURNS SETOF api.recipes AS $$
+WITH search AS (
+  SELECT to_tsquery('swedish', string_agg(lexeme || ':*', ' & ' ORDER BY positions)) AS query
+  FROM unnest(to_tsvector('swedish', search_query))
+)
+SELECT api.recipes.*
+FROM api.recipes, search
+WHERE api.recipes.search @@ search.query;
+$$ LANGUAGE SQL IMMUTABLE;
