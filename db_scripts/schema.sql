@@ -1,5 +1,9 @@
 CREATE SCHEMA data;
 
+--  https://stackoverflow.com/questions/31210790/indexing-an-array-for-full-text-search
+CREATE OR REPLACE FUNCTION data.immutable_array_to_string(text[]) 
+  RETURNS text LANGUAGE sql IMMUTABLE AS 'SELECT $1::text';
+
 CREATE TABLE data.recipes(
   id            SERIAL PRIMARY KEY,
   title         TEXT NOT NULL UNIQUE CHECK (length(title) >= 3 AND length(title) <= 100),
@@ -11,7 +15,7 @@ CREATE TABLE data.recipes(
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   textsearch    TSVECTOR GENERATED ALWAYS AS (
     to_tsvector('swedish', title || ' ' || coalesce(description, '') || ' ' || instructions)
-    || array_to_tsvector(tags) -- TODO: this is not configured for Swedish and is not properly preprocessed
+    || to_tsvector('swedish', immutable_array_to_string(tags)) 
   ) STORED
 );
 
@@ -208,6 +212,7 @@ WITH search AS (
   SELECT to_tsquery('swedish', string_agg(lexeme || ':*', ' & ' ORDER BY positions)) AS query
   FROM unnest(to_tsvector('swedish', search_query))
 )
+-- TODO: do not simply return all columns, decide what to return or take that as a param
 SELECT api.recipes.*
 FROM api.recipes, search
 WHERE api.recipes.search @@ search.query;
