@@ -15,9 +15,11 @@ CREATE TABLE data.recipes(
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   search        TSVECTOR GENERATED ALWAYS AS (
-    to_tsvector('swedish', title || ' ' || coalesce(description, '') || ' ' || instructions)
-    || to_tsvector('swedish', immutable_array_to_string(tags))
-    || jsonb_to_tsvector('swedish', ingredients, '["all"]')
+    setweight(to_tsvector('swedish', title), 'A')
+    || setweight(to_tsvector('swedish', coalesce(description, '')), 'C')
+    || setweight(to_tsvector('swedish', instructions), 'C')
+    || setweight(to_tsvector('swedish', immutable_array_to_string(tags)), 'B')
+    || setweight(jsonb_to_tsvector('swedish', ingredients, '["all"]'), 'D')
   ) STORED
 );
 
@@ -164,6 +166,8 @@ SELECT
   created_at,
   updated_at
 FROM api.recipes, search
-WHERE api.recipes.search @@ search.query;
+WHERE api.recipes.search @@ search.query
+ORDER BY ts_rank_cd(api.recipes.search, search.query) DESC
+LIMIT 10;
 $$ LANGUAGE SQL IMMUTABLE;
 
