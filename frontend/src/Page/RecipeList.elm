@@ -2,6 +2,7 @@ module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, vi
 
 import Html exposing (..)
 import Html.Attributes exposing (..)
+import Html.Events exposing (onInput)
 import Http
 import Json.Decode as Decoder exposing (Decoder, list)
 import Loading
@@ -18,7 +19,7 @@ import Url.Builder
 
 
 type alias Model =
-    { session : Session, recipes : Status (List (Recipe Preview)) }
+    { session : Session, recipes : Status (List (Recipe Preview)), query : String }
 
 
 type Status recipes
@@ -31,6 +32,7 @@ init : Session -> ( Model, Cmd Msg )
 init session =
     ( { session = session
       , recipes = Loading
+      , query = ""
       }
     , Recipe.fetchMany LoadedRecipes
     )
@@ -58,7 +60,10 @@ view model =
         Loaded recipes ->
             { title = "Recipes"
             , content =
-                div [ class "row" ] (List.map viewPreview recipes)
+                div []
+                    [ div [ class "row" ] [ input [ type_ "text", onInput SearchQueryEntered, value model.query ] [] ]
+                    , div [ class "row" ] (List.map viewPreview recipes)
+                    ]
             }
 
 
@@ -160,6 +165,7 @@ pancakeImgUrl =
 
 type Msg
     = LoadedRecipes (Result Recipe.ServerError (List (Recipe Preview)))
+    | SearchQueryEntered String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -170,6 +176,9 @@ update msg model =
 
         LoadedRecipes (Err error) ->
             ( { model | recipes = Failed error }, Cmd.none )
+
+        SearchQueryEntered query ->
+            ( { model | query = query }, Recipe.search LoadedRecipes query )
 
 
 

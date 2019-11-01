@@ -13,6 +13,7 @@ module Recipe exposing
     , fullDecoder
     , metadata
     , previewDecoder
+    , search
     , serverErrorToString
     , slug
     )
@@ -165,6 +166,21 @@ fetchMany toMsg =
     in
     Http.get
         { url = url params
+        , expect = expectJsonWithBody toMsg previewsDecoder
+        }
+
+
+search : (Result ServerError (List (Recipe Preview)) -> msg) -> String -> Cmd msg
+search toMsg query =
+    let
+        params =
+            [ Url.Builder.string "search_query" query ]
+
+        searchUrl queryParams =
+            Url.Builder.crossOrigin "http://localhost:3000" [ "rpc", "search" ] queryParams
+    in
+    Http.get
+        { url = searchUrl params
         , expect = expectJsonWithBody toMsg previewsDecoder
         }
 
