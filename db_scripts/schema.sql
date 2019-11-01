@@ -6,11 +6,11 @@ CREATE OR REPLACE FUNCTION data.immutable_array_to_string(text[])
 
 CREATE TABLE data.recipes(
   id            SERIAL PRIMARY KEY,
-  title         TEXT NOT NULL UNIQUE CHECK (length(title) >= 3 AND length(title) <= 100),
-  description   TEXT CHECK (description = NULL OR length(description) <= 500),
-  instructions  TEXT NOT NULL CHECK (length(instructions) >= 5 AND length(instructions) <= 4000),
+  title         TEXT NOT NULL UNIQUE CONSTRAINT title_length CHECK (length(title) >= 3 AND length(title) <= 100),
+  description   TEXT CONSTRAINT description_length CHECK (description = NULL OR length(description) <= 500),
+  instructions  TEXT NOT NULL CONSTRAINT instructions_length CHECK (length(instructions) >= 5 AND length(instructions) <= 4000),
   tags          TEXT[] DEFAULT '{}',
-  portions      INTEGER CHECK (portions > 0 and portions <= 100),
+  portions      INTEGER CONSTRAINT portions_size CHECK (portions > 0 and portions <= 100),
   ingredients   JSONB,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
