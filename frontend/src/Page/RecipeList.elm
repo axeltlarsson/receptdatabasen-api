@@ -61,10 +61,17 @@ view model =
             { title = "Recipes"
             , content =
                 div []
-                    [ div [ class "row" ] [ input [ type_ "text", onInput SearchQueryEntered, value model.query ] [] ]
-                    , div [ class "row" ] (List.map viewPreview recipes)
-                    ]
+                    [ viewSearchBox model, div [ class "row" ] (List.map viewPreview recipes) ]
             }
+
+
+viewSearchBox : Model -> Html Msg
+viewSearchBox model =
+    div [ class "row" ]
+        [ div [ class "form-group" ]
+            [ input [ type_ "search", class "form-group-input", onInput SearchQueryEntered, value model.query ] []
+            ]
+        ]
 
 
 viewPreview : Recipe Preview -> Html Msg
@@ -176,6 +183,9 @@ update msg model =
 
         LoadedRecipes (Err error) ->
             ( { model | recipes = Failed error }, Cmd.none )
+
+        SearchQueryEntered "" ->
+            ( { model | query = "" }, Recipe.fetchMany LoadedRecipes )
 
         SearchQueryEntered query ->
             ( { model | query = query }, Recipe.search LoadedRecipes query )
