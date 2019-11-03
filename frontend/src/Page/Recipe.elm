@@ -95,33 +95,33 @@ viewRecipe recipe =
     in
     div []
         [ viewSplash (Slug.toString title) description
-        , p [] [ text <| String.concat [ "Recept-id: ", String.fromInt id ] ]
-        , p [] [ text <| String.concat [ portionsStr, " portioner" ] ]
-        , viewIngredientsDict ingredients
-        , h2 [] [ text "Instruktioner" ]
-        , p [] [ Markdown.toHtmlWith mdOptions [ class "ingredients" ] instructions ]
-        , p [] [ text <| String.concat [ "Skapad: ", createdAt ] ]
-        , span [ class "usquare" ] [ a [ class "utb utb-OLR", Route.href (Route.EditRecipe (Recipe.slug recipe)) ] [ text "Ändra recept" ] ]
-        , button [ onClick ClickedDelete, class "btn btn-danger" ] [ text "Radera" ]
+        , div [ class "content" ]
+            [ viewInstructionsIngredients ingredients instructions portionsStr
+            , p [] [ text <| String.concat [ "Recept-id: ", String.fromInt id ] ]
+            , p [] [ text <| String.concat [ "Skapad: ", createdAt ] ]
+            , span [ class "usquare" ] [ a [ class "utb utb-OLR", Route.href (Route.EditRecipe (Recipe.slug recipe)) ] [ text "Ändra recept" ] ]
+            , button [ onClick ClickedDelete, class "btn btn-danger" ] [ text "Radera" ]
+            ]
         ]
 
 
-
-{--
-  - <div id="splash-img" class="hero fullscreen hero-img parallax-img">
-  -     <div class="hero-body">
-  -         <div class="content u-text-center">
-  -             <h1 class="uppercase white title">Easily create beautiful splash screens</h1>
-  -             <h3 class="uppercase white sub-title faded">Only 6 lines needed and no additional CSS</h3>
-  -         </div>
-  -     </div>
-  - </div>
-  --}
+viewInstructionsIngredients : Dict String (List String) -> String -> String -> Html Msg
+viewInstructionsIngredients ingredients instructions portionsStr =
+    section [ class "grid grid-cols-2 grid-gap-3" ]
+        [ div [ class "instructions" ]
+            [ h2 [] [ text "Instruktioner" ]
+            , p [] [ Markdown.toHtmlWith mdOptions [ class "ingredients" ] instructions ]
+            ]
+        , div [ class "ingredients" ]
+            [ h2 [] [ text "Ingredienser" ]
+            , p [] [ text <| String.concat [ portionsStr, " portioner" ] ]
+            , viewIngredientsDict ingredients
+            ]
+        ]
 
 
 viewSplash : String -> String -> Html Msg
 viewSplash title description =
-    -- h1 [] [ text title ]
     div [ class "hero fullscreen hero-im parallax-img", style "background" pancakeImgUrl ]
         [ div [ class "hero-body" ]
             [ div [ class "content u-text-center" ]
@@ -155,7 +155,7 @@ viewIngredientsDict ingredients =
 viewGroupedIngredients : ( String, List String ) -> Html Msg
 viewGroupedIngredients ( groupKey, ingredients ) =
     div []
-        [ h3 [] [ text groupKey ]
+        [ h4 [] [ text groupKey ]
         , ul []
             (List.map viewIngredient ingredients)
         ]
