@@ -229,7 +229,7 @@ viewPortionsSection form =
     in
     [ div [ class "col-1 form-section section-inline" ]
         [ label [ class "font-normal" ] [ text "Portioner:" ]
-        , Input.baseInput "number" Field.String Form.Text portions [ min "1", max "100" ]
+        , Input.baseInput "number" Field.String Form.Text portions [ Attr.min "1", Attr.max "100" ]
         , errorFor portions
         ]
     ]
