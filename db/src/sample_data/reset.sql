@@ -4,5 +4,6 @@ BEGIN;
 set client_min_messages to warning;
 truncate data.todo restart identity cascade;
 truncate data.user restart identity cascade;
+truncate data.recipe restart identity cascade;
 \ir data.sql
 COMMIT;

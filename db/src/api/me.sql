@@ -8,9 +8,9 @@ begin
     into usr;
 
     return json_build_object(
-        'id', usr.id, 
+        'id', usr.id,
         'name', usr.name,
-        'email', usr.email, 
+        'email', usr.email,
         'role', usr.role
     );
 end
