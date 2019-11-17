@@ -4,5 +4,4 @@ set search_path = data, public;
 
 -- import our application models
 \ir user.sql
-\ir todo.sql
 \ir recipe.sql

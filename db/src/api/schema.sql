@@ -14,6 +14,5 @@ grant api to current_user; -- this is a workaround for RDS where the master user
 \ir refresh_token.sql
 \ir signup.sql
 \ir me.sql
-\ir todos.sql
 \ir recipes.sql
 \ir search.sql
