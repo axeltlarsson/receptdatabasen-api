@@ -142,7 +142,7 @@ previewsDecoder =
 
 url : List QueryParameter -> String
 url queryParams =
-    Url.Builder.crossOrigin "http://localhost:3000" [ "recipes" ] queryParams
+    Url.Builder.crossOrigin "http://localhost:8080/rest" [ "recipes" ] queryParams
 
 
 fetch : Slug -> (Result ServerError (Recipe Full) -> msg) -> Cmd msg
@@ -177,7 +177,7 @@ search toMsg query =
             [ Url.Builder.string "search_query" query ]
 
         searchUrl queryParams =
-            Url.Builder.crossOrigin "http://localhost:3000" [ "rpc", "search" ] queryParams
+            Url.Builder.crossOrigin "http://localhost:8080/rest" [ "rpc", "search" ] queryParams
     in
     Http.get
         { url = searchUrl params
