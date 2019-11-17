@@ -1,6 +1,7 @@
 const spawn = require('child_process').spawn;
 require('dotenv').config();
-const PG_MAJOR_VERSION = process.env.PG_VERSION.replace(/\..*/,'');
+// const PG_MAJOR_VERSION = process.env.PG_VERSION.replace(/\..*/,'');
+const PG_MAJOR_VERSION = 11;
 spawn('docker', [
     'run',
     '-i',

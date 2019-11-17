@@ -56,7 +56,7 @@ describe('auth', function () {
         password: 'pass'
       })
       .expect('Content-Type', /json/)
-      
+
       .expect(r => {
         //console.log(r.body)
         r.body.me.email.should.equal('john@email.com')
