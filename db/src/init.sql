@@ -1,4 +1,4 @@
--- some setting to make the output less verbose
+-- some settings to make the output less verbose
 \set QUIET on
 \set ON_ERROR_STOP on
 set client_min_messages to warning;
@@ -19,7 +19,7 @@ create extension if not exists pgcrypto;
 
 \echo # Loading dependencies
 
--- functions for storing different settins in a table
+-- functions for storing different settings in a table
 \ir libs/settings.sql
 
 -- functions for reading different http request properties exposed by PostgREST
@@ -31,7 +31,7 @@ create extension if not exists pgcrypto;
 -- functions for JWT token generation in the database context
 \ir libs/pgjwt.sql
 
--- save app settings (they are storred in the settings.secrets table)
+-- save app settings (they are stored in the settings.secrets table)
 select settings.set('jwt_secret', :quoted_jwt_secret);
 select settings.set('jwt_lifetime', '3600');
 
@@ -40,7 +40,7 @@ select settings.set('jwt_lifetime', '3600');
 \ir util/schema.sql
 
 -- private schema where all tables will be defined
--- you can use othere names besides "data" or even spread the tables
+-- you can use other names besides "data" or even spread the tables
 -- between different schemas. The schema name "data" is just a convention
 \ir data/schema.sql
 
