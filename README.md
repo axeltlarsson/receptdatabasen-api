@@ -88,3 +88,14 @@ npm test                        # Run all tests (db, rest)
 npm run test_db                 # Run pgTAP tests
 npm run test_rest               # Run integration tests
 ```
+
+## Image upload endpoint
+Example usage:
+
+```bash
+http -v POST :8080/images/upload Content-type:image/jpeg < test.jpeg
+
+```
+
+### Setup
+`docker-compose exec openresty bash -c 'chown -R nobody /uploads'`
