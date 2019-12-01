@@ -55,7 +55,8 @@ services:
   # After some processing/checks and transformation, the request is forwarded
   # to PostgREST down the stack.
   openresty:
-    image: openresty/openresty:stretch
+    build: 
+      context: ./openresty
     command: ["/usr/bin/openresty", "-g", "daemon off; error_log /dev/stderr info;"]
     ports:
       - "8080:80"
@@ -70,6 +71,7 @@ services:
       - DB_SCHEMA=${DB_SCHEMA}
       - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
+      - IMAGE_UPLOAD_MAX_SIZE=${IMAGE_UPLOAD_MAX_SIZE}
     volumes:
       - ./openresty/nginx/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
       - ./openresty/nginx/conf/includes:/usr/local/openresty/nginx/conf/includes

@@ -98,4 +98,7 @@ http -v POST :8080/images/upload Content-type:image/jpeg < test.jpeg
 ```
 
 ### Setup
-`docker-compose exec openresty bash -c 'chown -R nobody /uploads'`
+
+```shell
+docker-compose exec openresty bash -c 'mkdir /uploads/cache && chown -R nobody /uploads'
+```
