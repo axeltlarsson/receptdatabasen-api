@@ -120,13 +120,13 @@ viewInstructionsIngredients ingredients instructions portionsStr =
         ]
 
 
-viewSplash : String -> String -> Html Msg
+viewSplash : String -> Maybe String -> Html Msg
 viewSplash title description =
     div [ class "hero fullscreen hero-im parallax-img", style "background" pancakeImgUrl ]
         [ div [ class "hero-body" ]
             [ div [ class "content u-text-center" ]
                 [ h1 [ class "white title" ] [ text title ]
-                , h3 [ class "white sub-title faded" ] [ text description ]
+                , h3 [ class "white sub-title faded" ] [ text <| Maybe.withDefault "" description ]
                 ]
             ]
         ]

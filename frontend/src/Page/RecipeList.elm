@@ -95,7 +95,7 @@ viewPreview recipe =
         ]
 
 
-viewPreviewWithImage : String -> Int -> String -> String -> Html Msg
+viewPreviewWithImage : String -> Int -> Maybe String -> String -> Html Msg
 viewPreviewWithImage title id description createdAt =
     div [ class "card u-flex u-flex-column h-90" ]
         [ div [ class "card-container" ]
@@ -107,7 +107,7 @@ viewPreviewWithImage title id description createdAt =
                 ]
             ]
         , div [ class "content", style "color" "black" ]
-            [ p [] [ text (shortDescription description) ]
+            [ p [] [ text (shortDescription <| Maybe.withDefault "" description) ]
             ]
 
         -- , div [ class "card-footer", class "content" ]
@@ -127,13 +127,13 @@ shortDescription description =
         String.left 150 description ++ "..."
 
 
-viewPreviewWithoutImage : String -> Int -> String -> String -> Html Msg
+viewPreviewWithoutImage : String -> Int -> Maybe String -> String -> Html Msg
 viewPreviewWithoutImage title id description createdAt =
     div [ class "card" ]
         [ div [ class "card-head" ]
             [ p [ class "card-head-title", style "color" "black" ] [ text title ]
             ]
-        , div [ class "content", style "color" "black" ] [ text description ]
+        , div [ class "content", style "color" "black" ] [ text <| Maybe.withDefault "" description ]
         ]
 
 

@@ -1,3 +1,6 @@
+/*
+ * TODO: these mutations seem weird to place here?
+ */
 drop schema if exists util cascade;
 create schema util;
 set search_path = util, public;

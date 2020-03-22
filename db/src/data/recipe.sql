@@ -7,9 +7,9 @@ create table data.recipe(
   title         text not null unique constraint title_length check (length(title) >= 3 and length(title) <= 100),
   description   text constraint description_length check (description = null or length(description) <= 500),
   instructions  text not null constraint instructions_length check (length(instructions) >= 5 and length(instructions) <= 4000),
-  tags          text[] default '{}',
-  portions      integer constraint portions_size check (portions > 0 and portions <= 100),
-  ingredients   jsonb,
+  tags          text[] not null default '{}',
+  portions      integer not null constraint portions_size check (portions > 0 and portions <= 100),
+  ingredients   jsonb not null,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
   search        tsvector generated always as (

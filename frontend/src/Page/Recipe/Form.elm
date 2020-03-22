@@ -84,10 +84,13 @@ fromRecipe recipe =
         { instructions, tags, portions, ingredients } =
             Recipe.contents recipe
 
+        descriptionField =
+            (Maybe.map Field.string >> Maybe.withDefault (Field.value Field.EmptyField)) description
+
         recipeForm =
             Form.initial
                 [ ( "title", Field.string <| Slug.toString title )
-                , ( "description", Field.string description )
+                , ( "description", descriptionField )
                 , ( "portions", Field.string <| String.fromInt portions )
                 , ( "instructions", Field.string instructions )
                 , ( "ingredients", Field.list <| Dict.foldl ingredientFields [] ingredients )

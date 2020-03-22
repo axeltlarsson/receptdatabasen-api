@@ -48,7 +48,7 @@ type Recipe a
 type alias Metadata =
     { id : Int
     , title : Slug
-    , description : String
+    , description : Maybe String
     , createdAt : String
     , updatedAt : String
     }
@@ -98,7 +98,7 @@ metadataDecoder =
     Decode.map5 Metadata
         (field "id" int)
         (field "title" Slug.decoder)
-        (field "description" string)
+        (field "description" <| Decode.nullable string)
         (field "created_at" string)
         (field "updated_at" string)
 
