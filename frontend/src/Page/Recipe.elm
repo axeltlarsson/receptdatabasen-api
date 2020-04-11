@@ -1,9 +1,17 @@
 module Page.Recipe exposing (Model, Msg, init, toSession, update, view)
 
+-- import Html exposing (..)
+-- import Html.Attributes exposing (class, src, style)
+-- import Html.Events exposing (onClick)
+
 import Dict exposing (Dict)
-import Html exposing (..)
-import Html.Attributes exposing (class, src, style)
-import Html.Events exposing (onClick)
+import Element exposing (Element, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, paragraph, rgb255, row, spacing, text, width)
+import Element.Background as Background
+import Element.Border as Border
+import Element.Font as Font
+import Element.Input as Input
+import Element.Region as Region
+import Html exposing (Html)
 import Http
 import Json.Decode as Decoder exposing (Decoder, list)
 import Loading
@@ -58,17 +66,31 @@ init session slug =
 
 view : Model -> { title : String, content : Html Msg }
 view model =
+    let
+        ui =
+            viewUi model
+    in
+    { title = ui.title
+    , content =
+        Element.layout
+            [ padding 10
+            , Region.mainContent
+            ]
+            ui.content
+    }
+
+
+viewUi : Model -> { title : String, content : Element Msg }
+viewUi model =
     case model.recipe of
         Loading ->
             { title = "Laddar..."
-            , content = Loading.animation
+            , content = Element.html Loading.animation
             }
 
         Failed err ->
             { title = "Kunde ej hämta recept"
-            , content =
-                main_ [ class "content" ]
-                    [ Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err) ]
+            , content = Element.html <| Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err)
             }
 
         Loaded recipe ->
@@ -81,7 +103,7 @@ view model =
             }
 
 
-viewRecipe : Recipe Full -> Html Msg
+viewRecipe : Recipe Full -> Element Msg
 viewRecipe recipe =
     let
         { title, description, id, createdAt } =
@@ -93,43 +115,93 @@ viewRecipe recipe =
         portionsStr =
             String.fromInt portions
     in
-    div []
-        [ viewSplash (Slug.toString title) description
-        , div [ class "content" ]
-            [ viewInstructionsIngredients ingredients instructions portionsStr
-            , p [] [ text <| String.concat [ "Recept-id: ", String.fromInt id ] ]
-            , p [] [ text <| String.concat [ "Skapad: ", createdAt ] ]
-            , span [ class "usquare" ] [ a [ class "utb utb-OLR", Route.href (Route.EditRecipe (Recipe.slug recipe)) ] [ text "Ändra recept" ] ]
-            , button [ onClick ClickedDelete, class "btn btn-danger" ] [ text "Radera" ]
+    column [ spacing 30 ]
+        [ viewTitle <| Slug.toString title
+        , viewDescription description
+        , row [ spacing 30 ]
+            [ viewInstructions instructions
+            , viewVerticalLine
+            , viewIngredients ingredients
+            ]
+        , row [ spacing 20 ]
+            [ viewEditButton
+            , viewDeleteButton
             ]
         ]
 
 
-viewInstructionsIngredients : Dict String (List String) -> String -> String -> Html Msg
-viewInstructionsIngredients ingredients instructions portionsStr =
-    section [ class "grid grid-cols-2 grid-gap-3" ]
-        [ div [ class "instructions" ]
-            [ h2 [] [ text "Instruktioner" ]
-            , p [] [ Markdown.toHtmlWith mdOptions [ class "ingredients" ] instructions ]
-            ]
-        , div [ class "ingredients" ]
-            [ h2 [] [ text "Ingredienser" ]
-            , p [] [ text <| String.concat [ portionsStr, " portioner" ] ]
-            , viewIngredientsDict ingredients
-            ]
+viewTitle : String -> Element Msg
+viewTitle title =
+    el
+        [ padding 30
+        , Font.size 48
+        ]
+        (text title)
+
+
+viewDescription : Maybe String -> Element Msg
+viewDescription description =
+    el
+        [ padding 30
+        ]
+        (paragraph [] [ text <| Maybe.withDefault "" description ])
+
+
+viewInstructions : String -> Element Msg
+viewInstructions instructions =
+    column [ alignTop, alignLeft, width fill ]
+        [ el [ padding 10, Font.size 28 ] (text "Gör så här")
+        , el [] (paragraph [] [ text instructions ])
         ]
 
 
-viewSplash : String -> Maybe String -> Html Msg
-viewSplash title description =
-    div [ class "hero fullscreen hero-im parallax-img", style "background" pancakeImgUrl ]
-        [ div [ class "hero-body" ]
-            [ div [ class "content u-text-center" ]
-                [ h1 [ class "white title" ] [ text title ]
-                , h3 [ class "white sub-title faded" ] [ text <| Maybe.withDefault "" description ]
-                ]
-            ]
+viewVerticalLine : Element Msg
+viewVerticalLine =
+    let
+        white =
+            rgb255 0 0 0
+
+        black =
+            rgb255 255 255 255
+    in
+    column
+        [ height (fill |> Element.maximum 1000)
         ]
+        [ column
+            [ Element.height fill
+            , Element.width (Element.px 1)
+
+            -- , Background.color (Element.rgb255 70 70 70)
+            , Background.gradient { angle = 2, steps = [ black, white, black ] } -- TODO: This is cheesy
+            ]
+            []
+        ]
+
+
+viewIngredients : Dict String (List String) -> Element Msg
+viewIngredients ingredients =
+    column [ alignRight, alignTop, width fill ]
+        [ el [ padding 10, Font.size 28 ] (text "Ingredienser")
+        , column [] (Dict.toList ingredients |> List.map viewGroupedIngredients)
+        ]
+
+
+debug : Element.Attribute Msg
+debug =
+    Element.explain Debug.todo
+
+
+viewGroupedIngredients : ( String, List String ) -> Element Msg
+viewGroupedIngredients ( groupKey, ingredients ) =
+    column [ spacing 20, padding 10 ]
+        [ el [ Font.heavy ] (text groupKey)
+        , column [ spacing 10 ] (List.map viewIngredient ingredients)
+        ]
+
+
+viewIngredient : String -> Element Msg
+viewIngredient ingredient =
+    el [] (text ingredient)
 
 
 pancakeImgUrl : String
@@ -137,33 +209,22 @@ pancakeImgUrl =
     "url(https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_185874/cf_259/pannkakstarta-med-choklad-och-nutella-724305-stor.jpg)"
 
 
-mdOptions : Markdown.Options
-mdOptions =
-    { githubFlavored = Nothing
-    , defaultHighlighting = Nothing
-    , sanitize = True
-    , smartypants = True
-    }
+viewDeleteButton : Element Msg
+viewDeleteButton =
+    Input.button
+        [ Background.color (rgb255 255 0 0), Border.rounded 3, padding 10, Font.color (rgb255 30 30 30) ]
+        { onPress = Just ClickedDelete
+        , label = text "Radera"
+        }
 
 
-viewIngredientsDict : Dict String (List String) -> Html Msg
-viewIngredientsDict ingredients =
-    div []
-        (Dict.toList ingredients |> List.map viewGroupedIngredients)
-
-
-viewGroupedIngredients : ( String, List String ) -> Html Msg
-viewGroupedIngredients ( groupKey, ingredients ) =
-    div []
-        [ h4 [] [ text groupKey ]
-        , ul []
-            (List.map viewIngredient ingredients)
-        ]
-
-
-viewIngredient : String -> Html Msg
-viewIngredient ingredient =
-    li [] [ text ingredient ]
+viewEditButton : Element Msg
+viewEditButton =
+    Input.button
+        [ Background.color (rgb255 255 127 0), Border.rounded 3, padding 10, Font.color (rgb255 30 30 30) ]
+        { onPress = Just ClickedEdit
+        , label = text "Ändra"
+        }
 
 
 
@@ -173,6 +234,7 @@ viewIngredient ingredient =
 type Msg
     = LoadedRecipe (Result Recipe.ServerError (Recipe Full))
     | ClickedDelete
+    | ClickedEdit
     | Deleted (Result Http.Error ())
 
 
@@ -189,6 +251,18 @@ update msg model =
             case model.recipe of
                 Loaded recipe ->
                     ( model, Recipe.delete (Recipe.slug recipe) Deleted )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        ClickedEdit ->
+            case model.recipe of
+                Loaded recipe ->
+                    let
+                        newRoute =
+                            Route.EditRecipe (Recipe.slug recipe)
+                    in
+                    ( model, Route.pushUrl (Session.navKey model.session) newRoute )
 
                 _ ->
                     ( model, Cmd.none )
