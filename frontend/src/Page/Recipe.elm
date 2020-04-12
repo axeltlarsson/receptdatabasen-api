@@ -5,7 +5,7 @@ module Page.Recipe exposing (Model, Msg, init, toSession, update, view)
 -- import Html.Events exposing (onClick)
 
 import Dict exposing (Dict)
-import Element exposing (Element, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, paragraph, rgb255, row, spacing, text, width)
+import Element exposing (Element, alignBottom, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, paragraph, rgb255, row, spacing, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -73,8 +73,7 @@ view model =
     { title = ui.title
     , content =
         Element.layout
-            [ padding 10
-            , Region.mainContent
+            [ Region.mainContent
             ]
             ui.content
     }
@@ -111,22 +110,41 @@ viewRecipe recipe =
 
         { portions, ingredients, instructions } =
             Recipe.contents recipe
-
-        portionsStr =
-            String.fromInt portions
     in
-    column [ spacing 30 ]
-        [ viewTitle <| Slug.toString title
-        , viewDescription description
-        , row [ spacing 30 ]
-            [ viewInstructions instructions
-            , viewVerticalLine
-            , viewIngredients ingredients
+    column [ width fill, spacing 30 ]
+        [ viewHeader (Slug.toString title) description
+        , column [ width fill, padding 10 ]
+            [ row [ width fill, spacing 30 ]
+                [ viewInstructions instructions
+                , viewVerticalLine
+                , viewIngredients ingredients portions
+                ]
+            , row [ spacing 20 ]
+                [ viewEditButton
+                , viewDeleteButton
+                ]
             ]
-        , row [ spacing 20 ]
-            [ viewEditButton
-            , viewDeleteButton
+        ]
+
+
+viewHeader : String -> Maybe String -> Element Msg
+viewHeader title description =
+    row [ width fill, height <| Element.px 400, Element.clipY, Element.clipX ]
+        [ Element.el
+            [ width fill
+            , height fill
+            , Element.clipX
+            , Element.clipY
+            , Element.behindContent <|
+                Element.image [ width fill ]
+                    { src = pancakeImgUrl, description = "Pancake cake image" }
             ]
+            (column
+                [ alignBottom ]
+                [ viewTitle title
+                , viewDescription description
+                ]
+            )
         ]
 
 
@@ -135,6 +153,7 @@ viewTitle title =
     el
         [ padding 30
         , Font.size 48
+        , Font.color white
         ]
         (text title)
 
@@ -143,6 +162,7 @@ viewDescription : Maybe String -> Element Msg
 viewDescription description =
     el
         [ padding 30
+        , Font.color white
         ]
         (paragraph [] [ text <| Maybe.withDefault "" description ])
 
@@ -151,19 +171,25 @@ viewInstructions : String -> Element Msg
 viewInstructions instructions =
     column [ alignTop, alignLeft, width fill ]
         [ el [ padding 10, Font.size 28 ] (text "Gör så här")
-        , el [] (paragraph [] [ text instructions ])
+        , el [] (paragraph [] [ viewInstructionsMd instructions ])
         ]
+
+
+viewInstructionsMd : String -> Element Msg
+viewInstructionsMd instructions =
+    let
+        opts =
+            { githubFlavored = Nothing
+            , defaultHighlighting = Nothing
+            , sanitize = True
+            , smartypants = True
+            }
+    in
+    Element.html <| Markdown.toHtmlWith opts [] instructions
 
 
 viewVerticalLine : Element Msg
 viewVerticalLine =
-    let
-        white =
-            rgb255 0 0 0
-
-        black =
-            rgb255 255 255 255
-    in
     column
         [ height (fill |> Element.maximum 1000)
         ]
@@ -172,16 +198,20 @@ viewVerticalLine =
             , Element.width (Element.px 1)
 
             -- , Background.color (Element.rgb255 70 70 70)
-            , Background.gradient { angle = 2, steps = [ black, white, black ] } -- TODO: This is cheesy
+            , Background.gradient { angle = 2, steps = [ white, grey, white ] } -- TODO: This is cheesy
             ]
             []
         ]
 
 
-viewIngredients : Dict String (List String) -> Element Msg
-viewIngredients ingredients =
+viewIngredients : Dict String (List String) -> Int -> Element Msg
+viewIngredients ingredients portions =
     column [ alignRight, alignTop, width fill ]
         [ el [ padding 10, Font.size 28 ] (text "Ingredienser")
+        , row [ padding 10 ]
+            [ el [] (text <| String.fromInt portions)
+            , el [] (text " portioner")
+            ]
         , column [] (Dict.toList ingredients |> List.map viewGroupedIngredients)
         ]
 
@@ -206,13 +236,13 @@ viewIngredient ingredient =
 
 pancakeImgUrl : String
 pancakeImgUrl =
-    "url(https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_185874/cf_259/pannkakstarta-med-choklad-och-nutella-724305-stor.jpg)"
+    "https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_185874/cf_259/pannkakstarta-med-choklad-och-nutella-724305-stor.jpg"
 
 
 viewDeleteButton : Element Msg
 viewDeleteButton =
     Input.button
-        [ Background.color (rgb255 255 0 0), Border.rounded 3, padding 10, Font.color (rgb255 30 30 30) ]
+        [ Background.color (rgb255 255 0 0), Border.rounded 3, padding 10, Font.color white ]
         { onPress = Just ClickedDelete
         , label = text "Radera"
         }
@@ -221,10 +251,25 @@ viewDeleteButton =
 viewEditButton : Element Msg
 viewEditButton =
     Input.button
-        [ Background.color (rgb255 255 127 0), Border.rounded 3, padding 10, Font.color (rgb255 30 30 30) ]
+        [ Background.color (rgb255 255 127 0), Border.rounded 3, padding 10, Font.color white ]
         { onPress = Just ClickedEdit
         , label = text "Ändra"
         }
+
+
+black : Element.Color
+black =
+    rgb255 0 0 0
+
+
+grey : Element.Color
+grey =
+    rgb255 104 92 93
+
+
+white : Element.Color
+white =
+    rgb255 255 255 255
 
 
 
