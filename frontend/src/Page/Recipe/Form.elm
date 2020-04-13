@@ -18,11 +18,56 @@ import Form.Validate as Validate exposing (..)
 import Html exposing (Html)
 import Json.Decode as Decode
 import Json.Encode as Encode
+import Mark
+import Mark.Error
 import Recipe
 import Recipe.Slug as Slug
 import Regex
 import Set
 import Task
+
+
+markup : String -> Element Msg
+markup source =
+    case Mark.compile document source of
+        Mark.Success html ->
+            el [] html
+
+        Mark.Almost { result, errors } ->
+            -- This is the case where there has been an error,
+            -- but it has been caught by `Mark.onError` and is still rendereable.
+            row []
+                [ el [] (viewErrors errors)
+                , el [] result
+                ]
+
+        Mark.Failure errors ->
+            row [ Background.color grey ]
+                [ viewErrors errors
+                ]
+
+
+viewErrors : List Mark.Error.Error -> Element Msg
+viewErrors errors =
+    row []
+        (List.map
+            (Mark.Error.toString >> text)
+            errors
+        )
+
+
+document : Mark.Document (Element Msg)
+document =
+    Mark.document
+        (\title -> el [] (text title))
+        titleBlock
+
+
+titleBlock : Mark.Block String
+titleBlock =
+    Mark.block "Ingredienser"
+        (\str -> str)
+        Mark.string
 
 
 
@@ -54,7 +99,13 @@ init =
 
 initialForm : RecipeForm
 initialForm =
-    { title = "", description = "", portions = 4, instructions = "", ingredients = "" }
+    { title = ""
+    , description = ""
+    , portions = 4
+    , instructions = ""
+    , ingredients = """|> Ingredienser
+    """
+    }
 
 
 fromRecipe : Recipe.Recipe Recipe.Full -> Model
@@ -153,6 +204,7 @@ viewForm form =
             , column [ width fill, spacing 20 ]
                 [ el [ Font.size 20 ] (text "Ingredienser")
                 , viewIngredientsInput form.ingredients
+                , markup form.ingredients
                 ]
             ]
         ]
