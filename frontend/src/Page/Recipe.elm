@@ -1,9 +1,5 @@
 module Page.Recipe exposing (Model, Msg, init, toSession, update, view)
 
--- import Html exposing (..)
--- import Html.Attributes exposing (class, src, style)
--- import Html.Events exposing (onClick)
-
 import Dict exposing (Dict)
 import Element exposing (Element, alignBottom, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, paragraph, rgb255, row, spacing, text, width)
 import Element.Background as Background
