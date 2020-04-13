@@ -10,11 +10,6 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
-import Form exposing (Form)
-import Form.Error exposing (ErrorValue(..))
-import Form.Field as Field exposing (Field)
-import Form.Input as Input
-import Form.Validate as Validate exposing (..)
 import Html exposing (Html)
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -30,8 +25,8 @@ import Task
 markup : String -> Element Msg
 markup source =
     case Mark.compile document source of
-        Mark.Success html ->
-            el [] html
+        Mark.Success elem ->
+            el [] elem
 
         Mark.Almost { result, errors } ->
             -- This is the case where there has been an error,
@@ -59,15 +54,72 @@ viewErrors errors =
 document : Mark.Document (Element Msg)
 document =
     Mark.document
-        (\title -> el [] (text title))
-        titleBlock
+        (\title -> title)
+        (Mark.oneOf
+            [ titleBlock
+            , list
+            ]
+        )
 
 
-titleBlock : Mark.Block String
+titleBlock : Mark.Block (Element Msg)
 titleBlock =
     Mark.block "Ingredienser"
-        (\str -> str)
+        (\str -> el [] (text str))
         Mark.string
+
+
+markText : Mark.Block (List (Element Msg))
+markText =
+    Mark.text
+        (\styles string ->
+            Element.text string
+         {--
+              - Html.span
+              -     [ Html.Attributes.classList
+              -         [ ( "bold", styles.bold )
+              -         , ( "italic", styles.italic )
+              -         , ( "strike", styles.strike )
+              -         ]
+              -     ]
+              -     [ Html.text string ]
+              --}
+        )
+
+
+list : Mark.Block (Element Msg)
+list =
+    Mark.tree "List" renderList (Mark.map (row []) markText)
+
+
+
+-- Note: we have to define this as a separate function because
+-- `Items` and `Node` are a pair of mutually recursive data structures.
+-- It's easiest to render them using two separate functions:
+-- renderList and renderItem
+
+
+renderList : Mark.Enumerated (Element Msg) -> Element Msg
+renderList (Mark.Enumerated enum) =
+    let
+        group =
+            case enum.icon of
+                Mark.Bullet ->
+                    Font.color grey
+
+                Mark.Number ->
+                    Font.color red
+    in
+    column [ group ]
+        (List.map renderItem enum.items)
+
+
+renderItem : Mark.Item (Element Msg) -> Element Msg
+renderItem (Mark.Item item) =
+    column [ padding 30 ]
+        [ row [] item.content
+        , renderList item.children
+        ]
 
 
 
@@ -103,8 +155,12 @@ initialForm =
     , description = ""
     , portions = 4
     , instructions = ""
-    , ingredients = """|> Ingredienser
-    """
+    , ingredients = """|> List
+    - Ingredienser
+        - 1 kg mjöl
+        - 1 kg mjölk
+    - Tillbehör
+        - koriander"""
     }
 
 
@@ -117,9 +173,10 @@ fromRecipe recipe =
         { instructions, tags, portions, ingredients } =
             Recipe.contents recipe
 
-        descriptionField =
-            (Maybe.map Field.string >> Maybe.withDefault (Field.value Field.EmptyField)) description
-
+        {--
+          - descriptionField =
+          -     (Maybe.map Field.string >> Maybe.withDefault (Field.value Field.EmptyField)) description
+          --}
         {--
           - recipeForm =
           -     Form.initial
@@ -293,9 +350,19 @@ viewIngredientsInput instructions =
         }
 
 
+white : Element.Color
+white =
+    rgb255 0 0 0
+
+
 grey : Element.Color
 grey =
     rgb255 104 92 93
+
+
+red : Element.Color
+red =
+    rgb255 255 0 0
 
 
 
