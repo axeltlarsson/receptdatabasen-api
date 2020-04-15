@@ -1,14 +1,15 @@
 module Page.NotFound exposing (view)
 
-import Html exposing (..)
+import Element exposing (Element, column, el, text)
+import Element.Region as Region
 
 
 
 -- VIEW
 
 
-view : { title : String, content : Html msg }
+view : { title : String, content : Element msg }
 view =
     { title = "Page Not Found"
-    , content = main_ [] [ h1 [] [ text "Not found" ] ]
+    , content = column [ Region.mainContent ] [ el [] (text "Not found") ]
     }

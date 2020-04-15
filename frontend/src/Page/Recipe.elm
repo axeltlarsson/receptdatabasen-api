@@ -7,7 +7,6 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
-import Html exposing (Html)
 import Http
 import Json.Decode as Decoder exposing (Decoder, list)
 import Loading
@@ -60,7 +59,7 @@ init session slug =
 -- VIEW
 
 
-view : Model -> { title : String, content : Html Msg }
+view : Model -> { title : String, content : Element Msg }
 view model =
     let
         ui =
@@ -68,10 +67,9 @@ view model =
     in
     { title = ui.title
     , content =
-        Element.layout
-            [ Region.mainContent
+        column [ Region.mainContent ]
+            [ ui.content
             ]
-            ui.content
     }
 
 

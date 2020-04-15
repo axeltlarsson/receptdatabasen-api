@@ -10,7 +10,6 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
-import Html exposing (Html)
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Mark
@@ -245,9 +244,9 @@ fromRecipe recipe =
   --}
 
 
-view : Model -> Html Msg
+view : Model -> Element Msg
 view { form } =
-    Element.layout [ Region.mainContent ] (viewForm form)
+    column [ Region.mainContent ] [ viewForm form ]
 
 
 viewForm : RecipeForm -> Element Msg

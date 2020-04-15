@@ -1,5 +1,6 @@
 module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, view)
 
+import Element exposing (Element, column, row)
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput)
@@ -42,26 +43,28 @@ init session =
 -- VIEW
 
 
-view : Model -> { title : String, content : Html Msg }
+view : Model -> { title : String, content : Element Msg }
 view model =
     case model.recipes of
         Loading ->
             { title = "Recipes"
-            , content = Loading.animation
+            , content = Element.html Loading.animation
             }
 
         Failed err ->
             { title = "Failed to load"
             , content =
-                main_ [ class "content" ]
-                    [ Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err) ]
+                Element.html <|
+                    main_ [ class "content" ]
+                        [ Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err) ]
             }
 
         Loaded recipes ->
             { title = "Recipes"
             , content =
-                div []
-                    [ viewSearchBox model, div [ class "row" ] (List.map viewPreview recipes) ]
+                Element.html <|
+                    div []
+                        [ viewSearchBox model, div [ class "row" ] (List.map viewPreview recipes) ]
             }
 
 

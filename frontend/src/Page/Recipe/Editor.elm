@@ -1,9 +1,7 @@
 module Page.Recipe.Editor exposing (Model, Msg, initEdit, initNew, toSession, update, view)
 
 import Browser.Navigation as Nav
-import Html exposing (..)
-import Html.Attributes exposing (class, for, id, min, placeholder, style, type_, value)
-import Html.Events exposing (keyCode, onInput, onSubmit, preventDefaultOn)
+import Element exposing (Element, column, row, text)
 import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
@@ -86,13 +84,13 @@ initEdit session slug =
 -- VIEW
 
 
-view : Model -> { title : String, content : Html Msg }
+view : Model -> { title : String, content : Element Msg }
 view model =
     let
         skeleton prob children =
-            div [ class "content" ]
+            column []
                 (List.append
-                    [ Html.map FormMsg children ]
+                    [ Element.map FormMsg children ]
                     [ viewServerError prob ]
                 )
     in
@@ -108,14 +106,14 @@ view model =
 
             -- Editing an existing recipe
             Loading slug ->
-                skeleton Nothing Loading.animation
+                skeleton Nothing (Element.html Loading.animation)
 
             LoadingFailed slug ->
                 let
                     title =
                         Maybe.withDefault "" (Url.percentDecode (Slug.toString slug))
                 in
-                skeleton Nothing <| Loading.error title "Kunde ej ladda in receptet"
+                skeleton Nothing <| Element.html (Loading.error title "Kunde ej ladda in receptet")
 
             Editing slug serverError form ->
                 skeleton serverError <| Form.view form
@@ -125,7 +123,7 @@ view model =
     }
 
 
-viewServerError : Maybe ServerError -> Html Msg
+viewServerError : Maybe ServerError -> Element Msg
 viewServerError maybeError =
     let
         maybeErrorStr =
@@ -133,13 +131,13 @@ viewServerError maybeError =
     in
     case maybeErrorStr of
         Just errorStr ->
-            div [ class "toast toast--error" ]
-                [ h6 [] [ text "Något gick fel när servern försökte spara receptet" ]
-                , code [] [ text errorStr ]
+            row []
+                [ text "Något gick fel när servern försökte spara receptet"
+                , text errorStr
                 ]
 
         Nothing ->
-            div [] []
+            row [] [ Element.none ]
 
 
 type Msg

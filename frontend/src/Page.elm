@@ -1,6 +1,8 @@
 module Page exposing (Page(..), view)
 
 import Browser exposing (Document)
+import Element exposing (Element, column, row)
+import Element.Region as Region
 import Html exposing (..)
 import Html.Attributes exposing (class, classList, href, style)
 import Route exposing (Route)
@@ -20,18 +22,20 @@ type Page
 view : Page -> { title : String, content : Html msg } -> Document msg
 view page { title, content } =
     { title = title ++ " | Receptdatabasen"
-    , body = viewHeader page :: [ content ]
+    , body =
+        Element.layout []
+            (column [] (viewHeader page :: [ content ]))
     }
 
 
-viewHeader : Page -> Html msg
+viewHeader : Page -> Element msg
 viewHeader page =
     nav [ class "navbar tab-container tabs-depth tabs-fill" ]
         [ ul [ class "nav" ] <| viewMenu page
         ]
 
 
-viewMenu : Page -> List (Html msg)
+viewMenu : Page -> List (Element msg)
 viewMenu page =
     let
         linkTo =
@@ -42,7 +46,7 @@ viewMenu page =
     ]
 
 
-navbarLink : Page -> Route -> List (Html msg) -> Html msg
+navbarLink : Page -> Route -> List (Element msg) -> Element msg
 navbarLink page route linkContent =
     li [ classList [ ( "nav-item", True ), ( "selected", isActive page route ) ] ]
         [ a [ class "nav-link", Route.href route ] linkContent ]
