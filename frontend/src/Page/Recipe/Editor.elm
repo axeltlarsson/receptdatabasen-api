@@ -113,7 +113,7 @@ view model =
                     title =
                         Maybe.withDefault "" (Url.percentDecode (Slug.toString slug))
                 in
-                skeleton Nothing <| Element.html (Loading.error title "Kunde ej ladda in receptet")
+                skeleton Nothing <| Loading.error title "Kunde ej ladda in receptet"
 
             Editing slug serverError form ->
                 skeleton serverError <| Form.view form

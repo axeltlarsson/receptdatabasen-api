@@ -1,7 +1,7 @@
 module Page exposing (Page(..), view)
 
 import Browser exposing (Document)
-import Element exposing (Element, alignBottom, alignTop, centerX, column, el, fill, height, link, padding, row, spacing, text, width)
+import Element exposing (Element, alignBottom, alignLeft, alignTop, centerX, column, el, fill, height, link, padding, row, spacing, spacingXY, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -44,22 +44,23 @@ viewHeader : Page -> Element msg
 viewHeader page =
     row
         [ Region.navigation
-        , padding 20
         , alignTop
-        , centerX
+        , width fill
+        , Border.glow Palette.lightGrey 0.5
         ]
-        (viewMenu page)
+        [ viewMenu page ]
 
 
-viewMenu : Page -> List (Element msg)
+viewMenu : Page -> Element msg
 viewMenu page =
     let
         linkTo =
             navbarLink page
     in
-    [ linkTo Route.NewRecipe (text "Nytt recept")
-    , linkTo Route.RecipeList (text "Alla recept")
-    ]
+    row [ alignLeft, spacingXY 20 0 ]
+        [ linkTo Route.NewRecipe (text "Nytt recept")
+        , linkTo Route.RecipeList (text "Alla recept")
+        ]
 
 
 navbarLink : Page -> Route -> Element msg -> Element msg
@@ -67,8 +68,7 @@ navbarLink page route linkContent =
     let
         activeAttrs =
             if isActive page route then
-                [ Background.color Palette.grey
-                , Font.color Palette.white
+                [ Font.underline
                 ]
 
             else
@@ -76,11 +76,10 @@ navbarLink page route linkContent =
     in
     link
         (List.append
-            [ Border.rounded 1
-            , Border.color Palette.grey
-            , Border.width 1
+            [ Element.mouseOver [ Element.alpha 0.5, Background.color Palette.grey, Font.color Palette.white ]
+            , Font.size Palette.large
+            , height fill
             , padding 20
-            , Element.mouseOver [ Element.alpha 0.5, Background.color Palette.grey, Font.color Palette.white ]
             ]
             activeAttrs
         )

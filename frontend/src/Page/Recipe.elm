@@ -84,7 +84,7 @@ viewUi model =
 
         Failed err ->
             { title = "Kunde ej hämta recept"
-            , content = Element.html <| Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err)
+            , content = Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err)
             }
 
         Loaded recipe ->

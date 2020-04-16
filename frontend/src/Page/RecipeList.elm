@@ -1,9 +1,11 @@
 module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, view)
 
-import Element exposing (Element, column, row)
-import Html exposing (..)
-import Html.Attributes exposing (..)
-import Html.Events exposing (onInput)
+import Element exposing (Element, column, el, link, padding, row, spacing, text)
+import Element.Background as Background
+import Element.Border as Border
+import Element.Font as Font
+import Element.Input as Input
+import Element.Region as Region
 import Http
 import Json.Decode as Decoder exposing (Decoder, list)
 import Loading
@@ -54,30 +56,32 @@ view model =
         Failed err ->
             { title = "Failed to load"
             , content =
-                Element.html <|
-                    main_ [ class "content" ]
-                        [ Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err) ]
+                column [ Region.mainContent ]
+                    [ Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err) ]
             }
 
         Loaded recipes ->
             { title = "Recipes"
             , content =
-                Element.html <|
-                    div []
-                        [ viewSearchBox model, div [ class "row" ] (List.map viewPreview recipes) ]
+                column [ Region.mainContent ]
+                    [ viewSearchBox model
+                    , column []
+                        (List.map viewPreview recipes)
+                    ]
             }
 
 
-viewSearchBox : Model -> Html Msg
+viewSearchBox : Model -> Element Msg
 viewSearchBox model =
-    div [ class "row" ]
-        [ div [ class "form-group" ]
-            [ input [ type_ "search", class "form-group-input", onInput SearchQueryEntered, value model.query ] []
-            ]
-        ]
+    Input.search [ Input.focusedOnLoad ]
+        { onChange = SearchQueryEntered
+        , text = model.query
+        , placeholder = Just (Input.placeholder [] (text "Sök recept..."))
+        , label = Input.labelHidden "sök recept"
+        }
 
 
-viewPreview : Recipe Preview -> Html Msg
+viewPreview : Recipe Preview -> Element Msg
 viewPreview recipe =
     let
         { title, description, id, createdAt } =
@@ -86,58 +90,58 @@ viewPreview recipe =
         titleStr =
             Slug.toString title
     in
-    div [ class "col-4" ]
-        [ a [ Route.href (Route.Recipe title) ]
-            [ case id of
-                23 ->
-                    viewPreviewWithoutImage titleStr id description createdAt
-
-                _ ->
-                    viewPreviewWithImage titleStr id description createdAt
-            ]
+    row []
+        [ Element.link []
+            { url = Route.toString (Route.Recipe title)
+            , label = el [] (text titleStr)
+            }
         ]
 
 
-viewPreviewWithImage : String -> Int -> Maybe String -> String -> Html Msg
-viewPreviewWithImage title id description createdAt =
-    div [ class "card u-flex u-flex-column h-90" ]
-        [ div [ class "card-container" ]
-            [ div [ class "card-image", style "background-image" (imgUrl id) ] []
-            , div [ class "title-container" ]
-                [ p [ class "title" ] [ text title ]
 
-                -- , span [ class "subtitle" ] [ text "by me" ]
-                ]
-            ]
-        , div [ class "content", style "color" "black" ]
-            [ p [] [ text (shortDescription <| Maybe.withDefault "" description) ]
-            ]
-
-        -- , div [ class "card-footer", class "content" ]
-        -- [ p []
-        -- [ text "tags"
-        -- ]
-        -- ]
-        ]
-
-
-shortDescription : String -> String
-shortDescription description =
-    if String.length description <= 147 then
-        description
-
-    else
-        String.left 150 description ++ "..."
-
-
-viewPreviewWithoutImage : String -> Int -> Maybe String -> String -> Html Msg
-viewPreviewWithoutImage title id description createdAt =
-    div [ class "card" ]
-        [ div [ class "card-head" ]
-            [ p [ class "card-head-title", style "color" "black" ] [ text title ]
-            ]
-        , div [ class "content", style "color" "black" ] [ text <| Maybe.withDefault "" description ]
-        ]
+{--
+  - viewPreviewWithImage : String -> Int -> Maybe String -> String -> Html Msg
+  - viewPreviewWithImage title id description createdAt =
+  -     div [ class "card u-flex u-flex-column h-90" ]
+  -         [ div [ class "card-container" ]
+  -             [ div [ class "card-image", style "background-image" (imgUrl id) ] []
+  -             , div [ class "title-container" ]
+  -                 [ p [ class "title" ] [ text title ]
+  - 
+  -                 -- , span [ class "subtitle" ] [ text "by me" ]
+  -                 ]
+  -             ]
+  -         , div [ class "content", style "color" "black" ]
+  -             [ p [] [ text (shortDescription <| Maybe.withDefault "" description) ]
+  -             ]
+  - 
+  -         -- , div [ class "card-footer", class "content" ]
+  -         -- [ p []
+  -         -- [ text "tags"
+  -         -- ]
+  -         -- ]
+  -         ]
+  - 
+  - 
+  - shortDescription : String -> String
+  - shortDescription description =
+  -     if String.length description <= 147 then
+  -         description
+  - 
+  -     else
+  -         String.left 150 description ++ "..."
+  - 
+  - 
+  - viewPreviewWithoutImage : String -> Int -> Maybe String -> String -> Html Msg
+  - viewPreviewWithoutImage title id description createdAt =
+  -     div [ class "card" ]
+  -         [ div [ class "card-head" ]
+  -             [ p [ class "card-head-title", style "color" "black" ] [ text title ]
+  -             ]
+  -         , div [ class "content", style "color" "black" ] [ text <| Maybe.withDefault "" description ]
+  -         ]
+  - 
+  --}
 
 
 imgUrl : Int -> String

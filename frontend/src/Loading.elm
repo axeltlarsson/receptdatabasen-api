@@ -1,7 +1,10 @@
 module Loading exposing (animation, error)
 
-import Html exposing (..)
+import Element exposing (Element, row, text)
+import Element.Background as Background
+import Html exposing (Html, div)
 import Html.Attributes exposing (class, id)
+import Palette
 
 
 animation : Html msg
@@ -13,9 +16,9 @@ animation =
         ]
 
 
-error : String -> String -> Html msg
+error : String -> String -> Element msg
 error title message =
-    div [ class "toast toast--error" ]
-        [ h6 [] [ text title ]
-        , code [] [ text message ]
+    row [ Background.color Palette.red ]
+        [ text title
+        , text message
         ]
