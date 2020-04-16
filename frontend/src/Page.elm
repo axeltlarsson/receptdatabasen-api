@@ -1,14 +1,16 @@
 module Page exposing (Page(..), view)
 
 import Browser exposing (Document)
-import Element exposing (Element, column, row)
+import Element exposing (Element, alignBottom, alignTop, centerX, column, el, fill, height, link, padding, row, spacing, text, width)
+import Element.Background as Background
+import Element.Border as Border
+import Element.Font as Font
 import Element.Region as Region
-import Html exposing (..)
-import Html.Attributes exposing (class, classList, href, style)
+import Palette
 import Route exposing (Route)
 
 
-{-| Determins which navbar link will be rendered as active
+{-| Determines which navbar link will be rendered as active
 -}
 type Page
     = Recipe
@@ -17,22 +19,36 @@ type Page
     | Other
 
 
+debug : Element.Attribute msg
+debug =
+    Element.explain Debug.todo
+
+
 {-| Takes a page's Html and frames it with header and footer.
 -}
-view : Page -> { title : String, content : Html msg } -> Document msg
+view : Page -> { title : String, content : Element msg } -> Document msg
 view page { title, content } =
     { title = title ++ " | Receptdatabasen"
     , body =
-        Element.layout []
-            (column [] (viewHeader page :: [ content ]))
+        [ Element.layout []
+            (column [ width fill ]
+                [ viewHeader page
+                , content
+                ]
+            )
+        ]
     }
 
 
 viewHeader : Page -> Element msg
 viewHeader page =
-    nav [ class "navbar tab-container tabs-depth tabs-fill" ]
-        [ ul [ class "nav" ] <| viewMenu page
+    row
+        [ Region.navigation
+        , padding 20
+        , alignTop
+        , centerX
         ]
+        (viewMenu page)
 
 
 viewMenu : Page -> List (Element msg)
@@ -41,15 +57,36 @@ viewMenu page =
         linkTo =
             navbarLink page
     in
-    [ linkTo Route.NewRecipe [ text "Nytt recept" ]
-    , linkTo Route.RecipeList [ text "Alla recept" ]
+    [ linkTo Route.NewRecipe (text "Nytt recept")
+    , linkTo Route.RecipeList (text "Alla recept")
     ]
 
 
-navbarLink : Page -> Route -> List (Element msg) -> Element msg
+navbarLink : Page -> Route -> Element msg -> Element msg
 navbarLink page route linkContent =
-    li [ classList [ ( "nav-item", True ), ( "selected", isActive page route ) ] ]
-        [ a [ class "nav-link", Route.href route ] linkContent ]
+    let
+        activeAttrs =
+            if isActive page route then
+                [ Background.color Palette.grey
+                , Font.color Palette.white
+                ]
+
+            else
+                []
+    in
+    link
+        (List.append
+            [ Border.rounded 1
+            , Border.color Palette.grey
+            , Border.width 1
+            , padding 20
+            , Element.mouseOver [ Element.alpha 0.5, Background.color Palette.grey, Font.color Palette.white ]
+            ]
+            activeAttrs
+        )
+        { url = Route.toString route
+        , label = linkContent
+        }
 
 
 isActive : Page -> Route -> Bool

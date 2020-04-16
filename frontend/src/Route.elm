@@ -1,4 +1,4 @@
-module Route exposing (Route(..), fromUrl, href, pushUrl, replaceUrl)
+module Route exposing (Route(..), fromUrl, href, pushUrl, replaceUrl, toString)
 
 import Browser.Navigation as Nav
 import Html exposing (Attribute)
@@ -29,13 +29,9 @@ parser =
         ]
 
 
-
--- PUBLIC HELPERS
-
-
 href : Route -> Attribute msg
 href targetRoute =
-    Attr.href (routeToString targetRoute)
+    Attr.href (toString targetRoute)
 
 
 fromUrl : Url -> Maybe Route
@@ -45,20 +41,16 @@ fromUrl url =
 
 replaceUrl : Nav.Key -> Route -> Cmd msg
 replaceUrl key route =
-    Nav.replaceUrl key (routeToString route)
+    Nav.replaceUrl key (toString route)
 
 
 pushUrl : Nav.Key -> Route -> Cmd msg
 pushUrl key route =
-    Nav.pushUrl key (routeToString route)
+    Nav.pushUrl key (toString route)
 
 
-
---INTERNAL
-
-
-routeToString : Route -> String
-routeToString page =
+toString : Route -> String
+toString page =
     let
         pieces =
             case page of

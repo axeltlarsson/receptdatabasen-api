@@ -11,6 +11,7 @@ import Http
 import Json.Decode as Decoder exposing (Decoder, list)
 import Loading
 import Markdown
+import Palette
 import Recipe exposing (Full, Metadata, Recipe, contents, fullDecoder, metadata)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
@@ -147,7 +148,7 @@ viewTitle title =
     el
         [ padding 30
         , Font.size 48
-        , Font.color white
+        , Font.color Palette.white
         ]
         (text title)
 
@@ -156,7 +157,7 @@ viewDescription : Maybe String -> Element Msg
 viewDescription description =
     el
         [ padding 30
-        , Font.color white
+        , Font.color Palette.white
         ]
         (paragraph [] [ text <| Maybe.withDefault "" description ])
 
@@ -192,7 +193,7 @@ viewVerticalLine =
             , Element.width (Element.px 1)
 
             -- , Background.color (Element.rgb255 70 70 70)
-            , Background.gradient { angle = 2, steps = [ white, grey, white ] } -- TODO: This is cheesy
+            , Background.gradient { angle = 2, steps = [ Palette.white, Palette.grey, Palette.white ] } -- TODO: This is cheesy
             ]
             []
         ]
@@ -236,7 +237,7 @@ pancakeImgUrl =
 viewDeleteButton : Element Msg
 viewDeleteButton =
     Input.button
-        [ Background.color (rgb255 255 0 0), Border.rounded 3, padding 10, Font.color white ]
+        [ Background.color (rgb255 255 0 0), Border.rounded 3, padding 10, Font.color Palette.white ]
         { onPress = Just ClickedDelete
         , label = text "Radera"
         }
@@ -245,25 +246,10 @@ viewDeleteButton =
 viewEditButton : Element Msg
 viewEditButton =
     Input.button
-        [ Background.color (rgb255 255 127 0), Border.rounded 3, padding 10, Font.color white ]
+        [ Background.color (rgb255 255 127 0), Border.rounded 3, padding 10, Font.color Palette.white ]
         { onPress = Just ClickedEdit
         , label = text "Ändra"
         }
-
-
-black : Element.Color
-black =
-    rgb255 0 0 0
-
-
-grey : Element.Color
-grey =
-    rgb255 104 92 93
-
-
-white : Element.Color
-white =
-    rgb255 255 255 255
 
 
 

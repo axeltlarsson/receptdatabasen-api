@@ -14,6 +14,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 import Mark
 import Mark.Error
+import Palette
 import Recipe
 import Recipe.Slug as Slug
 import Regex
@@ -36,7 +37,7 @@ markup source =
                 ]
 
         Mark.Failure errors ->
-            row [ Background.color grey ]
+            row [ Background.color Palette.grey ]
                 [ viewErrors errors
                 ]
 
@@ -104,10 +105,10 @@ renderList (Mark.Enumerated enum) =
         group =
             case enum.icon of
                 Mark.Bullet ->
-                    Font.color grey
+                    Font.color Palette.grey
 
                 Mark.Number ->
-                    Font.color red
+                    Font.color Palette.red
     in
     column [ group ]
         (List.map renderItem enum.items)
@@ -306,7 +307,7 @@ viewPortionsInput portions =
                 [ Element.width Element.fill
                 , Element.height (Element.px 2)
                 , Element.centerY
-                , Background.color grey
+                , Background.color Palette.grey
                 , Border.rounded 2
                 ]
                 Element.none
@@ -347,21 +348,6 @@ viewIngredientsInput instructions =
         , label = Input.labelHidden "Ingredienser"
         , spellcheck = True
         }
-
-
-white : Element.Color
-white =
-    rgb255 0 0 0
-
-
-grey : Element.Color
-grey =
-    rgb255 104 92 93
-
-
-red : Element.Color
-red =
-    rgb255 255 0 0
 
 
 
