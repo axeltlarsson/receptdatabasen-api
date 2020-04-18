@@ -1,8 +1,11 @@
 module Main exposing (main)
 
 import Browser exposing (Document)
+import Browser.Events
 import Browser.Navigation as Nav
 import Html
+import Json.Decode as D
+import Json.Encode as E
 import Page exposing (Page)
 import Page.Blank
 import Page.NotFound
@@ -27,10 +30,33 @@ type Model
     | Editor (Maybe Slug) Editor.Model
 
 
-init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init : E.Value -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
+    let
+        decodedFlags =
+            case D.decodeValue flagsDecoder flags of
+                Ok window ->
+                    window
+
+                Err _ ->
+                    { width = 0, height = 0 }
+
+        session =
+            Session.build key decodedFlags.width decodedFlags.height
+    in
     changeRouteTo (Route.fromUrl url)
-        (Redirect (Session.fromKey key))
+        (Redirect session)
+
+
+type alias Flags =
+    { width : Int, height : Int }
+
+
+flagsDecoder : D.Decoder Flags
+flagsDecoder =
+    D.map2 Flags
+        (D.field "width" D.int)
+        (D.field "height" D.int)
 
 
 
@@ -172,14 +198,14 @@ updateWith toModel toMsg ( subModel, subCmd ) =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Browser.Events.onResize (\w h -> GotRecipeMsg <| Recipe.GotResizeEvent w h)
 
 
 
 -- MAIN
 
 
-main : Program () Model Msg
+main : Program E.Value Model Msg
 main =
     Browser.application
         { init = init

@@ -10,7 +10,7 @@ import Page.Recipe.Form as Form
 import Recipe exposing (Full, Recipe, ServerError, fullDecoder)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
-import Session exposing (Session(..))
+import Session exposing (Session)
 import Url exposing (Url)
 import Url.Builder
 
@@ -60,20 +60,16 @@ updateWith toModel toMsg ( subModel, subCmd ) =
 
 initEdit : Session -> Slug -> ( Model, Cmd Msg )
 initEdit session slug =
-    let
-        newSession =
-            Session.Session (Session.navKey session)
-    in
     case Session.recipe session slug of
         Just recipe ->
-            ( { session = newSession
+            ( { session = session
               , status = Editing slug Nothing <| Form.fromRecipe recipe
               }
             , Cmd.none
             )
 
         Nothing ->
-            ( { session = newSession
+            ( { session = session
               , status = Loading slug
               }
             , Recipe.fetch slug (CompletedRecipeLoad slug)
@@ -208,7 +204,7 @@ update msg ({ status, session } as model) =
             ( { model | status = LoadingFailed slug }, Cmd.none )
 
         CompletedCreate (Ok recipe) ->
-            ( { model | session = SessionWithRecipe recipe (Session.navKey model.session) }
+            ( { model | session = Session.addRecipe recipe model.session }
             , Route.Recipe (Recipe.slug recipe)
                 |> Route.replaceUrl (Session.navKey model.session)
             )
@@ -219,7 +215,7 @@ update msg ({ status, session } as model) =
             )
 
         CompletedEdit (Ok recipe) ->
-            ( { model | session = SessionWithRecipe recipe (Session.navKey model.session) }
+            ( { model | session = Session.addRecipe recipe model.session }
             , Route.Recipe (Recipe.slug recipe)
                 |> Route.replaceUrl (Session.navKey model.session)
             )

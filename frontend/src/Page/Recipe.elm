@@ -1,4 +1,4 @@
-module Page.Recipe exposing (Model, Msg, init, toSession, update, view)
+module Page.Recipe exposing (Model, Msg(..), init, toSession, update, view)
 
 import Dict exposing (Dict)
 import Element exposing (Element, alignBottom, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, paragraph, rgb255, row, spacing, text, width)
@@ -15,7 +15,7 @@ import Palette
 import Recipe exposing (Full, Metadata, Recipe, contents, fullDecoder, metadata)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
-import Session exposing (Session(..))
+import Session exposing (Session)
 import Url exposing (Url)
 import Url.Builder
 
@@ -36,21 +36,17 @@ type Status recipe
 
 init : Session -> Slug -> ( Model, Cmd Msg )
 init session slug =
-    let
-        newSession =
-            Session.Session (Session.navKey session)
-    in
     case Session.recipe session slug of
         Just recipe ->
             ( { recipe = Loaded recipe
-              , session = newSession
+              , session = session
               }
             , Cmd.none
             )
 
         Nothing ->
             ( { recipe = Loading
-              , session = newSession
+              , session = session
               }
             , Recipe.fetch slug LoadedRecipe
             )
@@ -261,13 +257,22 @@ type Msg
     | ClickedDelete
     | ClickedEdit
     | Deleted (Result Http.Error ())
+    | GotResizeEvent Width Height
+
+
+type alias Width =
+    Int
+
+
+type alias Height =
+    Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         LoadedRecipe (Ok recipe) ->
-            ( { model | recipe = Loaded recipe, session = SessionWithRecipe recipe (Session.navKey model.session) }, Cmd.none )
+            ( { model | recipe = Loaded recipe, session = Session.addRecipe recipe model.session }, Cmd.none )
 
         LoadedRecipe (Err error) ->
             ( { model | recipe = Failed error }, Cmd.none )
@@ -300,6 +305,9 @@ update msg model =
 
         Deleted (Err error) ->
             ( { model | recipe = Failed (Recipe.ServerError error) }, Cmd.none )
+
+        GotResizeEvent width height ->
+            Debug.log (Debug.toString ( width, height )) ( model, Cmd.none )
 
 
 
