@@ -30,7 +30,9 @@ view : Page -> { title : String, content : Element msg } -> Document msg
 view page { title, content } =
     { title = title ++ " | Receptdatabasen"
     , body =
-        [ Element.layout []
+        [ Element.layout
+            [ Font.family [ Font.typeface "Metropolis" ]
+            ]
             (column [ width fill ]
                 [ viewHeader page
                 , content
@@ -54,12 +56,17 @@ viewHeader page =
 viewMenu : Page -> Element msg
 viewMenu page =
     let
-        linkTo =
+        linkTo route title =
             navbarLink page
+                route
+                (el
+                    [ Font.light ]
+                    (text title)
+                )
     in
     row [ alignLeft, spacingXY 20 0 ]
-        [ linkTo Route.NewRecipe (text "Nytt recept")
-        , linkTo Route.RecipeList (text "Alla recept")
+        [ linkTo Route.NewRecipe "Nytt recept"
+        , linkTo Route.RecipeList "Alla recept"
         ]
 
 

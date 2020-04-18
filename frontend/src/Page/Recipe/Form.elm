@@ -247,7 +247,7 @@ fromRecipe recipe =
 
 view : Model -> Element Msg
 view { form } =
-    column [ Region.mainContent ] [ viewForm form ]
+    column [ Region.mainContent, width fill ] [ viewForm form ]
 
 
 viewForm : RecipeForm -> Element Msg

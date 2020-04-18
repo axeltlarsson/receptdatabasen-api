@@ -1,7 +1,7 @@
 module Page.Recipe.Editor exposing (Model, Msg, initEdit, initNew, toSession, update, view)
 
 import Browser.Navigation as Nav
-import Element exposing (Element, column, row, text)
+import Element exposing (Element, column, fill, row, spacing, text, width)
 import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
@@ -88,7 +88,7 @@ view : Model -> { title : String, content : Element Msg }
 view model =
     let
         skeleton prob children =
-            column []
+            column [ width fill ]
                 (List.append
                     [ Element.map FormMsg children ]
                     [ viewServerError prob ]
