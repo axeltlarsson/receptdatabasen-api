@@ -89,25 +89,49 @@ viewUi model =
                     Recipe.metadata recipe
             in
             { title = Slug.toString title
-            , content = viewRecipe recipe
+            , content = viewRecipe recipe (Session.device model.session)
             }
 
 
-viewRecipe : Recipe Full -> Element Msg
-viewRecipe recipe =
+phoneLayout : Element.Device -> Bool
+phoneLayout ({ class, orientation } as device) =
+    case ( class, orientation ) of
+        ( Element.Phone, Element.Portrait ) ->
+            True
+
+        _ ->
+            False
+
+
+viewRecipe : Recipe Full -> Element.Device -> Element Msg
+viewRecipe recipe device =
     let
         { title, description, id, createdAt } =
             Recipe.metadata recipe
 
         { portions, ingredients, instructions } =
             Recipe.contents recipe
+
+        responsiveLayout =
+            if phoneLayout device then
+                column [ width fill, spacing 30 ]
+
+            else
+                row [ width fill, spacing 30 ]
+
+        divider =
+            if phoneLayout device then
+                viewHorisontalDivider
+
+            else
+                viewVerticalDivider
     in
     column [ width fill, spacing 30 ]
         [ viewHeader (Slug.toString title) description
         , column [ width fill, padding 10 ]
-            [ row [ width fill, spacing 30 ]
+            [ responsiveLayout
                 [ viewInstructions instructions
-                , viewVerticalLine
+                , divider
                 , viewIngredients ingredients portions
                 ]
             , row [ spacing 20 ]
@@ -179,8 +203,24 @@ viewInstructionsMd instructions =
     Element.html <| Markdown.toHtmlWith opts [] instructions
 
 
-viewVerticalLine : Element Msg
-viewVerticalLine =
+viewHorisontalDivider : Element Msg
+viewHorisontalDivider =
+    column
+        [ width (fill |> Element.maximum 1000)
+        ]
+        [ column
+            [ Element.width fill
+            , Element.height (Element.px 1)
+
+            -- , Background.color (Element.rgb255 70 70 70)
+            , Background.gradient { angle = 2, steps = [ Palette.white, Palette.grey, Palette.white ] } -- TODO: This is cheesy
+            ]
+            []
+        ]
+
+
+viewVerticalDivider : Element Msg
+viewVerticalDivider =
     column
         [ height (fill |> Element.maximum 1000)
         ]
