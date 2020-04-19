@@ -1,26 +1,49 @@
-module Session exposing (Session, addRecipe, build, buildWithRecipe, navKey, recipe)
+module Session exposing (Session, Window, addRecipe, build, buildWithRecipe, device, navKey, recipe, updateWindowSize)
 
 import Browser.Navigation as Nav
+import Element exposing (classifyDevice)
 import Recipe exposing (Full, Recipe)
 import Recipe.Slug as Slug exposing (Slug)
 import Url
 
 
 type Session
-    = Session Nav.Key Window
-    | SessionWithRecipe (Recipe Full) Nav.Key Window
+    = Session Nav.Key Element.Device
+    | SessionWithRecipe (Recipe Full) Nav.Key Element.Device
 
 
-type Window
-    = Window Width Height
+type alias Window =
+    { width : Int, height : Int }
 
 
-type alias Width =
-    Int
+build : Nav.Key -> Window -> Session
+build key window =
+    Session key (classifyDevice window)
 
 
-type alias Height =
-    Int
+buildWithRecipe : Nav.Key -> Window -> Recipe Full -> Session
+buildWithRecipe key window fullRecipe =
+    SessionWithRecipe fullRecipe key (classifyDevice window)
+
+
+addRecipe : Recipe Full -> Session -> Session
+addRecipe fullRecipe session =
+    case session of
+        Session key dev ->
+            SessionWithRecipe fullRecipe key dev
+
+        SessionWithRecipe oldRecipe key dev ->
+            SessionWithRecipe fullRecipe key dev
+
+
+updateWindowSize : Session -> Window -> Session
+updateWindowSize session window =
+    case session of
+        Session key dev ->
+            Session key (classifyDevice window)
+
+        SessionWithRecipe fullRecipe key dev ->
+            SessionWithRecipe fullRecipe key (classifyDevice window)
 
 
 navKey : Session -> Nav.Key
@@ -33,26 +56,6 @@ navKey session =
             key
 
 
-build : Nav.Key -> Width -> Height -> Session
-build key width height =
-    Session key (Window width height)
-
-
-buildWithRecipe : Nav.Key -> Width -> Height -> Recipe Full -> Session
-buildWithRecipe key width height fullRecipe =
-    SessionWithRecipe fullRecipe key (Window width height)
-
-
-addRecipe : Recipe Full -> Session -> Session
-addRecipe fullRecipe session =
-    case session of
-        Session key window ->
-            SessionWithRecipe fullRecipe key window
-
-        SessionWithRecipe oldRecipe key window ->
-            SessionWithRecipe fullRecipe key window
-
-
 recipe : Session -> Slug -> Maybe (Recipe Full)
 recipe session slug =
     case session of
@@ -61,6 +64,16 @@ recipe session slug =
 
         SessionWithRecipe recipeFull _ _ ->
             matchingSlug slug recipeFull
+
+
+device : Session -> Element.Device
+device session =
+    case session of
+        Session key dev ->
+            dev
+
+        SessionWithRecipe _ _ dev ->
+            dev
 
 
 

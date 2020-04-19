@@ -42,7 +42,7 @@ init flags url key =
                     { width = 0, height = 0 }
 
         session =
-            Session.build key decodedFlags.width decodedFlags.height
+            Session.build key decodedFlags
     in
     changeRouteTo (Route.fromUrl url)
         (Redirect session)
@@ -100,6 +100,7 @@ type Msg
     | GotRecipeMsg Recipe.Msg
     | GotRecipeListMsg RecipeList.Msg
     | GotEditorMsg Editor.Msg
+    | GotWindowResize Session.Window
 
 
 toSession : Model -> Session
@@ -150,6 +151,10 @@ changeRouteTo maybeRoute model =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        updateSession window =
+            Session.updateWindowSize (toSession model) window
+    in
     case ( msg, model ) of
         ( LinkClicked urlRequest, _ ) ->
             case urlRequest of
@@ -176,6 +181,12 @@ update msg model =
             Editor.update subMsg editor
                 |> updateWith (Editor slug) GotEditorMsg
 
+        ( GotWindowResize window, Recipe recipe ) ->
+            ( Recipe { recipe | session = updateSession window }, Cmd.none )
+
+        ( GotWindowResize window, RecipeList recipes ) ->
+            ( RecipeList { recipes | session = updateSession window }, Cmd.none )
+
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page
             ( model, Cmd.none )
@@ -198,7 +209,7 @@ updateWith toModel toMsg ( subModel, subCmd ) =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Browser.Events.onResize (\w h -> GotRecipeMsg <| Recipe.GotResizeEvent w h)
+    Browser.Events.onResize (\w h -> GotWindowResize { width = w, height = h })
 
 
 

@@ -257,15 +257,6 @@ type Msg
     | ClickedDelete
     | ClickedEdit
     | Deleted (Result Http.Error ())
-    | GotResizeEvent Width Height
-
-
-type alias Width =
-    Int
-
-
-type alias Height =
-    Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -305,9 +296,6 @@ update msg model =
 
         Deleted (Err error) ->
             ( { model | recipe = Failed (Recipe.ServerError error) }, Cmd.none )
-
-        GotResizeEvent width height ->
-            Debug.log (Debug.toString ( width, height )) ( model, Cmd.none )
 
 
 
