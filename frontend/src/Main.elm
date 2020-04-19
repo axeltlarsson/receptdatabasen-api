@@ -181,11 +181,22 @@ update msg model =
             Editor.update subMsg editor
                 |> updateWith (Editor slug) GotEditorMsg
 
-        ( GotWindowResize window, Recipe recipe ) ->
-            ( Recipe { recipe | session = updateSession window }, Cmd.none )
+        ( GotWindowResize window, page ) ->
+            case page of
+                Recipe recipe ->
+                    ( Recipe { recipe | session = updateSession window }, Cmd.none )
 
-        ( GotWindowResize window, RecipeList recipes ) ->
-            ( RecipeList { recipes | session = updateSession window }, Cmd.none )
+                RecipeList recipes ->
+                    ( RecipeList { recipes | session = updateSession window }, Cmd.none )
+
+                Editor slug editor ->
+                    ( Editor slug { editor | session = updateSession window }, Cmd.none )
+
+                Redirect session ->
+                    ( Redirect (updateSession window), Cmd.none )
+
+                NotFound session ->
+                    ( NotFound (updateSession window), Cmd.none )
 
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page
