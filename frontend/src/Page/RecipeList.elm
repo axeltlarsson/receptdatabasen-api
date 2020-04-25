@@ -1,14 +1,16 @@
 module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, view)
 
-import Element exposing (Element, column, el, link, padding, row, spacing, text)
+import Element exposing (Element, centerX, centerY, column, el, fill, height, link, padding, paragraph, row, spacing, text, width, wrappedRow)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
+import FeatherIcons
 import Http
 import Json.Decode as Decoder exposing (Decoder, list)
 import Loading
+import Palette
 import Recipe exposing (Preview, Recipe, previewDecoder)
 import Recipe.Slug as Slug exposing (Slug)
 import Route exposing (Route)
@@ -63,9 +65,9 @@ view model =
         Loaded recipes ->
             { title = "Recipes"
             , content =
-                column [ Region.mainContent ]
+                column [ Region.mainContent, spacing 20, width fill, padding 10 ]
                     [ viewSearchBox model
-                    , column []
+                    , wrappedRow [ centerX, spacing 10 ]
                         (List.map viewPreview recipes)
                     ]
             }
@@ -73,11 +75,51 @@ view model =
 
 viewSearchBox : Model -> Element Msg
 viewSearchBox model =
+    let
+        placeholder =
+            Input.placeholder []
+                (row []
+                    [ FeatherIcons.search |> FeatherIcons.toHtml [] |> Element.html
+                    , text " Sök recept..."
+                    ]
+                )
+    in
     Input.search [ Input.focusedOnLoad ]
         { onChange = SearchQueryEntered
         , text = model.query
-        , placeholder = Just (Input.placeholder [] (text "Sök recept..."))
+        , placeholder = Just placeholder
         , label = Input.labelHidden "sök recept"
+        }
+
+
+debug : Element.Attribute msg
+debug =
+    Element.explain Debug.todo
+
+
+
+{--
+  - https://codepen.io/sdthornton/pen/wBZdXq
+  --}
+
+
+cardShadow : Element.Attribute Msg
+cardShadow =
+    Border.shadow
+        { offset = ( 0, 3 )
+        , size = 0
+        , blur = 6
+        , color = Element.rgba 0 0 0 0.16
+        }
+
+
+cardShadow2 : Element.Attribute Msg
+cardShadow2 =
+    Border.shadow
+        { offset = ( 0, 3 )
+        , size = 0
+        , blur = 6
+        , color = Element.rgba 0 0 0 0.23
         }
 
 
@@ -90,58 +132,107 @@ viewPreview recipe =
         titleStr =
             Slug.toString title
     in
-    row []
-        [ Element.link []
+    column
+        -- iPad width: 768 - page padding x 2 = 748 => one recipe will fill the width on an iPad at most
+        -- minimum: max - 10 for the spacing between recipes x 1/2 for good proportions
+        [ width (fill |> Element.maximum 748 |> Element.minimum 369)
+        , height <| Element.px 400
+
+        -- , Border.glow Palette.lightGrey 0.9
+        , cardShadow
+        , cardShadow2
+        ]
+        [ Element.link [ height fill, width fill ]
             { url = Route.toString (Route.Recipe title)
-            , label = el [] (text titleStr)
+            , label =
+                column [ height fill, width fill ]
+                    [ viewHeader id titleStr
+                    , viewDescription description
+                    ]
             }
         ]
 
 
 
 {--
-  - viewPreviewWithImage : String -> Int -> Maybe String -> String -> Html Msg
-  - viewPreviewWithImage title id description createdAt =
-  -     div [ class "card u-flex u-flex-column h-90" ]
-  -         [ div [ class "card-container" ]
-  -             [ div [ class "card-image", style "background-image" (imgUrl id) ] []
-  -             , div [ class "title-container" ]
-  -                 [ p [ class "title" ] [ text title ]
-  - 
-  -                 -- , span [ class "subtitle" ] [ text "by me" ]
-  -                 ]
-  -             ]
-  -         , div [ class "content", style "color" "black" ]
-  -             [ p [] [ text (shortDescription <| Maybe.withDefault "" description) ]
-  -             ]
-  - 
-  -         -- , div [ class "card-footer", class "content" ]
-  -         -- [ p []
-  -         -- [ text "tags"
-  -         -- ]
-  -         -- ]
-  -         ]
-  - 
-  - 
-  - shortDescription : String -> String
-  - shortDescription description =
-  -     if String.length description <= 147 then
-  -         description
-  - 
-  -     else
-  -         String.left 150 description ++ "..."
-  - 
-  - 
-  - viewPreviewWithoutImage : String -> Int -> Maybe String -> String -> Html Msg
-  - viewPreviewWithoutImage title id description createdAt =
-  -     div [ class "card" ]
-  -         [ div [ class "card-head" ]
-  -             [ p [ class "card-head-title", style "color" "black" ] [ text title ]
-  -             ]
-  -         , div [ class "content", style "color" "black" ] [ text <| Maybe.withDefault "" description ]
-  -         ]
-  - 
+  - Style the image with Element.behindContent - more control but slightly more difficult compared with Background.image!
+  It Could be that I need this in the future though, if I want to blur the image etc
   --}
+
+
+viewHeaderBehind : Int -> String -> Element Msg
+viewHeaderBehind id title =
+    column [ width fill, Element.clipY, Element.clipX, height fill ]
+        [ Element.el
+            [ width fill
+            , height fill
+            , Element.clipX
+            , Element.clipY
+            , Element.behindContent <| Element.image [ height fill, Element.clipX ] { src = imgUrl id, description = "image" }
+            ]
+            (column [ Element.alignBottom ]
+                [ paragraph [ Font.light ] [ text title ]
+                ]
+            )
+        ]
+
+
+viewHeader : Int -> String -> Element Msg
+viewHeader id title =
+    column
+        [ Background.image (imgUrl id)
+        , width fill
+        , height fill
+        ]
+        [ paragraph
+            [ Font.color Palette.white
+            , Font.medium
+            , Element.alignBottom
+            , padding 20
+            ]
+            [ text title ]
+        ]
+
+
+takeWordsUntilCharLimit : Int -> List String -> List String
+takeWordsUntilCharLimit limit words =
+    let
+        f : String -> List String -> List String
+        f w ws =
+            if (String.join " " >> String.length) (List.append ws [ w ]) < limit then
+                List.append ws [ w ]
+
+            else
+                ws
+    in
+    List.foldl f [] words
+
+
+viewDescription : Maybe String -> Element Msg
+viewDescription description =
+    let
+        append x y =
+            -- String.append is weird, so need to switch args
+            y ++ x
+
+        shorten descr =
+            if String.length descr <= 147 then
+                descr
+
+            else
+                takeWordsUntilCharLimit 147 (String.trim >> String.words <| descr)
+                    |> String.join " "
+                    |> append "..."
+    in
+    Maybe.withDefault Element.none <|
+        Maybe.map
+            (shorten
+                >> text
+                >> el [ Font.hairline ]
+                >> List.singleton
+                >> paragraph [ padding 20, width fill, Element.alignBottom ]
+            )
+            description
 
 
 imgUrl : Int -> String
@@ -151,13 +242,16 @@ imgUrl i =
             foodImgUrl "cheese+cake"
 
         2 ->
-            foodImgUrl "blue+berry+pie"
+            foodImgUrl "pancake"
 
-        25 ->
-            pancakeImgUrl
+        3 ->
+            foodImgUrl "omelette"
 
-        26 ->
-            foodImgUrl "spaghetti"
+        4 ->
+            iceCoffeeUrl
+
+        5 ->
+            lemonadeUrl
 
         _ ->
             foodImgUrl "food"
@@ -165,12 +259,22 @@ imgUrl i =
 
 foodImgUrl : String -> String
 foodImgUrl query =
-    "url(https://source.unsplash.com/640x480/?" ++ query ++ ")"
+    "https://source.unsplash.com/640x480/?" ++ query
 
 
 pancakeImgUrl : String
 pancakeImgUrl =
-    "url(https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_185874/cf_259/pannkakstarta-med-choklad-och-nutella-724305-stor.jpg)"
+    "https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_185874/cf_259/pannkakstarta-med-choklad-och-nutella-724305-stor.jpg"
+
+
+lemonadeUrl : String
+lemonadeUrl =
+    "https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_214425/cf_259/rabarberlemonad-721978.jpg"
+
+
+iceCoffeeUrl : String
+iceCoffeeUrl =
+    "https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_214221/cf_259/iskaffe-med-kondenserad-mjolk-och-choklad-726741.jpg"
 
 
 

@@ -139,3 +139,6 @@ Tillagning:
     ]
    }'
 );
+
+insert into data.recipe (title, instructions, tags, portions, ingredients) values
+('Chokladkaka', 'in i ugnen med kakao bara!', '{"efterrätt"}', 4, '{"ingredienser": [ "1 kg mjöl", "1 kg socker", "1 kg kakao" ]}');
