@@ -79,4 +79,63 @@ Tillagning:
     ]
   }'
 
+),
+(
+  'Omelett',
+  'En omelett kan även den som har kökstummen mitt i handen laga och det tar bara 10 minuter! Krydda till exempel med paprikapulver och chili om du vill ha lite mer smak på omeletten. ',
+  '- Vispa ihop ägg, mjölk, salt och peppar lätt, så att allt precis bara blandas.
+- Hetta upp en stekpanna och låt matfettet fräsa så att det får en aning färg.
+- Häll i omelettsmeten. Rör med en gaffel så att lös smet kan rinna ner mot bottnen. Omeletten är klar när den fortfarande är krämig på ytan och har släppt i kanterna. Vik omeletten dubbel och servera.
+',
+  '{"frukost"}',
+  4,
+  '{
+    "ingredienser": [
+      "6 ägg",
+      "1 dl mjölk",
+      "salt och peppar",
+      "2 msk smör"
+    ]  }'
+
+),
+(
+  'Iskaffe med kondenserad mjölk och choklad',
+  'Gör en svalkande och söt iskaffe med smak av choklad! Kallbryggt kaffe med kakao, kondenserad mjölk och vanlig mjölk blir en läskande iced mocha kaffe, perfekt när du behöver en koffeinkick under soliga dagar.',
+  '## Dag 1: Blanda kaffet med vatten och kakaon i en burk. Rör runt och sätt på ett lock. Låt stå i rumstemperatur ca 1 dygn.
+## Dag 2: Sila genom ett kaffefilter eller en silduk.
+- [ ] Blanda med vatten.
+- [ ] Häll upp i fyra glas med mycket is. Blanda kondenserad mjölk och mjölk och häll i glasen.
+',
+  '{"drink"}',
+  4,
+  '{
+    "dag 1": [
+      "1 dl malet kaffe",
+      "4 dl vatten",
+      "2 msk kakao"
+    ],
+    "dag 2": [
+      "3 dl vatten",
+      "1 1/2 dl kondenserad mjölk",
+      "3 dl mjölk",
+      "is"
+    ]}'
+),
+(
+  'Rabarberlemonad',
+  'Rabarberlemonad är en syrlig, söt och somrig dryck som passar lika bra i picknickkorgen som till fördrink. Den hemmagjorda rabarberlemonaden blir extra god med färskpressad citronjuice och strösocker. Välj gärna en röd rabarbersort för färgens skull. ',
+  '- [ ] Skiva rabarbern. Lägg i en kastrull med socker och hälften av vattnet. Låt koka 5–10 minuter. Låt svalna.
+  - [ ] Sila genom en silduk eller finmaskig sil. Blanda med resten av vattnet (kallt), citronjuice och is i en stor kanna.
+  ',
+  '{"drink"}',
+  4,
+  '{
+    "ingredienser": [
+      "200 g rabarber",
+      "1 dl strösocker",
+      "12 dl vatten",
+      "1 1/2 dl färskpressad citronjuice",
+      "is till servering"
+    ]
+   }'
 );
