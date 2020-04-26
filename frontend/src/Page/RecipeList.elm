@@ -137,10 +137,9 @@ viewPreview recipe =
         -- minimum: max - 10 for the spacing between recipes x 1/2 for good proportions
         [ width (fill |> Element.maximum 748 |> Element.minimum 369)
         , height <| Element.px 400
-
-        -- , Border.glow Palette.lightGrey 0.9
         , cardShadow
         , cardShadow2
+        , Border.rounded 2
         ]
         [ Element.link [ height fill, width fill ]
             { url = Route.toString (Route.Recipe title)
@@ -153,44 +152,37 @@ viewPreview recipe =
         ]
 
 
-
-{--
-  - Style the image with Element.behindContent - more control but slightly more difficult compared with Background.image!
-  It Could be that I need this in the future though, if I want to blur the image etc
-  --}
-
-
-viewHeaderBehind : Int -> String -> Element Msg
-viewHeaderBehind id title =
-    column [ width fill, Element.clipY, Element.clipX, height fill ]
+viewHeader : Int -> String -> Element Msg
+viewHeader id title =
+    column [ width fill, height fill, Border.rounded 2 ]
         [ Element.el
             [ width fill
             , height fill
-            , Element.clipX
-            , Element.clipY
-            , Element.behindContent <| Element.image [ height fill, Element.clipX ] { src = imgUrl id, description = "image" }
+            , Background.image <| imgUrl id
             ]
-            (column [ Element.alignBottom ]
-                [ paragraph [ Font.light ] [ text title ]
+            (el
+                [ Element.behindContent <|
+                    el
+                        [ width fill
+                        , height fill
+                        , Palette.floorFade
+                        ]
+                        Element.none
+                , width fill
+                , height fill
                 ]
+                (column [ Element.alignBottom ]
+                    [ paragraph
+                        [ Font.medium
+                        , Font.color Palette.white
+                        , Palette.textShadow
+                        , Font.size 24
+                        , padding 20
+                        ]
+                        [ text title ]
+                    ]
+                )
             )
-        ]
-
-
-viewHeader : Int -> String -> Element Msg
-viewHeader id title =
-    column
-        [ Background.image (imgUrl id)
-        , width fill
-        , height fill
-        ]
-        [ paragraph
-            [ Font.color Palette.white
-            , Font.medium
-            , Element.alignBottom
-            , padding 20
-            ]
-            [ text title ]
         ]
 
 
@@ -228,7 +220,7 @@ viewDescription description =
         Maybe.map
             (shorten
                 >> text
-                >> el [ Font.hairline ]
+                >> el [ Font.hairline, Font.color Palette.nearBlack ]
                 >> List.singleton
                 >> paragraph [ padding 20, width fill, Element.alignBottom ]
             )

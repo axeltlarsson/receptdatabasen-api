@@ -1,6 +1,8 @@
 module Palette exposing (..)
 
-import Element exposing (rgb255)
+import Element exposing (rgb255, rgba255)
+import Element.Background as Background
+import Element.Font as Font
 
 
 black : Element.Color
@@ -18,6 +20,16 @@ lightGrey =
     rgb255 220 220 220
 
 
+darkGrey : Element.Color
+darkGrey =
+    rgb255 205 205 205
+
+
+nearBlack : Element.Color
+nearBlack =
+    rgb255 26 17 16
+
+
 white : Element.Color
 white =
     rgb255 255 255 255
@@ -31,3 +43,19 @@ red =
 large : Int
 large =
     24
+
+
+floorFade : Element.Attribute msg
+floorFade =
+    Background.gradient
+        { angle = pi -- down
+        , steps =
+            [ rgba255 0 0 0 0
+            , rgba255 0 0 0 0.2
+            ]
+        }
+
+
+textShadow : Element.Attribute msg
+textShadow =
+    Font.shadow { offset = ( 0, 1 ), blur = 1, color = black }
