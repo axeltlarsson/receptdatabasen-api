@@ -1,7 +1,28 @@
 module Page.Recipe exposing (Model, Msg(..), init, toSession, update, view)
 
 import Dict exposing (Dict)
-import Element exposing (Element, alignBottom, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, paragraph, rgb255, row, spacing, text, width)
+import Element
+    exposing
+        ( Element
+        , alignBottom
+        , alignLeft
+        , alignRight
+        , alignTop
+        , centerX
+        , centerY
+        , column
+        , el
+        , fill
+        , height
+        , padding
+        , paddingXY
+        , paragraph
+        , rgb255
+        , row
+        , spacing
+        , text
+        , width
+        )
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -144,18 +165,19 @@ viewRecipe recipe device =
 
 viewHeader : String -> Maybe String -> Element Msg
 viewHeader title description =
-    row [ width fill, height <| Element.px 400, Element.clipY, Element.clipX ]
+    row [ width fill, height <| Element.px 400 ]
         [ Element.el
             [ width fill
             , height fill
-            , Element.clipX
-            , Element.clipY
-            , Element.behindContent <|
-                Element.image [ width fill ]
-                    { src = pancakeImgUrl, description = "Pancake cake image" }
+            , Background.image iceCoffeeUrl
             ]
             (column
-                [ alignBottom ]
+                [ alignBottom
+                , Element.behindContent <|
+                    el [ width fill, height fill, Palette.floorFade ] Element.none
+                , padding 30
+                , spacing 20
+                ]
                 [ viewTitle title
                 , viewDescription description
                 ]
@@ -166,9 +188,9 @@ viewHeader title description =
 viewTitle : String -> Element Msg
 viewTitle title =
     el
-        [ padding 30
-        , Font.size 48
+        [ Font.size 48
         , Font.color Palette.white
+        , Palette.textShadow
         ]
         (text title)
 
@@ -176,15 +198,15 @@ viewTitle title =
 viewDescription : Maybe String -> Element Msg
 viewDescription description =
     el
-        [ padding 30
-        , Font.color Palette.white
+        [ Font.color Palette.white
+        , Palette.textShadow
         ]
         (paragraph [] [ text <| Maybe.withDefault "" description ])
 
 
 viewInstructions : String -> Element Msg
 viewInstructions instructions =
-    column [ alignTop, alignLeft, width fill ]
+    column [ alignTop, alignLeft, width fill, Font.color Palette.nearBlack ]
         [ el [ padding 10, Font.size 28 ] (text "Gör så här")
         , el [] (paragraph [] [ viewInstructionsMd instructions ])
         ]
@@ -192,6 +214,9 @@ viewInstructions instructions =
 
 viewInstructionsMd : String -> Element Msg
 viewInstructionsMd instructions =
+    {--
+    - TODO: Font.color Palette.nearBlack
+    --}
     let
         opts =
             { githubFlavored = Nothing
@@ -211,8 +236,6 @@ viewHorisontalDivider =
         [ column
             [ Element.width fill
             , Element.height (Element.px 1)
-
-            -- , Background.color (Element.rgb255 70 70 70)
             , Background.gradient { angle = 2, steps = [ Palette.white, Palette.grey, Palette.white ] } -- TODO: This is cheesy
             ]
             []
@@ -227,8 +250,6 @@ viewVerticalDivider =
         [ column
             [ Element.height fill
             , Element.width (Element.px 1)
-
-            -- , Background.color (Element.rgb255 70 70 70)
             , Background.gradient { angle = 2, steps = [ Palette.white, Palette.grey, Palette.white ] } -- TODO: This is cheesy
             ]
             []
@@ -268,6 +289,16 @@ viewIngredient ingredient =
 pancakeImgUrl : String
 pancakeImgUrl =
     "https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_185874/cf_259/pannkakstarta-med-choklad-och-nutella-724305-stor.jpg"
+
+
+lemonadeUrl : String
+lemonadeUrl =
+    "https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_214425/cf_259/rabarberlemonad-721978.jpg"
+
+
+iceCoffeeUrl : String
+iceCoffeeUrl =
+    "https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_214221/cf_259/iskaffe-med-kondenserad-mjolk-och-choklad-726741.jpg"
 
 
 viewDeleteButton : Element Msg
