@@ -115,32 +115,6 @@ debug =
     Element.explain Debug.todo
 
 
-
-{--
-  - https://codepen.io/sdthornton/pen/wBZdXq
-  --}
-
-
-cardShadow : Element.Attribute Msg
-cardShadow =
-    Border.shadow
-        { offset = ( 0, 3 )
-        , size = 0
-        , blur = 6
-        , color = Element.rgba 0 0 0 0.16
-        }
-
-
-cardShadow2 : Element.Attribute Msg
-cardShadow2 =
-    Border.shadow
-        { offset = ( 0, 3 )
-        , size = 0
-        , blur = 6
-        , color = Element.rgba 0 0 0 0.23
-        }
-
-
 viewPreview : Recipe Preview -> Element Msg
 viewPreview recipe =
     let
@@ -155,8 +129,8 @@ viewPreview recipe =
         -- minimum: max - 10 for the spacing between recipes x 1/2 for good proportions
         [ width (fill |> Element.maximum 748 |> Element.minimum 369)
         , height <| Element.px 400
-        , cardShadow
-        , cardShadow2
+        , Palette.cardShadow1
+        , Palette.cardShadow2
         , Border.rounded 2
         ]
         [ Element.link [ height fill, width fill ]

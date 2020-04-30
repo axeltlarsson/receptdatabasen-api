@@ -2,6 +2,7 @@ module Palette exposing (..)
 
 import Element exposing (rgb255, rgba255)
 import Element.Background as Background
+import Element.Border as Border
 import Element.Font as Font
 
 
@@ -48,3 +49,29 @@ large =
 textShadow : Element.Attribute msg
 textShadow =
     Font.shadow { offset = ( 0, 1 ), blur = 1, color = black }
+
+
+
+{--
+  - https://codepen.io/sdthornton/pen/wBZdXq
+  --}
+
+
+cardShadow1 : Element.Attribute msg
+cardShadow1 =
+    Border.shadow
+        { offset = ( 0, 3 )
+        , size = 0
+        , blur = 6
+        , color = Element.rgba 0 0 0 0.16
+        }
+
+
+cardShadow2 : Element.Attribute msg
+cardShadow2 =
+    Border.shadow
+        { offset = ( 0, 3 )
+        , size = 0
+        , blur = 6
+        , color = Element.rgba 0 0 0 0.23
+        }

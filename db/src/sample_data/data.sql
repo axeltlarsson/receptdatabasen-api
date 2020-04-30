@@ -138,6 +138,50 @@ Tillagning:
       "is till servering"
     ]
    }'
+),
+(
+  'Boeuf bourguignon',
+  'Recept på klassikern boeuf bourguignon. Torkad timjan, rött vin och skivad bacon är bara några av ingredienserna i denna mustiga nötköttsklassiker.',
+  '1. Bryn köttet i en het stekpanna med smör och lite olja.
+    Krydda med salt och peppar och lägg över i en rymlig gryta.
+
+1. Skär morötterna, löken och vitlöken i skivor. Fräs dem i en stekpanna tillsammans med tomatpurén. Pudra över mjölet och rör så att det fördelar sig jämnt.
+
+1. Häll på vin, tillsätt timjan och lagerblad.
+
+1. Koka upp allt i pannan under omrörning.
+
+1. Slå över allt i grytan över köttet och tillsätt buljong så att det täcker. Låt grytan småputtra tills köttet är mört, det tar ca 1 1/2 timme.
+
+1. Förbered garnityret under tiden köttet kokar klart.
+  Skala smålökarna (det går lättare att få av skalet om man först ger dem ett uppkok i vatten och sedan spolar av dem med kallt vatten).
+
+1. Skär baconet i strimlor och stek de i pannan.
+När baconet har börjat släppa sitt goda fett tillsätt champinjonerna.
+
+1. Lägg i smålökar, svamp och bacon och sjud några minuter.
+',
+  '{"kött", "gryta", "franskt", "höst", "vinter"}',
+  4,
+  '{
+    "ingredienser": [
+      "800 g nötkött i bitar",
+      "1 msk smör",
+      "1 morot",
+      "1 gul lök",
+      "2 vitlöksklyftor",
+      "2 msk tomatpuré",
+      "1,5 msk vetemjöl",
+      "3 dl rött vin",
+      "3 msk oxfond",
+      "2 dl vatten",
+      "1 krm torkad timjan",
+      "1 lagerblad",
+      "12 st steklökar",
+      "200 g champinjoner",
+      "150 g skivad bacon"
+    ]
+    }'
 );
 
 insert into data.recipe (title, instructions, tags, portions, ingredients) values

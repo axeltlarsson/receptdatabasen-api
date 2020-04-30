@@ -15,6 +15,7 @@ import Element
         , fill
         , height
         , padding
+        , paddingEach
         , paddingXY
         , paragraph
         , rgb255
@@ -125,6 +126,15 @@ phoneLayout ({ class, orientation } as device) =
             False
 
 
+paddingPx : Element.Device -> Int
+paddingPx device =
+    if phoneLayout device then
+        10
+
+    else
+        30
+
+
 viewRecipe : Recipe Full -> Element.Device -> Element Msg
 viewRecipe recipe device =
     let
@@ -139,21 +149,13 @@ viewRecipe recipe device =
                 column [ width fill, spacing 30 ]
 
             else
-                row [ width fill, spacing 30 ]
-
-        divider =
-            if phoneLayout device then
-                viewHorisontalDivider
-
-            else
-                viewVerticalDivider
+                row [ width fill, spacing 60 ]
     in
     column [ width fill, spacing 30 ]
-        [ viewHeader (Slug.toString title) description
-        , column [ width fill, padding 10 ]
+        [ viewHeader (Slug.toString title) description device
+        , column [ width fill, padding <| paddingPx device, spacing 20 ]
             [ responsiveLayout
                 [ viewInstructions instructions
-                , divider
                 , viewIngredients ingredients portions
                 ]
             , row [ spacing 20 ]
@@ -164,9 +166,9 @@ viewRecipe recipe device =
         ]
 
 
-viewHeader : String -> Maybe String -> Element Msg
-viewHeader title description =
-    row [ width fill, height <| Element.px 400 ]
+viewHeader : String -> Maybe String -> Element.Device -> Element Msg
+viewHeader title description device =
+    column [ width fill, height <| Element.px 400 ]
         [ Element.el
             [ width fill
             , height fill
@@ -176,42 +178,48 @@ viewHeader title description =
                 [ alignBottom
                 , Element.behindContent <|
                     el [ width fill, height fill, floorFade ] Element.none
-                , padding 30
+                , padding <| paddingPx device
                 , spacing 20
                 , width fill
                 ]
                 [ viewTitle title
-                , viewDescription description
                 ]
             )
+        , viewDescription description (paddingPx device)
         ]
 
 
 viewTitle : String -> Element Msg
 viewTitle title =
-    el
+    paragraph
         [ Font.size 48
         , Font.color Palette.white
         , Palette.textShadow
-        , width fill
+        , width
+            (fill
+                |> Element.maximum 800
+            )
         ]
-        (text title)
+        [ text title ]
 
 
-viewDescription : Maybe String -> Element Msg
-viewDescription description =
+viewDescription : Maybe String -> Int -> Element Msg
+viewDescription description pad =
     el
-        [ Font.color Palette.white
-        , Palette.textShadow
+        [ paddingXY pad 20
+        , width
+            (fill
+                |> Element.maximum 800
+            )
         ]
-        (paragraph [ width fill ] [ text <| Maybe.withDefault "" description ])
+        (paragraph [ Font.light, width fill ] [ text <| Maybe.withDefault "" description ])
 
 
 viewInstructions : String -> Element Msg
 viewInstructions instructions =
     column [ alignTop, alignLeft, width fill, Font.color Palette.nearBlack ]
-        [ el [ padding 10, Font.size 28 ] (text "Gör så här")
-        , el [] (paragraph [] [ viewInstructionsMd instructions ])
+        [ el [ Font.size 28 ] (text "Gör så här")
+        , el [ paddingXY 0 10 ] (paragraph [] [ viewInstructionsMd instructions ])
         ]
 
 
@@ -219,6 +227,7 @@ viewInstructionsMd : String -> Element Msg
 viewInstructionsMd instructions =
     {--
     - TODO: Font.color Palette.nearBlack
+    - TODO: lists have an annoying left-margin/padding which doesn't align with "Gör så här" header
     --}
     let
         opts =
@@ -232,43 +241,23 @@ viewInstructionsMd instructions =
         (Element.html <| Markdown.toHtmlWith opts [] instructions)
 
 
-viewHorisontalDivider : Element Msg
-viewHorisontalDivider =
-    column
-        [ width (fill |> Element.maximum 1000)
-        ]
-        [ column
-            [ Element.width fill
-            , Element.height (Element.px 1)
-            , Background.gradient { angle = 2, steps = [ Palette.white, Palette.grey, Palette.white ] } -- TODO: This is cheesy
-            ]
-            []
-        ]
-
-
-viewVerticalDivider : Element Msg
-viewVerticalDivider =
-    column
-        [ height (fill |> Element.maximum 1000)
-        ]
-        [ column
-            [ Element.height fill
-            , Element.width (Element.px 1)
-            , Background.gradient { angle = 2, steps = [ Palette.white, Palette.grey, Palette.white ] } -- TODO: This is cheesy
-            ]
-            []
-        ]
+edges =
+    { top = 0
+    , right = 0
+    , bottom = 0
+    , left = 0
+    }
 
 
 viewIngredients : Dict String (List String) -> Int -> Element Msg
 viewIngredients ingredients portions =
-    column [ alignRight, alignTop, width fill ]
-        [ el [ padding 10, Font.size 28 ] (text "Ingredienser")
-        , row [ padding 10 ]
-            [ el [] (text <| String.fromInt portions)
-            , el [] (text " portioner")
+    column [ alignTop, width fill ]
+        [ column []
+            -- TODO: centerX ^ a good idea?
+            [ el [ Font.size 28 ] (text "Ingredienser")
+            , paragraph [ paddingXY 0 20 ] [ text <| String.fromInt portions, text " portioner" ]
+            , column [] (Dict.toList ingredients |> List.map viewGroupedIngredients)
             ]
-        , column [] (Dict.toList ingredients |> List.map viewGroupedIngredients)
         ]
 
 
@@ -279,9 +268,9 @@ debug =
 
 viewGroupedIngredients : ( String, List String ) -> Element Msg
 viewGroupedIngredients ( groupKey, ingredients ) =
-    column [ spacing 20, padding 10 ]
+    column [ spacing 20, paddingXY 0 10 ]
         [ el [ Font.heavy ] (text groupKey)
-        , column [ spacing 10 ] (List.map viewIngredient ingredients)
+        , column [ spacing 10, paddingXY 0 10 ] (List.map viewIngredient ingredients)
         ]
 
 

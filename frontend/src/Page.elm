@@ -34,7 +34,12 @@ view page { title, content } =
             [ Font.family [ Font.typeface "Metropolis" ]
             , width fill
             ]
-            (column [ width fill ]
+            (column
+                [ width (fill |> Element.maximum 1440)
+                , Element.centerX
+                , Palette.cardShadow1
+                , Palette.cardShadow2
+                ]
                 [ viewHeader page
                 , content
                 ]
