@@ -18,6 +18,7 @@ import Element
         , paddingXY
         , paragraph
         , rgb255
+        , rgba255
         , row
         , spacing
         , text
@@ -85,7 +86,7 @@ view model =
     in
     { title = ui.title
     , content =
-        column [ Region.mainContent ]
+        column [ Region.mainContent, width fill ]
             [ ui.content
             ]
     }
@@ -174,9 +175,10 @@ viewHeader title description =
             (column
                 [ alignBottom
                 , Element.behindContent <|
-                    el [ width fill, height fill, Palette.floorFade ] Element.none
+                    el [ width fill, height fill, floorFade ] Element.none
                 , padding 30
                 , spacing 20
+                , width fill
                 ]
                 [ viewTitle title
                 , viewDescription description
@@ -191,6 +193,7 @@ viewTitle title =
         [ Font.size 48
         , Font.color Palette.white
         , Palette.textShadow
+        , width fill
         ]
         (text title)
 
@@ -201,7 +204,7 @@ viewDescription description =
         [ Font.color Palette.white
         , Palette.textShadow
         ]
-        (paragraph [] [ text <| Maybe.withDefault "" description ])
+        (paragraph [ width fill ] [ text <| Maybe.withDefault "" description ])
 
 
 viewInstructions : String -> Element Msg
@@ -225,7 +228,8 @@ viewInstructionsMd instructions =
             , smartypants = True
             }
     in
-    Element.html <| Markdown.toHtmlWith opts [] instructions
+    el [ width fill ]
+        (Element.html <| Markdown.toHtmlWith opts [] instructions)
 
 
 viewHorisontalDivider : Element Msg
@@ -299,6 +303,18 @@ lemonadeUrl =
 iceCoffeeUrl : String
 iceCoffeeUrl =
     "https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_214221/cf_259/iskaffe-med-kondenserad-mjolk-och-choklad-726741.jpg"
+
+
+floorFade : Element.Attribute msg
+floorFade =
+    Background.gradient
+        { angle = pi -- down
+        , steps =
+            [ rgba255 0 0 0 0
+            , rgba255 0 0 0 0.2
+            , rgba255 0 0 0 0.2
+            ]
+        }
 
 
 viewDeleteButton : Element Msg

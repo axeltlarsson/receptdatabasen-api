@@ -32,6 +32,7 @@ view page { title, content } =
     , body =
         [ Element.layout
             [ Font.family [ Font.typeface "Metropolis" ]
+            , width fill
             ]
             (column [ width fill ]
                 [ viewHeader page

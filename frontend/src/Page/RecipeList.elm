@@ -1,6 +1,24 @@
 module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, view)
 
-import Element exposing (Element, centerX, centerY, column, el, fill, height, link, padding, paragraph, row, spacing, text, width, wrappedRow)
+import Element
+    exposing
+        ( Element
+        , centerX
+        , centerY
+        , column
+        , el
+        , fill
+        , height
+        , link
+        , padding
+        , paragraph
+        , rgba255
+        , row
+        , spacing
+        , text
+        , width
+        , wrappedRow
+        )
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -165,7 +183,7 @@ viewHeader id title =
                     el
                         [ width fill
                         , height fill
-                        , Palette.floorFade
+                        , floorFade
                         ]
                         Element.none
                 , width fill
@@ -184,6 +202,17 @@ viewHeader id title =
                 )
             )
         ]
+
+
+floorFade : Element.Attribute msg
+floorFade =
+    Background.gradient
+        { angle = pi -- down
+        , steps =
+            [ rgba255 0 0 0 0
+            , rgba255 0 0 0 0.2
+            ]
+        }
 
 
 takeWordsUntilCharLimit : Int -> List String -> List String

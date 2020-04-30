@@ -45,17 +45,6 @@ large =
     24
 
 
-floorFade : Element.Attribute msg
-floorFade =
-    Background.gradient
-        { angle = pi -- down
-        , steps =
-            [ rgba255 0 0 0 0
-            , rgba255 0 0 0 0.2
-            ]
-        }
-
-
 textShadow : Element.Attribute msg
 textShadow =
     Font.shadow { offset = ( 0, 1 ), blur = 1, color = black }
