@@ -1,8 +1,5 @@
 module Page.Recipe.Form exposing (Model, Msg(..), fromRecipe, init, toJson, update, view)
 
--- import Html.Attributes as Attr exposing (class, classList, disabled, height, id, max, min, placeholder, value, width)
--- import Html.Events exposing (keyCode, on, onClick, onInput, preventDefaultOn, stopPropagationOn, targetValue)
-
 import Dict
 import Element exposing (Element, alignBottom, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, paragraph, rgb255, row, spacing, text, width)
 import Element.Background as Background
@@ -10,6 +7,8 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
+import Html exposing (Html)
+import Html.Attributes
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Mark
@@ -120,6 +119,18 @@ renderItem (Mark.Item item) =
         [ row [] item.content
         , renderList item.children
         ]
+
+
+viewQuill : Html msg
+viewQuill =
+    Html.node "quill-editor"
+        [ Html.Attributes.attribute "content" ""
+        , Html.Attributes.attribute "format" "html"
+        , Html.Attributes.attribute "theme" "snow"
+        , Html.Attributes.attribute "bounds" "self"
+        , Html.Attributes.attribute "id" "quill-editor"
+        ]
+        []
 
 
 
@@ -252,8 +263,9 @@ view { form } =
 
 viewForm : RecipeForm -> Element Msg
 viewForm form =
-    column [ width fill, spacing 30, padding 10 ]
-        [ column [ width (fill |> Element.maximum 700), centerX, spacing 30 ]
+    column [ width fill, spacing 30, padding 10, Font.extraLight ]
+        [ el [] (Element.html viewQuill)
+        , column [ width (fill |> Element.maximum 700), centerX, spacing 30 ]
             [ viewTitleInput form.title
             , viewDescriptionInput form.description
             , viewPortionsInput form.portions
@@ -275,7 +287,7 @@ debug =
 viewDescriptionInput : String -> Element Msg
 viewDescriptionInput description =
     Input.multiline
-        [ height (Element.px 120) ]
+        [ height (fill |> Element.minimum 120 |> Element.maximum 240) ]
         { onChange = DescriptionChanged
         , text = description
         , placeholder = Just (Input.placeholder [] (el [] (text "Beskriv receptet med en trevlig introduktion...")))
@@ -288,6 +300,7 @@ viewTitleInput : String -> Element Msg
 viewTitleInput title =
     Input.text
         [ Input.focusedOnLoad
+        , Font.bold
         ]
         { onChange = TitleChanged
         , text = title
@@ -329,7 +342,7 @@ viewPortionsInput portions =
 viewInstructionsInput : String -> Element Msg
 viewInstructionsInput instructions =
     Input.multiline
-        [ height (Element.px 120) ]
+        [ height (fill |> Element.minimum 120 |> Element.maximum 240) ]
         { onChange = InstructionsChanged
         , text = instructions
         , placeholder = Just (Input.placeholder [] (el [] (text "Gör så här...")))
@@ -341,7 +354,7 @@ viewInstructionsInput instructions =
 viewIngredientsInput : String -> Element Msg
 viewIngredientsInput instructions =
     Input.multiline
-        [ height (Element.px 120) ]
+        []
         { onChange = IngredientsChanged
         , text = instructions
         , placeholder = Just (Input.placeholder [] (el [] (text "- Ingredienser")))
