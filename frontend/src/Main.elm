@@ -1,16 +1,16 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Events
 import Browser.Navigation as Nav
 import Html
-import Json.Decode as D
-import Json.Encode as E
+import Json.Decode as Decode
+import Json.Encode as Encode
 import Page exposing (Page)
 import Page.Blank
 import Page.NotFound
 import Page.Recipe as Recipe
-import Page.Recipe.Editor as Editor
+import Page.Recipe.Editor as Editor exposing (Msg(..))
 import Page.RecipeList as RecipeList
 import Recipe.Slug as Slug exposing (Slug)
 import Route exposing (Route)
@@ -30,11 +30,11 @@ type Model
     | Editor (Maybe Slug) Editor.Model
 
 
-init : E.Value -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init : Encode.Value -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
 init flags url key =
     let
         decodedFlags =
-            case D.decodeValue flagsDecoder flags of
+            case Decode.decodeValue flagsDecoder flags of
                 Ok window ->
                     window
 
@@ -52,11 +52,11 @@ type alias Flags =
     { width : Int, height : Int }
 
 
-flagsDecoder : D.Decoder Flags
+flagsDecoder : Decode.Decoder Flags
 flagsDecoder =
-    D.map2 Flags
-        (D.field "width" D.int)
-        (D.field "height" D.int)
+    Decode.map2 Flags
+        (Decode.field "width" Decode.int)
+        (Decode.field "height" Decode.int)
 
 
 
@@ -141,8 +141,13 @@ changeRouteTo maybeRoute model =
                 |> updateWith RecipeList GotRecipeListMsg
 
         Just Route.NewRecipe ->
-            Editor.initNew session
-                |> updateWith (Editor Nothing) GotEditorMsg
+            let
+                ( m, c ) =
+                    Editor.initNew session
+                        |> updateWith (Editor Nothing) GotEditorMsg
+            in
+            Debug.log "editormsg"
+                ( m, Cmd.batch [ c, portSender (Encode.string "messag from Elm-land") ] )
 
         Just (Route.EditRecipe slug) ->
             Editor.initEdit session slug
@@ -220,14 +225,23 @@ updateWith toModel toMsg ( subModel, subCmd ) =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Browser.Events.onResize (\w h -> GotWindowResize { width = w, height = h })
+    Sub.batch
+        [ Browser.Events.onResize (\w h -> GotWindowResize { width = w, height = h })
+        , portReceiver (\v -> GotEditorMsg (PortMsg v))
+        ]
+
+
+port portSender : Encode.Value -> Cmd msg
+
+
+port portReceiver : (Decode.Value -> msg) -> Sub msg
 
 
 
 -- MAIN
 
 
-main : Program E.Value Model Msg
+main : Program Encode.Value Model Msg
 main =
     Browser.application
         { init = init

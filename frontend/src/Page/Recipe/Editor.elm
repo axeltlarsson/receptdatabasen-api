@@ -1,6 +1,7 @@
-module Page.Recipe.Editor exposing (Model, Msg, initEdit, initNew, toSession, update, view)
+module Page.Recipe.Editor exposing (Model, Msg(..), initEdit, initNew, toSession, update, view)
 
 import Browser.Navigation as Nav
+import Dict exposing (Dict)
 import Element exposing (Element, column, fill, row, spacing, text, width)
 import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder)
@@ -142,6 +143,7 @@ type Msg
     | CompletedCreate (Result Recipe.ServerError (Recipe Full))
     | CompletedRecipeLoad Slug (Result Recipe.ServerError (Recipe Full))
     | CompletedEdit (Result Recipe.ServerError (Recipe Full))
+    | PortMsg Decode.Value
 
 
 formToModel : Model -> Form.Model -> Model
@@ -164,6 +166,16 @@ formToModel { status, session } form =
     { session = session
     , status = newStatus
     }
+
+
+quilDecoder : Decode.Decoder (List (Dict String String))
+quilDecoder =
+    Decode.field "delta" deltaDecoder
+
+
+deltaDecoder : Decode.Decoder (List (Dict String String))
+deltaDecoder =
+    Decode.field "ops" (Decode.list (Decode.dict Decode.string))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -191,6 +203,21 @@ update msg ({ status, session } as model) =
                 _ ->
                     -- Disallow editing the form in all other situations
                     ( model, Cmd.none )
+
+        PortMsg value ->
+            let
+                decoded =
+                    Decode.decodeValue quilDecoder value
+
+                res =
+                    case decoded of
+                        Err err ->
+                            Decode.errorToString err
+
+                        Ok y ->
+                            Debug.toString y
+            in
+            Debug.log (Debug.toString res) ( model, Cmd.none )
 
         -- Server events
         CompletedRecipeLoad _ (Ok recipe) ->

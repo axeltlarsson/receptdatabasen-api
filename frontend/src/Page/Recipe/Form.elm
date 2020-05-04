@@ -9,6 +9,7 @@ import Element.Input as Input
 import Element.Region as Region
 import Html exposing (Html)
 import Html.Attributes
+import Html.Events
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Mark
@@ -121,16 +122,36 @@ renderItem (Mark.Item item) =
         ]
 
 
-viewQuill : Html msg
+viewWordCounterContainer : Html Msg
+viewWordCounterContainer =
+    Html.node "div"
+        [ Html.Attributes.attribute "id" "counter" ]
+        []
+
+
+viewQuill : Html Msg
 viewQuill =
     Html.node "quill-editor"
         [ Html.Attributes.attribute "content" ""
         , Html.Attributes.attribute "format" "html"
         , Html.Attributes.attribute "theme" "snow"
-        , Html.Attributes.attribute "bounds" "self"
+        , Html.Attributes.attribute "bounds" "#quill-editor"
         , Html.Attributes.attribute "id" "quill-editor"
+        , Html.Attributes.attribute "modules" "{\"elm-port\": true}"
+
+        -- , onClick QuillMsg
         ]
         []
+
+
+onClick : (Decode.Value -> msg) -> Html.Attribute msg
+onClick tagger =
+    Html.Events.on "editorChange" (Decode.map tagger Decode.value)
+
+
+eventDecoder : Decode.Decoder String
+eventDecoder =
+    Decode.at [ "event" ] Decode.string
 
 
 
@@ -264,7 +285,8 @@ view { form } =
 viewForm : RecipeForm -> Element Msg
 viewForm form =
     column [ width fill, spacing 30, padding 10, Font.extraLight ]
-        [ el [] (Element.html viewQuill)
+        [ el [] (Element.html viewWordCounterContainer)
+        , el [ height <| Element.px 200 ] (Element.html viewQuill)
         , column [ width (fill |> Element.maximum 700), centerX, spacing 30 ]
             [ viewTitleInput form.title
             , viewDescriptionInput form.description
@@ -606,6 +628,7 @@ type Msg
     | IngredientsChanged String
     | SubmitForm
     | SubmitValidForm Encode.Value
+    | QuillMsg Decode.Value
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -652,6 +675,21 @@ update msg ({ form } as model) =
 
         SubmitValidForm _ ->
             ( model, Cmd.none )
+
+        QuillMsg x ->
+            let
+                decoded =
+                    Decode.decodeValue eventDecoder x
+
+                res =
+                    case decoded of
+                        Err err ->
+                            Decode.errorToString err
+
+                        Ok y ->
+                            y
+            in
+            Debug.log ("clicked " ++ Debug.toString x ++ " " ++ res) ( model, Cmd.none )
 
 
 toJson : Model -> Maybe Encode.Value
