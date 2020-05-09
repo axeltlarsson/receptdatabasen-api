@@ -1,6 +1,6 @@
-module Page.Recipe.Form exposing (Model, Msg(..), fromRecipe, init, toJson, update, view)
+module Page.Recipe.Form exposing (Model, Msg(..), fromRecipe, init, portMsg, toJson, update, view)
 
-import Dict
+import Dict exposing (Dict)
 import Element exposing (Element, alignBottom, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, paragraph, rgb255, row, spacing, text, width)
 import Element.Background as Background
 import Element.Border as Border
@@ -22,111 +22,146 @@ import Set
 import Task
 
 
-markup : String -> Element Msg
+markup : String -> Delta
 markup source =
     case Mark.compile document source of
         Mark.Success elem ->
-            el [] elem
+            Debug.log ("Mark.compile success " ++ Debug.toString elem)
+                elem
 
         Mark.Almost { result, errors } ->
             -- This is the case where there has been an error,
             -- but it has been caught by `Mark.onError` and is still rendereable.
-            row []
-                [ el [] (viewErrors errors)
-                , el [] result
-                ]
+            case result of
+                Delta ops ->
+                    Debug.log ("Mark.compile Almost errors: " ++ Debug.toString errors)
+                        Delta
+                        (List.append (deltaErrors errors) ops)
 
+        -- , result
         Mark.Failure errors ->
-            row [ Background.color Palette.grey ]
-                [ viewErrors errors
+            Debug.log ("Mark.compile failure: " ++ Debug.toString (List.map Mark.Error.toString errors))
+                Delta
+                (deltaErrors errors)
+
+
+viewMarkup : Delta -> Element Msg
+viewMarkup delta =
+    let
+        str =
+            "|> Title\n    what? is this valid?"
+    in
+    case delta of
+        Delta ops ->
+            column [ spacing 10 ]
+                [ row [] [ text "ops toString: ", el [ Border.width 1, Border.color Palette.black, padding 10 ] (text <| Debug.toString ops) ]
+
+                -- , el [ padding 20, Border.width 1, Border.color Palette.black ] (text <| Debug.toString <| markup str)
+                , row []
+                    [ text "delta to string:"
+                    , el [] (text <| Debug.toString delta)
+                    ]
                 ]
 
 
-viewErrors : List Mark.Error.Error -> Element Msg
-viewErrors errors =
-    row []
-        (List.map
-            (Mark.Error.toString >> text)
-            errors
-        )
+deltaErrors : List Mark.Error.Error -> List Op
+deltaErrors errors =
+    List.map
+        (\e -> Insert (Mark.Error.toString e) (Just (Color "red")))
+        errors
 
 
-document : Mark.Document (Element Msg)
+type Delta
+    = Delta (List Op)
+
+
+type Op
+    = Insert String (Maybe Attributes)
+
+
+type Attributes
+    = Bold
+    | Color String
+
+
+deltaToString : Delta -> String
+deltaToString (Delta ops) =
+    let
+        opToString (Insert str attrs) =
+            str
+    in
+    List.map opToString ops |> String.join ","
+
+
+opsFromDelta : Delta -> List Op
+opsFromDelta (Delta ops) =
+    ops
+
+
+document : Mark.Document Delta
 document =
     Mark.document
-        (\title -> title)
-        (Mark.oneOf
+        (\blocks -> Delta (List.concat blocks))
+        (Mark.manyOf
             [ titleBlock
-            , list
+            , textBlock
             ]
         )
 
 
-titleBlock : Mark.Block (Element Msg)
+titleBlock : Mark.Block (List Op)
 titleBlock =
-    Mark.block "Ingredienser"
-        (\str -> el [] (text str))
+    Mark.block "Title"
+        (\str -> [ Insert ("|> Title\n    " ++ str) (Just Bold) ])
         Mark.string
 
 
-markText : Mark.Block (List (Element Msg))
-markText =
+textBlock : Mark.Block (List Op)
+textBlock =
     Mark.text
         (\styles string ->
-            Element.text string
-         {--
-              - Html.span
-              -     [ Html.Attributes.classList
-              -         [ ( "bold", styles.bold )
-              -         , ( "italic", styles.italic )
-              -         , ( "strike", styles.strike )
-              -         ]
-              -     ]
-              -     [ Html.text string ]
-              --}
+            Insert string Nothing
         )
 
 
-list : Mark.Block (Element Msg)
-list =
-    Mark.tree "List" renderList (Mark.map (row []) markText)
 
-
-
--- Note: we have to define this as a separate function because
--- `Items` and `Node` are a pair of mutually recursive data structures.
--- It's easiest to render them using two separate functions:
--- renderList and renderItem
-
-
-renderList : Mark.Enumerated (Element Msg) -> Element Msg
-renderList (Mark.Enumerated enum) =
-    let
-        group =
-            case enum.icon of
-                Mark.Bullet ->
-                    Font.color Palette.grey
-
-                Mark.Number ->
-                    Font.color Palette.red
-    in
-    column [ group ]
-        (List.map renderItem enum.items)
-
-
-renderItem : Mark.Item (Element Msg) -> Element Msg
-renderItem (Mark.Item item) =
-    column [ padding 30 ]
-        [ row [] item.content
-        , renderList item.children
-        ]
-
-
-viewWordCounterContainer : Html Msg
-viewWordCounterContainer =
-    Html.node "div"
-        [ Html.Attributes.attribute "id" "counter" ]
-        []
+{--
+  - list : Mark.Block (Element Msg)
+  - list =
+  -     Mark.tree "List" renderList (Mark.map (row []) markText)
+  -
+  -
+  -
+  - -- Note: we have to define this as a separate function because
+  - -- `Items` and `Node` are a pair of mutually recursive data structures.
+  - -- It's easiest to render them using two separate functions:
+  - -- renderList and renderItem
+  -
+  -
+  - renderList : Mark.Enumerated (Element Msg) -> Element Msg
+  - renderList (Mark.Enumerated enum) =
+  -     let
+  -         group =
+  -             case enum.icon of
+  -                 Mark.Bullet ->
+  -                     Font.color Palette.grey
+  -
+  -                 Mark.Number ->
+  -                     Font.color Palette.red
+  -     in
+  -     column [ group ]
+  -         (List.map renderItem enum.items)
+  -
+  -
+  - renderItem : Mark.Item (Element Msg) -> Element Msg
+  - renderItem (Mark.Item item) =
+  -     column [ padding 30 ]
+  -         [ row [] item.content
+  -         , renderList item.children
+  -         ]
+  -
+  -
+  --}
 
 
 viewQuill : Html Msg
@@ -138,20 +173,8 @@ viewQuill =
         , Html.Attributes.attribute "bounds" "#quill-editor"
         , Html.Attributes.attribute "id" "quill-editor"
         , Html.Attributes.attribute "modules" "{\"elm-port\": true}"
-
-        -- , onClick QuillMsg
         ]
         []
-
-
-onClick : (Decode.Value -> msg) -> Html.Attribute msg
-onClick tagger =
-    Html.Events.on "editorChange" (Decode.map tagger Decode.value)
-
-
-eventDecoder : Decode.Decoder String
-eventDecoder =
-    Decode.at [ "event" ] Decode.string
 
 
 
@@ -173,12 +196,13 @@ type alias RecipeForm =
 
 type alias Model =
     { form : RecipeForm
+    , delta : Delta
     }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( { form = initialForm }, Cmd.none )
+    ( { form = initialForm, delta = Delta [] }, Cmd.none )
 
 
 initialForm : RecipeForm
@@ -204,24 +228,6 @@ fromRecipe recipe =
 
         { instructions, tags, portions, ingredients } =
             Recipe.contents recipe
-
-        {--
-          - descriptionField =
-          -     (Maybe.map Field.string >> Maybe.withDefault (Field.value Field.EmptyField)) description
-          --}
-        {--
-          - recipeForm =
-          -     Form.initial
-          -         [ ( "title", Field.string <| Slug.toString title )
-          -         , ( "description", descriptionField )
-          -         , ( "portions", Field.string <| String.fromInt portions )
-          -         , ( "instructions", Field.string instructions )
-          -         , ( "ingredients", Field.list <| Dict.foldl ingredientFields [] ingredients )
-          -         , ( "tags", Field.list <| List.map Field.string tags )
-          -         , ( "newTagInput", Field.value Field.EmptyField )
-          -         ]
-          -         validate
-          --}
     in
     { form =
         { title = Slug.toString title
@@ -230,6 +236,7 @@ fromRecipe recipe =
         , instructions = instructions
         , ingredients = "" -- TODO
         }
+    , delta = Delta []
     }
 
 
@@ -278,15 +285,17 @@ fromRecipe recipe =
 
 
 view : Model -> Element Msg
-view { form } =
-    column [ Region.mainContent, width fill ] [ viewForm form ]
+view { form, delta } =
+    column [ Region.mainContent, width fill ]
+        [ viewMarkup delta
+        , viewForm form
+        ]
 
 
 viewForm : RecipeForm -> Element Msg
 viewForm form =
     column [ width fill, spacing 30, padding 10, Font.extraLight ]
-        [ el [] (Element.html viewWordCounterContainer)
-        , el [ height <| Element.px 200 ] (Element.html viewQuill)
+        [ el [ height <| Element.px 200 ] (Element.html viewQuill)
         , column [ width (fill |> Element.maximum 700), centerX, spacing 30 ]
             [ viewTitleInput form.title
             , viewDescriptionInput form.description
@@ -295,7 +304,6 @@ viewForm form =
             , column [ width fill, spacing 20 ]
                 [ el [ Font.size 20 ] (text "Ingredienser")
                 , viewIngredientsInput form.ingredients
-                , markup form.ingredients
                 ]
             ]
         ]
@@ -386,237 +394,6 @@ viewIngredientsInput instructions =
 
 
 
-{--
-  -
-  -     div [ class "recipe-form animated fadeIn" ]
-  -         [ div [ class "title input-control" ]
-  -             [ Input.textInput title [ class "input-xlarge", placeholder "Namn på receptet..." ]
-  -             , errorFor title
-  -             ]
-  -         , div [ class "description input-control" ]
-  -             [ Input.textArea description [ placeholder "Beskrivning..." ]
-  -             , errorFor description
-  -             ]
-  -         , div [ class "portions form-section row u-no-padding" ] <| viewPortionsSection form
-  -         , div [ class "instructions input-control" ]
-  -             [ Input.textArea instructions [ placeholder "Instruktioner..." ]
-  -             , errorFor instructions
-  -             ]
-  -         , div [ class "ingredients form-section animated fadeIn" ] <| viewIngredientsSection form
-  -         , div [ class "tags form-section" ] <| viewTagsSection form
-  -         , div [ class "submit form-section" ]
-  -             [ button
-  -                 [ class "submit btn btn-dark btn-animated"
-  -                 , disabled disableSave
-  -                 , onClick Form.Submit
-  -                 ]
-  -                 [ text "Spara" ]
-  -             ]
-  -             ]
-  -
-  -
-  --}
-{--
-  - viewPortionsSection : RecipeForm -> List (Html Form.Msg)
-  - viewPortionsSection form =
-  -     let
-  -         portions =
-  -             Form.getFieldAsString "portions" form
-  -     in
-  -         [ div [ class "col-1 form-section section-inline" ]
-  -         [ label [ class "font-normal" ] [ text "Portioner:" ]
-  -         , Input.baseInput "number" Field.String Form.Text portions [ Attr.min "1", Attr.max "100" ]
-  -         , errorFor portions
-  -         ]
-  -         ]
-  -
-  -
-  - viewIngredientsSection : RecipeForm -> List (Html Form.Msg)
-  - viewIngredientsSection form =
-  -     let
-  -         ingredients =
-  -             Form.getListIndexes "ingredients" form
-  -
-  -         ingredientGroups =
-  -             Form.getFieldAsString "ingredients" form
-  -
-  -         newIngredientGroupInput =
-  -             Form.getFieldAsString "newIngredientGroupInput" form
-  -     in
-  -         [ div [ class "ingredient-groups form-section row" ] <|
-  -             List.append [ h3 [ class "col-12" ] [ text "Ingredienser" ] ]
-  -             (List.map
-  -             (viewFormIngredientGroup form)
-  -             ingredients
-  -             |> List.append [ errorFor ingredientGroups ]
-  -     , div [ class "row" ]
-  -         [ div [ class "new-ingredient-group col-12 form-group" ]
-  -             [ Input.textInput newIngredientGroupInput
-  -                 [ placeholder "Ny ingrediensgrupp..."
-  -                 , onEnter (Form.Append "ingredients")
-  -                 , class "form-group-input"
-  -                 ]
-  -             , button
-  -                 [ class "form-group-btn btn btn-dark btn-animated"
-  -                 , onClick (Form.Append "ingredients")
-  -                 ]
-  -                 [ icon "add" ]
-  -             ]
-  -         , errorFor newIngredientGroupInput
-  -         ]
-  -     ]
-  -
-  -
-  - viewFormIngredientGroup : RecipeForm -> Int -> Html Form.Msg
-  - viewFormIngredientGroup form i =
-  -     let
-  -         groupField =
-  -             Form.getFieldAsString (groupIndex ++ ".group") form
-  -
-  -         groupIndex =
-  -             "ingredients." ++ String.fromInt i
-  -
-  -         ingredients =
-  -             Form.getListIndexes (groupIndex ++ ".ingredients") form
-  -     in
-  -     div [ class "form-section ingredient-group col-6 animated fadeIn" ]
-  -         [ div [ class "form-group" ]
-  -             [ Input.textInput groupField
-  -                 [ class "form-group-input input font-bold", placeholder "Grupp" ]
-  -             , errorFor groupField
-  -             , button
-  -                 [ class "remove-group form-group-btn btn btn-animated"
-  -                 , onClick (Form.RemoveItem "ingredients" i)
-  -                 ]
-  -                 [ icon "close" ]
-  -             ]
-  -         , div [ class "ingredients" ] (List.map (viewFormIngredient form groupIndex) ingredients)
-  -         , div [ class "form-group" ]
-  -             [ Input.textInput (Form.getFieldAsString (groupIndex ++ ".newIngredientInput") form)
-  -                 [ class "form-group-input add-ingredient"
-  -                 , placeholder "Ny ingrediens..."
-  -                 , onEnter (Form.Append (groupIndex ++ ".ingredients"))
-  -                 ]
-  -             , button
-  -                 [ class "form-group-btn btn btn-dark btn-animated"
-  -                 , onClick (Form.Append (groupIndex ++ ".ingredients"))
-  -                 ]
-  -                 [ icon "add" ]
-  -             ]
-  -         ]
-  -
-  -
-  - icon : String -> Html Form.Msg
-  - icon iconStr =
-  -     i [ class "material-icons" ] [ text iconStr ]
-  -
-  -
-  - viewFormIngredient : RecipeForm -> String -> Int -> Html Form.Msg
-  - viewFormIngredient form groupIndex i =
-  -     let
-  -         index =
-  -             groupIndex ++ ".ingredients." ++ String.fromInt i
-  -     in
-  -     div
-  -         [ class "form-group ingredient animated fadeIn" ]
-  -         [ Input.textInput (Form.getFieldAsString index form) [ class "form-group-input" ]
-  -         , button
-  -             [ class "remove form-group-btn btn btn-animated"
-  -             , onClick (Form.RemoveItem (groupIndex ++ ".ingredients") i)
-  -             ]
-  -             [ icon "close" ]
-  -         ]
-  -
-  -
-  - viewTagsSection : RecipeForm -> List (Html Form.Msg)
-  - viewTagsSection form =
-  -     let
-  -         tagsIndcs =
-  -             Form.getListIndexes "tags" form
-  -
-  -         newTagInput =
-  -             Form.getFieldAsString "newTagInput" form
-  -
-  -         tags =
-  -             List.map (viewFormTag form) tagsIndcs
-  -     in
-  -     [ div [ class "form-section row" ]
-  -         (List.concat
-  -             [ [ h3 [ class "col-12" ] [ text "Taggar" ] ]
-  -             , tags
-  -             ]
-  -         )
-  -     , div [ class "row" ]
-  -         [ div [ class "form-group col-12 new-tag-input" ]
-  -             [ Input.textInput newTagInput
-  -                 [ placeholder "Ny tagg..."
-  -                 , onEnter (Form.Append "tags")
-  -                 , class "form-group-input"
-  -                 ]
-  -             , button
-  -                 [ class "form-group-btn btn btn-dark btn-animated"
-  -                 , onClick (Form.Append "tags")
-  -                 ]
-  -                 [ icon "add" ]
-  -             ]
-  -         , errorFor newTagInput
-  -         ]
-  -     ]
-  -
-  -
-  - viewFormTag : RecipeForm -> Int -> Html Form.Msg
-  - viewFormTag form i =
-  -     div [ class "col-4 animated fadeIn" ]
-  -         [ div
-  -             [ class "form-group tagg" ]
-  -             -- "tagg" to avoid Cirrus conflict with "tag"
-  -             [ Input.textInput (Form.getFieldAsString ("tags." ++ String.fromInt i) form) [ class "form-group-input" ]
-  -             , button
-  -                 [ class "remove form-group-btn btn btn-animated"
-  -                 , onClick (Form.RemoveItem "tags" i)
-  -                 ]
-  -                 [ icon "close" ]
-  -             ]
-  -         ]
-  --}
--- onEnter : msg -> Attribute msg
--- onEnter msg =
--- let
--- isEnter code =
--- if code == 13 then
--- Decode.succeed ( msg, True )
--- else
--- Decode.fail "not ENTER"
--- in
--- preventDefaultOn "keydown" (Decode.andThen isEnter keyCode)
-{--
-  -
-  - errorString : ErrorValue CustomError -> String -> String
-  - errorString error msg =
-  -     case error of
-  -         Empty ->
-  -             "fältet får ej vara tomt"
-  -
-  -         SmallerIntThan i ->
-  -             "måste vara minst " ++ String.fromInt i
-  -
-  -         GreaterIntThan i ->
-  -             "får vara max " ++ String.fromInt i
-  -
-  -         ShorterStringThan i ->
-  -             "måste vara minst " ++ String.fromInt i ++ " tecken lång"
-  -
-  -         LongerStringThan i ->
-  -             "får vara max " ++ String.fromInt i ++ " tecken lång"
-  -
-  -         Form.Error.CustomError EmptyList ->
-  -             "får ej vara tom"
-  -
-  -         _ ->
-  -             "är ogiltig"
-  -
-  -
-  --}
 -- UPDATE
 
 
@@ -628,7 +405,13 @@ type Msg
     | IngredientsChanged String
     | SubmitForm
     | SubmitValidForm Encode.Value
-    | QuillMsg Decode.Value
+    | QuillMsgReceived Decode.Value
+    | SendQuillMsg Encode.Value
+
+
+portMsg : Decode.Value -> Msg
+portMsg =
+    QuillMsgReceived
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -674,12 +457,13 @@ update msg ({ form } as model) =
                     )
 
         SubmitValidForm _ ->
+            -- Editor deals with this
             ( model, Cmd.none )
 
-        QuillMsg x ->
+        QuillMsgReceived x ->
             let
                 decoded =
-                    Decode.decodeValue eventDecoder x
+                    Decode.decodeValue quillDecoder x
 
                 res =
                     case decoded of
@@ -689,7 +473,63 @@ update msg ({ form } as model) =
                         Ok y ->
                             y
             in
-            Debug.log ("clicked " ++ Debug.toString x ++ " " ++ res) ( model, Cmd.none )
+            ( { model | delta = markup res }
+            , Task.succeed (SendQuillMsg (deltaEncoder <| markup res)) |> Task.perform identity
+            )
+
+        SendQuillMsg x ->
+            -- Editor deals with this
+            ( model, Cmd.none )
+
+
+deltaEncoder : Delta -> Encode.Value
+deltaEncoder (Delta ops) =
+    Encode.object
+        [ ( "ops"
+          , Encode.list opEncoder ops
+            -- TODO: add \n at the end as that is what Quill wants!
+          )
+        ]
+
+
+opEncoder : Op -> Encode.Value
+opEncoder op =
+    case op of
+        Insert str attributes ->
+            let
+                insertEncode =
+                    ( "insert", Encode.string str )
+            in
+            case attributes of
+                Just Bold ->
+                    Encode.object
+                        [ ( "insert", Encode.string str )
+                        , ( "attributes", boldEncoder )
+                        ]
+
+                Just (Color color) ->
+                    Encode.object
+                        [ ( "insert", Encode.string str )
+                        , ( "attributes", colorEncoder color )
+                        ]
+
+                Nothing ->
+                    Encode.object [ ( "insert", Encode.string str ) ]
+
+
+boldEncoder : Encode.Value
+boldEncoder =
+    Encode.object [ ( "bold", Encode.bool True ) ]
+
+
+colorEncoder : String -> Encode.Value
+colorEncoder color =
+    Encode.object [ ( "color", Encode.string color ) ]
+
+
+quillDecoder : Decode.Decoder String
+quillDecoder =
+    Decode.field "text" Decode.string
 
 
 toJson : Model -> Maybe Encode.Value

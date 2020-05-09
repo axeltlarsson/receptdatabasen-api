@@ -26,13 +26,18 @@
     // Quill custom event relay to Elm port
     Quill.register('modules/elm-port', function(quill, options) {
       quill.on('text-change', function(delta, oldDelta, source) {
-        var payload = { "delta": delta, "oldDelta": oldDelta, "source": source }
-        console.debug(payload);
-        app.ports.portReceiver.send(payload);
+        var payload = { "delta": delta, "oldDelta": oldDelta, "source": source, "text": quill.getText() }
+        // Prevent infinite loops by checking source
+        if (source != 'api') {
+          console.debug(payload);
+          app.ports.portReceiver.send(payload);
+        }
       });
 
       app.ports.portSender.subscribe(function(elmValue) {
-        console.log("elmValue from Elm!", elmValue);
+        console.debug("elmValue from Elm!: ", elmValue);
+        //quill.formatText(0, 5, { 'bold': true, 'color': 'blue' });
+        quill.setContents(elmValue);
       })
     });
 

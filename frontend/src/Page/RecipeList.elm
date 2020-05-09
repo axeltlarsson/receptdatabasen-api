@@ -215,7 +215,7 @@ viewDescription description =
                 descr
 
             else
-                takeWordsUntilCharLimit 147 (String.trim >> String.words <| descr)
+                takeWordsUntilCharLimit 147 (descr |> String.trim |> String.words)
                     |> String.join " "
                     |> append "..."
     in

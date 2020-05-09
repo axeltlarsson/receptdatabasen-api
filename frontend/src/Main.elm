@@ -10,7 +10,7 @@ import Page exposing (Page)
 import Page.Blank
 import Page.NotFound
 import Page.Recipe as Recipe
-import Page.Recipe.Editor as Editor exposing (Msg(..))
+import Page.Recipe.Editor as Editor
 import Page.RecipeList as RecipeList
 import Recipe.Slug as Slug exposing (Slug)
 import Route exposing (Route)
@@ -141,13 +141,8 @@ changeRouteTo maybeRoute model =
                 |> updateWith RecipeList GotRecipeListMsg
 
         Just Route.NewRecipe ->
-            let
-                ( m, c ) =
-                    Editor.initNew session
-                        |> updateWith (Editor Nothing) GotEditorMsg
-            in
-            Debug.log "editormsg"
-                ( m, Cmd.batch [ c, portSender (Encode.string "messag from Elm-land") ] )
+            Editor.initNew session
+                |> updateWith (Editor Nothing) GotEditorMsg
 
         Just (Route.EditRecipe slug) ->
             Editor.initEdit session slug
@@ -227,11 +222,8 @@ subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
         [ Browser.Events.onResize (\w h -> GotWindowResize { width = w, height = h })
-        , portReceiver (\v -> GotEditorMsg (PortMsg v))
+        , portReceiver (\v -> GotEditorMsg (Editor.portMsg v))
         ]
-
-
-port portSender : Encode.Value -> Cmd msg
 
 
 port portReceiver : (Decode.Value -> msg) -> Sub msg
