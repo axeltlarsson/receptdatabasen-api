@@ -25,9 +25,9 @@ import Task
 markup : String -> Delta
 markup source =
     case Mark.compile document source of
-        Mark.Success elem ->
-            Debug.log ("Mark.compile success " ++ Debug.toString elem)
-                elem
+        Mark.Success (Delta ops) ->
+            Debug.log ("Mark.compile success " ++ Debug.toString ops ++ " | source: '" ++ Debug.toString source ++ "'")
+                (Delta ops)
 
         Mark.Almost { result, errors } ->
             -- This is the case where there has been an error,
@@ -67,7 +67,7 @@ viewMarkup delta =
 deltaErrors : List Mark.Error.Error -> List Op
 deltaErrors errors =
     List.map
-        (\e -> Insert (Mark.Error.toString e) (Just (Color "red")))
+        (\e -> Insert (Mark.Error.toString e) [ Color "red" ])
         errors
 
 
@@ -76,26 +76,13 @@ type Delta
 
 
 type Op
-    = Insert String (Maybe Attributes)
+    = Insert String (List Attribute)
+    | Retain Int
 
 
-type Attributes
+type Attribute
     = Bold
     | Color String
-
-
-deltaToString : Delta -> String
-deltaToString (Delta ops) =
-    let
-        opToString (Insert str attrs) =
-            str
-    in
-    List.map opToString ops |> String.join ","
-
-
-opsFromDelta : Delta -> List Op
-opsFromDelta (Delta ops) =
-    ops
 
 
 document : Mark.Document Delta
@@ -112,16 +99,19 @@ document =
 titleBlock : Mark.Block (List Op)
 titleBlock =
     Mark.block "Title"
-        (\str -> [ Insert ("|> Title\n    " ++ str) (Just Bold) ])
+        (\str -> [ Insert ("|> Title\n    " ++ str) [ Bold ] ])
         Mark.string
 
 
 textBlock : Mark.Block (List Op)
 textBlock =
-    Mark.text
-        (\styles string ->
-            Insert string Nothing
-        )
+    Mark.textWith
+        { view =
+            \styles string ->
+                Insert (string ++ "\n") []
+        , replacements = Mark.commonReplacements
+        , inlines = []
+        }
 
 
 
@@ -329,8 +319,7 @@ viewDescriptionInput description =
 viewTitleInput : String -> Element Msg
 viewTitleInput title =
     Input.text
-        [ Input.focusedOnLoad
-        , Font.bold
+        [ Font.bold
         ]
         { onChange = TitleChanged
         , text = title
@@ -462,32 +451,109 @@ update msg ({ form } as model) =
 
         QuillMsgReceived x ->
             let
-                decoded =
-                    Decode.decodeValue quillDecoder x
-
                 res =
-                    case decoded of
+                    case Decode.decodeValue quillDecoder x of
                         Err err ->
-                            Decode.errorToString err
+                            Debug.log (Decode.errorToString err)
+                                Cmd.none
 
                         Ok y ->
-                            y
+                            -- Drop the newline at the end
+                            let
+                                text =
+                                    String.dropRight 1 y.text
+
+                                isSpaceInsert =
+                                    case y.delta of
+                                        Delta (z :: [ Insert " " [] ]) ->
+                                            True
+
+                                        _ ->
+                                            False
+                            in
+                            Debug.log (text ++ " | " ++ Debug.toString y.delta ++ " isSpaceInsert: " ++ Debug.toString isSpaceInsert)
+                                (if not isSpaceInsert then
+                                    Task.succeed
+                                        (SendQuillMsg (deltaEncoder <| markup y.text))
+                                        |> Task.perform identity
+
+                                 else
+                                    Cmd.none
+                                )
             in
-            ( { model | delta = markup res }
-            , Task.succeed (SendQuillMsg (deltaEncoder <| markup res)) |> Task.perform identity
-            )
+            Debug.log "result: "
+                ( model
+                , res
+                )
 
         SendQuillMsg x ->
             -- Editor deals with this
             ( model, Cmd.none )
 
 
+type alias TextChange =
+    { delta : Delta, text : String }
+
+
+quillDecoder : Decode.Decoder TextChange
+quillDecoder =
+    Decode.map2 TextChange
+        (Decode.field "delta" deltaDecoder)
+        (Decode.field "text" Decode.string)
+
+
+deltaDecoder : Decode.Decoder Delta
+deltaDecoder =
+    Decode.map Delta (Decode.field "ops" (Decode.list (Decode.lazy (\_ -> opDecoder))))
+
+
+opDecoder : Decode.Decoder Op
+opDecoder =
+    Decode.oneOf
+        [ retainDecoder
+        , insertDecoder
+        ]
+
+
+insertDecoder : Decode.Decoder Op
+insertDecoder =
+    Decode.field "insert"
+        (Decode.map2 Insert
+            Decode.string
+            (Decode.succeed [])
+        )
+
+
+retainDecoder : Decode.Decoder Op
+retainDecoder =
+    Decode.field "retain"
+        (Decode.map Retain
+            Decode.int
+        )
+
+
+
+{--
+  - type Delta
+  -     = Delta (List Op)
+  -
+  --}
+{--
+  - type Op
+  -     = Insert String (List Attribute)
+  -
+  -
+  - type Attribute
+  -     = Bold
+  -     | Color String
+  --}
+
+
 deltaEncoder : Delta -> Encode.Value
 deltaEncoder (Delta ops) =
     Encode.object
         [ ( "ops"
-          , Encode.list opEncoder ops
-            -- TODO: add \n at the end as that is what Quill wants!
+          , Encode.list opEncoder (List.append ops [ Insert "\n" [] ])
           )
         ]
 
@@ -496,40 +562,23 @@ opEncoder : Op -> Encode.Value
 opEncoder op =
     case op of
         Insert str attributes ->
-            let
-                insertEncode =
-                    ( "insert", Encode.string str )
-            in
-            case attributes of
-                Just Bold ->
-                    Encode.object
-                        [ ( "insert", Encode.string str )
-                        , ( "attributes", boldEncoder )
-                        ]
+            Encode.object
+                [ ( "insert", Encode.string str )
+                , ( "attributes", Encode.object (List.map attributeEncoder attributes) )
+                ]
 
-                Just (Color color) ->
-                    Encode.object
-                        [ ( "insert", Encode.string str )
-                        , ( "attributes", colorEncoder color )
-                        ]
-
-                Nothing ->
-                    Encode.object [ ( "insert", Encode.string str ) ]
+        Retain int ->
+            Encode.object [ ( "retain", Encode.int int ) ]
 
 
-boldEncoder : Encode.Value
-boldEncoder =
-    Encode.object [ ( "bold", Encode.bool True ) ]
+attributeEncoder : Attribute -> ( String, Encode.Value )
+attributeEncoder attribute =
+    case attribute of
+        Color color ->
+            ( "color", Encode.string color )
 
-
-colorEncoder : String -> Encode.Value
-colorEncoder color =
-    Encode.object [ ( "color", Encode.string color ) ]
-
-
-quillDecoder : Decode.Decoder String
-quillDecoder =
-    Decode.field "text" Decode.string
+        Bold ->
+            ( "bold", Encode.bool True )
 
 
 toJson : Model -> Maybe Encode.Value
