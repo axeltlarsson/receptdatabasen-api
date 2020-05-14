@@ -71,6 +71,16 @@ deltaErrors errors =
         errors
 
 
+postProcessDelta : Delta -> Delta
+postProcessDelta (Delta ops) =
+    List.map
+        (\op ->
+            op
+        )
+        ops
+        |> Delta
+
+
 type Delta
     = Delta (List Op)
 
@@ -83,6 +93,50 @@ type Op
 type Attribute
     = Bold
     | Color String
+    | Strike
+    | Italic
+    | NullAttribute
+
+
+boldFormat : Bool -> Attribute
+boldFormat bool =
+    if bool then
+        Bold
+
+    else
+        NullAttribute
+
+
+italicFormat : Bool -> Attribute
+italicFormat bool =
+    if bool then
+        Italic
+
+    else
+        NullAttribute
+
+
+strikeFormat : Bool -> Attribute
+strikeFormat bool =
+    if bool then
+        Strike
+
+    else
+        NullAttribute
+
+
+stylesToFormat : { bold : Bool, italic : Bool, strike : Bool } -> List Attribute
+stylesToFormat { bold, italic, strike } =
+    List.filter
+        (\a ->
+            case a of
+                NullAttribute ->
+                    False
+
+                _ ->
+                    True
+        )
+        [ boldFormat bold, italicFormat italic, strikeFormat strike ]
 
 
 document : Mark.Document Delta
@@ -91,9 +145,14 @@ document =
         (\blocks -> Delta (List.concat blocks))
         (Mark.manyOf
             [ titleBlock
-            , textBlock
+            , Mark.map appendNewlinesToTitleBlock textBlock
             ]
         )
+
+
+appendNewlinesToTitleBlock : List Op -> List Op
+appendNewlinesToTitleBlock ops =
+    List.append ops [ Insert "\n\n" [] ]
 
 
 titleBlock : Mark.Block (List Op)
@@ -108,10 +167,44 @@ textBlock =
     Mark.textWith
         { view =
             \styles string ->
-                Insert (string ++ "\n") []
+                Insert (attributesOnString string styles) (stylesToFormat styles)
         , replacements = Mark.commonReplacements
         , inlines = []
         }
+
+
+attributesOnString : String -> { bold : Bool, italic : Bool, strike : Bool } -> String
+attributesOnString str { bold, italic, strike } =
+    let
+        surround s x =
+            x ++ s ++ x
+
+        r : ( Bool, Attribute ) -> String -> String
+        r ( active, attr ) s =
+            if active then
+                case attr of
+                    Bold ->
+                        surround s "*"
+
+                    Italic ->
+                        surround s "/"
+
+                    Strike ->
+                        surround s "~"
+
+                    NullAttribute ->
+                        s
+
+                    Color _ ->
+                        s
+
+            else
+                s
+
+        attributesAsList =
+            [ ( bold, Bold ), ( italic, Italic ), ( strike, Strike ) ]
+    in
+    List.foldl r str attributesAsList
 
 
 
@@ -451,44 +544,51 @@ update msg ({ form } as model) =
 
         QuillMsgReceived x ->
             let
-                res =
+                cmd =
                     case Decode.decodeValue quillDecoder x of
                         Err err ->
                             Debug.log (Decode.errorToString err)
                                 Cmd.none
 
                         Ok y ->
-                            -- Drop the newline at the end
-                            let
-                                text =
-                                    String.dropRight 1 y.text
-
-                                isSpaceInsert =
-                                    case y.delta of
-                                        Delta (z :: [ Insert " " [] ]) ->
-                                            True
-
-                                        _ ->
-                                            False
-                            in
-                            Debug.log (text ++ " | " ++ Debug.toString y.delta ++ " isSpaceInsert: " ++ Debug.toString isSpaceInsert)
-                                (if not isSpaceInsert then
+                            Debug.log ("delta: " ++ Debug.toString y.delta)
+                                (if shallParse y.delta then
+                                    let
+                                        newlineAppendix s =
+                                            (String.trimRight >> String.length >> String.dropLeft) s s
+                                    in
                                     Task.succeed
-                                        (SendQuillMsg (deltaEncoder <| markup y.text))
+                                        (SendQuillMsg (deltaEncoder (markup y.text) "\n"))
                                         |> Task.perform identity
 
                                  else
                                     Cmd.none
                                 )
             in
-            Debug.log "result: "
-                ( model
-                , res
-                )
+            ( model, cmd )
 
         SendQuillMsg x ->
             -- Editor deals with this
             ( model, Cmd.none )
+
+
+
+{--
+  - We should only parse the quill delta at certain times, not on space inserts for instance.
+  --}
+
+
+shallParse : Delta -> Bool
+shallParse delta =
+    case delta of
+        Delta (_ :: [ Insert " " [] ]) ->
+            False
+
+        Delta (_ :: [ Insert "\n" [] ]) ->
+            True
+
+        _ ->
+            False
 
 
 type alias TextChange =
@@ -549,11 +649,11 @@ retainDecoder =
   --}
 
 
-deltaEncoder : Delta -> Encode.Value
-deltaEncoder (Delta ops) =
+deltaEncoder : Delta -> String -> Encode.Value
+deltaEncoder (Delta ops) appendix =
     Encode.object
         [ ( "ops"
-          , Encode.list opEncoder (List.append ops [ Insert "\n" [] ])
+          , Encode.list opEncoder (List.append ops [ Insert appendix [] ])
           )
         ]
 
@@ -579,6 +679,15 @@ attributeEncoder attribute =
 
         Bold ->
             ( "bold", Encode.bool True )
+
+        Italic ->
+            ( "italic", Encode.bool True )
+
+        Strike ->
+            ( "strike", Encode.bool True )
+
+        NullAttribute ->
+            ( "nothing", Encode.null )
 
 
 toJson : Model -> Maybe Encode.Value

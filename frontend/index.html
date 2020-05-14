@@ -58,13 +58,16 @@
         console.debug("elmValue from Elm!: ", elmValue);
         var range = quill.getSelection(true);
         console.debug(range);
-        quill.setContents(elmValue);
-        setTimeout(
-          () => {
-           quill.setSelection(range);
-            quill.focus();
-
-          }, 1);
+        var res = quill.setContents(elmValue);
+        console.log("setContents res: ", res);
+        console.log("contents: ", quill.getContents());
+        console.log("selection: ", quill.getSelection());
+//      setTimeout(
+//        () => {
+//          quill.setSelection(range);
+//          quill.focus();
+//
+//        }, 1);
 
       })
     });
