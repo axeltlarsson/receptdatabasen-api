@@ -45,40 +45,11 @@ markup source =
                 (deltaErrors errors)
 
 
-viewMarkup : Delta -> Element Msg
-viewMarkup delta =
-    let
-        str =
-            "|> Title\n    what? is this valid?"
-    in
-    case delta of
-        Delta ops ->
-            column [ spacing 10 ]
-                [ row [] [ text "ops toString: ", el [ Border.width 1, Border.color Palette.black, padding 10 ] (text <| Debug.toString ops) ]
-
-                -- , el [ padding 20, Border.width 1, Border.color Palette.black ] (text <| Debug.toString <| markup str)
-                , row []
-                    [ text "delta to string:"
-                    , el [] (text <| Debug.toString delta)
-                    ]
-                ]
-
-
 deltaErrors : List Mark.Error.Error -> List Op
 deltaErrors errors =
     List.map
         (\e -> Insert (Mark.Error.toString e) [ Color "red" ])
         errors
-
-
-postProcessDelta : Delta -> Delta
-postProcessDelta (Delta ops) =
-    List.map
-        (\op ->
-            op
-        )
-        ops
-        |> Delta
 
 
 type Delta
@@ -88,6 +59,7 @@ type Delta
 type Op
     = Insert String (List Attribute)
     | Retain Int
+    | Delete Int
 
 
 type Attribute
@@ -144,14 +116,14 @@ document =
     Mark.document
         (\blocks -> Delta (List.concat blocks))
         (Mark.manyOf
-            [ titleBlock
-            , Mark.map appendNewlinesToTitleBlock textBlock
+            [ Mark.map appendNewlines titleBlock
+            , Mark.map appendNewlines textBlock
             ]
         )
 
 
-appendNewlinesToTitleBlock : List Op -> List Op
-appendNewlinesToTitleBlock ops =
+appendNewlines : List Op -> List Op
+appendNewlines ops =
     List.append ops [ Insert "\n\n" [] ]
 
 
@@ -251,7 +223,7 @@ viewQuill : Html Msg
 viewQuill =
     Html.node "quill-editor"
         [ Html.Attributes.attribute "content" ""
-        , Html.Attributes.attribute "format" "html"
+        , Html.Attributes.attribute "format" "text" -- TODO: decide which format to use (if it matters?)
         , Html.Attributes.attribute "theme" "snow"
         , Html.Attributes.attribute "bounds" "#quill-editor"
         , Html.Attributes.attribute "id" "quill-editor"
@@ -280,12 +252,22 @@ type alias RecipeForm =
 type alias Model =
     { form : RecipeForm
     , delta : Delta
+    , formats : { bold : Bool, italic : Bool, strike : Bool }
     }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( { form = initialForm, delta = Delta [] }, Cmd.none )
+    ( { form = initialForm
+      , delta = Delta []
+      , formats =
+            { bold = False
+            , italic = False
+            , strike = False
+            }
+      }
+    , Cmd.none
+    )
 
 
 initialForm : RecipeForm
@@ -320,6 +302,7 @@ fromRecipe recipe =
         , ingredients = "" -- TODO
         }
     , delta = Delta []
+    , formats = { bold = False, italic = False, strike = False }
     }
 
 
@@ -370,8 +353,7 @@ fromRecipe recipe =
 view : Model -> Element Msg
 view { form, delta } =
     column [ Region.mainContent, width fill ]
-        [ viewMarkup delta
-        , viewForm form
+        [ viewForm form
         ]
 
 
@@ -542,64 +524,104 @@ update msg ({ form } as model) =
             -- Editor deals with this
             ( model, Cmd.none )
 
-        QuillMsgReceived x ->
-            let
-                cmd =
-                    case Decode.decodeValue quillDecoder x of
-                        Err err ->
-                            Debug.log (Decode.errorToString err)
-                                Cmd.none
+        QuillMsgReceived quillMsg ->
+            case Decode.decodeValue quillDecoder quillMsg of
+                Err err ->
+                    Debug.log (Decode.errorToString err)
+                        ( model, Cmd.none )
 
-                        Ok y ->
-                            Debug.log ("delta: " ++ Debug.toString y.delta)
-                                (if shallParse y.delta then
-                                    let
-                                        newlineAppendix s =
-                                            (String.trimRight >> String.length >> String.dropLeft) s s
-                                    in
-                                    Task.succeed
-                                        (SendQuillMsg (deltaEncoder (markup y.text) "\n"))
-                                        |> Task.perform identity
-
-                                 else
-                                    Cmd.none
-                                )
-            in
-            ( model, cmd )
+                Ok textChange ->
+                    onTextChange model textChange
 
         SendQuillMsg x ->
             -- Editor deals with this
             ( model, Cmd.none )
 
 
+onTextChange : Model -> TextChange -> ( Model, Cmd Msg )
+onTextChange model { delta, text, selection, currentLine } =
+    let
+        sendQuillMsg val =
+            Task.succeed (SendQuillMsg val) |> Task.perform identity
 
-{--
-  - We should only parse the quill delta at certain times, not on space inserts for instance.
-  --}
+        formats =
+            model.formats
+    in
+    case lastCharInsert delta of
+        Just "\n" ->
+            if String.startsWith "|>" currentLine then
+                ( model, sendQuillMsg <| outgoingQuillMsgEncoder Indent )
+
+            else
+                -- parse on newline insert unless currentLine startsWith |>
+                ( model, sendQuillMsg <| outgoingQuillMsgEncoder <| SetContents (markup text) "\n" )
+
+        Just "//*" ->
+            ( model, sendQuillMsg <| outgoingQuillMsgEncoder <| SetContents (markup text) "\n" )
+
+        Just "/*" ->
+            ( { model | formats = { formats | bold = not formats.bold } }
+            , sendQuillMsg <|
+                outgoingQuillMsgEncoder <|
+                    Format Bold (not formats.bold)
+            )
+
+        Just "/dis" ->
+            ( { model | formats = { formats | italic = not formats.italic } }
+            , sendQuillMsg <|
+                outgoingQuillMsgEncoder <|
+                    Format Italic (not formats.italic)
+            )
+
+        Just "~dis" ->
+            ( { model | formats = { formats | strike = not formats.strike } }
+            , sendQuillMsg <|
+                outgoingQuillMsgEncoder <|
+                    Format Strike (not formats.strike)
+            )
+
+        Just x ->
+            ( model, Cmd.none )
+
+        Nothing ->
+            ( model, Cmd.none )
 
 
-shallParse : Delta -> Bool
-shallParse delta =
+lastCharInsert : Delta -> Maybe String
+lastCharInsert delta =
     case delta of
-        Delta (_ :: [ Insert " " [] ]) ->
-            False
+        Delta [ Insert x [] ] ->
+            Just x
 
-        Delta (_ :: [ Insert "\n" [] ]) ->
-            True
+        Delta (_ :: [ Insert x [] ]) ->
+            Just x
 
         _ ->
-            False
+            Nothing
 
 
 type alias TextChange =
-    { delta : Delta, text : String }
+    { delta : Delta, text : String, selection : Selection, currentLine : String }
+
+
+type alias Selection =
+    { index : Int
+    , length : Int
+    }
 
 
 quillDecoder : Decode.Decoder TextChange
 quillDecoder =
-    Decode.map2 TextChange
+    Decode.map4 TextChange
         (Decode.field "delta" deltaDecoder)
         (Decode.field "text" Decode.string)
+        (Decode.field "selection"
+            (Decode.map2 Selection
+                (Decode.field "index" Decode.int)
+                (Decode.field "length" Decode.int)
+            )
+        )
+        (Decode.field "currentLine" Decode.string)
 
 
 deltaDecoder : Decode.Decoder Delta
@@ -612,6 +634,7 @@ opDecoder =
     Decode.oneOf
         [ retainDecoder
         , insertDecoder
+        , deleteDecoder
         ]
 
 
@@ -632,21 +655,57 @@ retainDecoder =
         )
 
 
+deleteDecoder : Decode.Decoder Op
+deleteDecoder =
+    Decode.field "delete"
+        (Decode.map Delete Decode.int)
 
-{--
-  - type Delta
-  -     = Delta (List Op)
-  -
-  --}
-{--
-  - type Op
-  -     = Insert String (List Attribute)
-  -
-  -
-  - type Attribute
-  -     = Bold
-  -     | Color String
-  --}
+
+type OutgoingQuillMsg
+    = SetContents Delta String
+    | Format Attribute Bool
+    | Indent
+
+
+outgoingQuillMsgEncoder : OutgoingQuillMsg -> Encode.Value
+outgoingQuillMsgEncoder quillMsg =
+    case quillMsg of
+        SetContents delta appendix ->
+            Encode.object
+                [ ( "type", Encode.string "setContents" )
+                , ( "payload", deltaEncoder delta appendix )
+                ]
+
+        Format attr active ->
+            Encode.object
+                [ ( "type", Encode.string "format" )
+                , ( "payload"
+                  , Encode.object
+                        [ ( "property"
+                          , Encode.string <|
+                                case attr of
+                                    Bold ->
+                                        "bold"
+
+                                    Italic ->
+                                        "italic"
+
+                                    Strike ->
+                                        "strike"
+
+                                    _ ->
+                                        "nothing"
+                          )
+                        , ( "value", Encode.bool active )
+                        ]
+                  )
+                ]
+
+        Indent ->
+            Encode.object
+                [ ( "type", Encode.string "indent" )
+                , ( "payload", Encode.string "\n    " )
+                ]
 
 
 deltaEncoder : Delta -> String -> Encode.Value
@@ -669,6 +728,9 @@ opEncoder op =
 
         Retain int ->
             Encode.object [ ( "retain", Encode.int int ) ]
+
+        Delete int ->
+            Encode.object [ ( "delete", Encode.int int ) ]
 
 
 attributeEncoder : Attribute -> ( String, Encode.Value )

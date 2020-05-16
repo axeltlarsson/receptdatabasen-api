@@ -26,12 +26,17 @@
     // Quill custom event relay to Elm port
     Quill.register('modules/elm-port', function(quill, options) {
       quill.on('text-change', function(delta, oldDelta, source) {
+        let sel = quill.getSelection()
+        let currentLine = quill.getLine(sel['index'])[0]['domNode'].innerText
+
         var payload = {
           "delta": delta,
           "oldDelta": oldDelta,
           "source": source,
           "text": quill.getText(),
-          "contents": quill.getContents()
+          "contents": quill.getContents(),
+          "selection": sel,
+          "currentLine": currentLine
         }
         // Prevent infinite loops by checking source
         if (source != 'api') {
@@ -40,35 +45,64 @@
         }
       });
 
-//   quill.on('selection-change', function(range, oldRange, source) {
-//     console.log("selection-change from source: ", source);
-//     if (range) {
-//       if (range.length == 0) {
-//         console.log('User cursor is on', range.index);
-//       } else {
-//         var text = quill.getText(range.index, range.length);
-//         console.log('User has highlighted', text);
-//       }
-//     } else {
-//       console.log('Cursor not in the editor');
-//     }
-//   });
-//
-      app.ports.portSender.subscribe(function(elmValue) {
-        console.debug("elmValue from Elm!: ", elmValue);
-        var range = quill.getSelection(true);
-        console.debug(range);
-        var res = quill.setContents(elmValue);
-        console.log("setContents res: ", res);
-        console.log("contents: ", quill.getContents());
-        console.log("selection: ", quill.getSelection());
-//      setTimeout(
-//        () => {
-//          quill.setSelection(range);
-//          quill.focus();
-//
-//        }, 1);
+     quill.on('selection-change', function(range, oldRange, source) {
+  //    console.log("selection-change from source: ", source);
+  //    if (range) {
+  //      if (range.length == 0) {
+  //        console.log('User cursor is on', range.index);
+  //      } else {
+  //        var text = quill.getText(range.index, range.length);
+  //        console.log('User has highlighted', text);
+  //      }
+  //    } else {
+  //      console.log('Cursor not in the editor');
+  //    }
+     });
 
+      app.ports.portSender.subscribe(function(elmValue) {
+        var payload = elmValue.payload;
+
+        switch (elmValue.type) {
+          case "setContents":
+            var range = quill.getSelection(true);
+            var res = quill.setContents(payload);
+            console.log("setContents res: ", res);
+            console.log("contents: ", quill.getContents());
+            console.log("selection: ", quill.getSelection());
+            //      setTimeout(
+            //        () => {
+            //          quill.setSelection(range);
+            //          quill.focus();
+            //
+            //        }, 1);
+
+            break;
+          case "format":
+            console.debug("formatting", payload);
+            // Set selection to include the character activating the selection
+            console.debug(quill.getFormat())
+            let sel = quill.getSelection()
+            if (payload.value) {
+              console.debug("activating ", payload.property)
+              quill.setSelection({index: sel.index-1, length: 1})
+            } else {
+              console.debug("deactivating ", payload.property)
+              quill.setSelection({index: sel.index-1, length: 1})
+            }
+
+            quill.format(payload.property, payload.value);
+            // restore selection
+            quill.setSelection({index: sel.index, length: sel.length})
+            console.debug(quill.getFormat())
+            break;
+          case "indent":
+            console.log("indenting", payload);
+            let selection = quill.getSelection()
+            quill.insertText(selection, payload)
+            setTimeout(()=>{
+              quill.setSelection(selection.index + 5, 0)
+            }, 1)
+        }
       })
     });
 

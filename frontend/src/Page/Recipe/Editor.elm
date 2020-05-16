@@ -27,7 +27,6 @@ port portSender : Encode.Value -> Cmd msg
 type alias Model =
     { session : Session
     , status : Status
-    , toQuill : String
     }
 
 
@@ -48,7 +47,6 @@ initNew session =
         toModel subModel =
             { session = session
             , status = EditingNew Nothing subModel
-            , toQuill = ""
             }
     in
     Form.init |> updateWith toModel FormMsg
@@ -71,7 +69,6 @@ initEdit session slug =
         Just recipe ->
             ( { session = session
               , status = Editing slug Nothing <| Form.fromRecipe recipe
-              , toQuill = ""
               }
             , Cmd.none
             )
@@ -79,7 +76,6 @@ initEdit session slug =
         Nothing ->
             ( { session = session
               , status = Loading slug
-              , toQuill = ""
               }
             , Recipe.fetch slug (CompletedRecipeLoad slug)
             )
@@ -95,7 +91,7 @@ view model =
         skeleton prob children =
             column [ width fill ]
                 (List.append
-                    [ viewQuillInput model.toQuill, Element.map FormMsg children ]
+                    [ Element.map FormMsg children ]
                     [ viewServerError prob ]
                 )
     in
@@ -128,19 +124,6 @@ view model =
     }
 
 
-viewQuillInput : String -> Element Msg
-viewQuillInput str =
-    row []
-        [ Input.text []
-            { onChange = QuillInputChanged
-            , text = str
-            , placeholder = Nothing
-            , label = Input.labelHidden "quillInput"
-            }
-        , Input.button [] { onPress = Just SendToQuill, label = text "send to quill" }
-        ]
-
-
 viewServerError : Maybe ServerError -> Element Msg
 viewServerError maybeError =
     let
@@ -165,8 +148,6 @@ type Msg
     | CompletedRecipeLoad Slug (Result Recipe.ServerError (Recipe Full))
     | CompletedEdit (Result Recipe.ServerError (Recipe Full))
     | PortMsg Decode.Value
-    | QuillInputChanged String
-    | SendToQuill
 
 
 portMsg : Decode.Value -> Msg
@@ -193,7 +174,6 @@ formToModel { status, session } form =
     in
     { session = session
     , status = newStatus
-    , toQuill = ""
     }
 
 
@@ -268,12 +248,6 @@ update msg ({ status, session } as model) =
             ( { model | status = savingError error model.status }
             , Cmd.none
             )
-
-        QuillInputChanged something ->
-            ( { model | toQuill = something }, Cmd.none )
-
-        SendToQuill ->
-            ( { model | toQuill = "" }, portSender <| Encode.string model.toQuill )
 
 
 save : Status -> Encode.Value -> ( Status, Cmd Msg )
