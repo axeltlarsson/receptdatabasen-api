@@ -22,16 +22,9 @@ import Set
 import Task
 
 
-viewQuill : Html Msg
-viewQuill =
-    Html.node "quill-editor"
-        [ Html.Attributes.attribute "content" ""
-        , Html.Attributes.attribute "format" "text" -- TODO: decide which format to use (if it matters?)
-        , Html.Attributes.attribute "theme" "snow"
-        , Html.Attributes.attribute "bounds" "#quill-editor"
-        , Html.Attributes.attribute "id" "quill-editor"
-        , Html.Attributes.attribute "modules" modulesString
-        ]
+viewMarkdownEditor : Html Msg
+viewMarkdownEditor =
+    Html.textarea [ Html.Attributes.id "mde-editor" ]
         []
 
 
@@ -75,7 +68,7 @@ init : ( Model, Cmd Msg )
 init =
     ( { form = initialForm
       }
-    , Cmd.none
+    , Task.succeed (SendPortMsg (Encode.object [ ( "editorElemId", Encode.string "mde-editor" ) ])) |> Task.perform identity
     )
 
 
@@ -167,11 +160,12 @@ view { form } =
 viewForm : RecipeForm -> Element Msg
 viewForm form =
     column [ width fill, spacing 30, padding 10, Font.extraLight ]
-        [ el [ height <| Element.px 200 ] (Element.html viewQuill)
-        , column [ width (fill |> Element.maximum 700), centerX, spacing 30 ]
+        [ column [ width (fill |> Element.maximum 700), centerX, spacing 30 ]
             [ viewTitleInput form.title
             , viewDescriptionInput form.description
             , viewPortionsInput form.portions
+            , el [ Font.size 36, Font.semiBold ] (text "Gör så här")
+            , el [ height fill, width fill ] (Element.html viewMarkdownEditor)
             , viewInstructionsInput form.instructions
             , column [ width fill, spacing 20 ]
                 [ el [ Font.size 20 ] (text "Ingredienser")
@@ -277,7 +271,7 @@ type Msg
     | SubmitForm
     | SubmitValidForm Encode.Value
     | PortMsgReceived Decode.Value
-    | SendPortlMsg Encode.Value
+    | SendPortMsg Encode.Value
 
 
 portMsg : Decode.Value -> Msg
@@ -332,12 +326,26 @@ update msg ({ form } as model) =
             ( model, Cmd.none )
 
         PortMsgReceived m ->
-            Debug.log (Debug.toString m)
-                ( model, Cmd.none )
+            case Decode.decodeValue portMsgDecoder m of
+                Err err ->
+                    Debug.log (Decode.errorToString err)
+                        ( model, Cmd.none )
 
-        SendPortlMsg x ->
+                Ok textChange ->
+                    ( { model | form = { form | instructions = textChange } }, Cmd.none )
+
+        SendPortMsg x ->
             -- Editor deals with this
             ( model, Cmd.none )
+
+
+type alias PortMsg =
+    String
+
+
+portMsgDecoder : Decode.Decoder PortMsg
+portMsgDecoder =
+    Decode.field "payload" Decode.string
 
 
 toJson : Model -> Maybe Encode.Value
