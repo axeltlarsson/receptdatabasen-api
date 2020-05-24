@@ -67,6 +67,8 @@ type Attribute
     | Color String
     | Strike
     | Italic
+    | Size String
+    | Font String
     | NullAttribute
 
 
@@ -116,22 +118,44 @@ document =
     Mark.document
         (\blocks -> Delta (List.concat blocks))
         (Mark.manyOf
-            [ Mark.map appendNewlines titleBlock
-            , Mark.map appendNewlines textBlock
+            [ Mark.map (appendNewlines 2) titleBlock
+            , Mark.map (appendNewlines 2) textBlock
+            , Mark.map (appendNewlines 1) stepBlock
             ]
         )
 
 
-appendNewlines : List Op -> List Op
-appendNewlines ops =
-    List.append ops [ Insert "\n\n" [] ]
+appendNewlines : Int -> List Op -> List Op
+appendNewlines nbr ops =
+    List.append ops [ Insert (String.repeat nbr "\n") [] ]
 
 
 titleBlock : Mark.Block (List Op)
 titleBlock =
     Mark.block "Title"
-        (\str -> [ Insert ("|> Title\n    " ++ str) [ Bold ] ])
+        (\str ->
+            [ Insert "|> Title\n" [ Bold, Color "grey", Size "small" ]
+            , Insert ("    " ++ str) [ Bold, Size "large" ]
+            , Insert "\n\n" [ NullAttribute ]
+            ]
+        )
         Mark.string
+
+
+stepBlock : Mark.Block (List Op)
+stepBlock =
+    let
+        t : List Op -> List Op
+        t ops =
+            List.append
+                [ Insert "|> Step\n" [ Bold, Color "grey", Size "small" ]
+                , Insert "    " [ NullAttribute ]
+                ]
+                ops
+    in
+    Mark.block "Step"
+        t
+        textBlock
 
 
 textBlock : Mark.Block (List Op)
@@ -168,6 +192,12 @@ attributesOnString str { bold, italic, strike } =
                         s
 
                     Color _ ->
+                        s
+
+                    Size _ ->
+                        s
+
+                    Font _ ->
                         s
 
             else
@@ -227,9 +257,23 @@ viewQuill =
         , Html.Attributes.attribute "theme" "snow"
         , Html.Attributes.attribute "bounds" "#quill-editor"
         , Html.Attributes.attribute "id" "quill-editor"
-        , Html.Attributes.attribute "modules" "{\"elm-port\": true}"
+        , Html.Attributes.attribute "modules" modulesString
         ]
         []
+
+
+modulesString : String
+modulesString =
+    """
+    {
+        "elm-port": true,
+        "toolbar": [
+            ["bold", "italic", "strike"],
+            [{ "size": ["small", false, "large", "huge"] }]
+
+            ]
+    }
+    """
 
 
 
@@ -750,6 +794,12 @@ attributeEncoder attribute =
 
         NullAttribute ->
             ( "nothing", Encode.null )
+
+        Size size ->
+            ( "size", Encode.string size )
+
+        Font font ->
+            ( "font", Encode.string font )
 
 
 toJson : Model -> Maybe Encode.Value
