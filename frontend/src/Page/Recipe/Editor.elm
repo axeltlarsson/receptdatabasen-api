@@ -185,7 +185,7 @@ update msg ({ status, session } as model) =
                 |> save status
                 |> Tuple.mapFirst (\newStatus -> { model | status = newStatus })
 
-        FormMsg (Form.SendQuillMsg quillMsg) ->
+        FormMsg (Form.SendPortlMsg quillMsg) ->
             ( model, portSender quillMsg )
 
         FormMsg subMsg ->

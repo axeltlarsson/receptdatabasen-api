@@ -22,233 +22,6 @@ import Set
 import Task
 
 
-markup : String -> Delta
-markup source =
-    case Mark.compile document source of
-        Mark.Success (Delta ops) ->
-            Debug.log ("Mark.compile success " ++ Debug.toString ops ++ " | source: '" ++ Debug.toString source ++ "'")
-                (Delta ops)
-
-        Mark.Almost { result, errors } ->
-            -- This is the case where there has been an error,
-            -- but it has been caught by `Mark.onError` and is still rendereable.
-            case result of
-                Delta ops ->
-                    Debug.log ("Mark.compile Almost errors: " ++ Debug.toString errors)
-                        Delta
-                        (List.append (deltaErrors errors) ops)
-
-        -- , result
-        Mark.Failure errors ->
-            Debug.log ("Mark.compile failure: " ++ Debug.toString (List.map Mark.Error.toString errors))
-                Delta
-                (deltaErrors errors)
-
-
-deltaErrors : List Mark.Error.Error -> List Op
-deltaErrors errors =
-    List.map
-        (\e -> Insert (Mark.Error.toString e) [ Color "red" ])
-        errors
-
-
-type Delta
-    = Delta (List Op)
-
-
-type Op
-    = Insert String (List Attribute)
-    | Retain Int
-    | Delete Int
-
-
-type Attribute
-    = Bold
-    | Color String
-    | Strike
-    | Italic
-    | Size String
-    | Font String
-    | NullAttribute
-
-
-boldFormat : Bool -> Attribute
-boldFormat bool =
-    if bool then
-        Bold
-
-    else
-        NullAttribute
-
-
-italicFormat : Bool -> Attribute
-italicFormat bool =
-    if bool then
-        Italic
-
-    else
-        NullAttribute
-
-
-strikeFormat : Bool -> Attribute
-strikeFormat bool =
-    if bool then
-        Strike
-
-    else
-        NullAttribute
-
-
-stylesToFormat : { bold : Bool, italic : Bool, strike : Bool } -> List Attribute
-stylesToFormat { bold, italic, strike } =
-    List.filter
-        (\a ->
-            case a of
-                NullAttribute ->
-                    False
-
-                _ ->
-                    True
-        )
-        [ boldFormat bold, italicFormat italic, strikeFormat strike ]
-
-
-document : Mark.Document Delta
-document =
-    Mark.document
-        (\blocks -> Delta (List.concat blocks))
-        (Mark.manyOf
-            [ Mark.map (appendNewlines 2) titleBlock
-            , Mark.map (appendNewlines 2) textBlock
-            , Mark.map (appendNewlines 1) stepBlock
-            ]
-        )
-
-
-appendNewlines : Int -> List Op -> List Op
-appendNewlines nbr ops =
-    List.append ops [ Insert (String.repeat nbr "\n") [] ]
-
-
-titleBlock : Mark.Block (List Op)
-titleBlock =
-    Mark.block "Title"
-        (\str ->
-            [ Insert "|> Title\n" [ Bold, Color "grey", Size "small" ]
-            , Insert ("    " ++ str) [ Bold, Size "large" ]
-            , Insert "\n\n" [ NullAttribute ]
-            ]
-        )
-        Mark.string
-
-
-stepBlock : Mark.Block (List Op)
-stepBlock =
-    let
-        t : List Op -> List Op
-        t ops =
-            List.append
-                [ Insert "|> Step\n" [ Bold, Color "grey", Size "small" ]
-                , Insert "    " [ NullAttribute ]
-                ]
-                ops
-    in
-    Mark.block "Step"
-        t
-        textBlock
-
-
-textBlock : Mark.Block (List Op)
-textBlock =
-    Mark.textWith
-        { view =
-            \styles string ->
-                Insert (attributesOnString string styles) (stylesToFormat styles)
-        , replacements = Mark.commonReplacements
-        , inlines = []
-        }
-
-
-attributesOnString : String -> { bold : Bool, italic : Bool, strike : Bool } -> String
-attributesOnString str { bold, italic, strike } =
-    let
-        surround s x =
-            x ++ s ++ x
-
-        r : ( Bool, Attribute ) -> String -> String
-        r ( active, attr ) s =
-            if active then
-                case attr of
-                    Bold ->
-                        surround s "*"
-
-                    Italic ->
-                        surround s "/"
-
-                    Strike ->
-                        surround s "~"
-
-                    NullAttribute ->
-                        s
-
-                    Color _ ->
-                        s
-
-                    Size _ ->
-                        s
-
-                    Font _ ->
-                        s
-
-            else
-                s
-
-        attributesAsList =
-            [ ( bold, Bold ), ( italic, Italic ), ( strike, Strike ) ]
-    in
-    List.foldl r str attributesAsList
-
-
-
-{--
-  - list : Mark.Block (Element Msg)
-  - list =
-  -     Mark.tree "List" renderList (Mark.map (row []) markText)
-  -
-  -
-  -
-  - -- Note: we have to define this as a separate function because
-  - -- `Items` and `Node` are a pair of mutually recursive data structures.
-  - -- It's easiest to render them using two separate functions:
-  - -- renderList and renderItem
-  -
-  -
-  - renderList : Mark.Enumerated (Element Msg) -> Element Msg
-  - renderList (Mark.Enumerated enum) =
-  -     let
-  -         group =
-  -             case enum.icon of
-  -                 Mark.Bullet ->
-  -                     Font.color Palette.grey
-  -
-  -                 Mark.Number ->
-  -                     Font.color Palette.red
-  -     in
-  -     column [ group ]
-  -         (List.map renderItem enum.items)
-  -
-  -
-  - renderItem : Mark.Item (Element Msg) -> Element Msg
-  - renderItem (Mark.Item item) =
-  -     column [ padding 30 ]
-  -         [ row [] item.content
-  -         , renderList item.children
-  -         ]
-  -
-  -
-  --}
-
-
 viewQuill : Html Msg
 viewQuill =
     Html.node "quill-editor"
@@ -295,20 +68,12 @@ type alias RecipeForm =
 
 type alias Model =
     { form : RecipeForm
-    , delta : Delta
-    , formats : { bold : Bool, italic : Bool, strike : Bool }
     }
 
 
 init : ( Model, Cmd Msg )
 init =
     ( { form = initialForm
-      , delta = Delta []
-      , formats =
-            { bold = False
-            , italic = False
-            , strike = False
-            }
       }
     , Cmd.none
     )
@@ -345,8 +110,6 @@ fromRecipe recipe =
         , instructions = instructions
         , ingredients = "" -- TODO
         }
-    , delta = Delta []
-    , formats = { bold = False, italic = False, strike = False }
     }
 
 
@@ -395,7 +158,7 @@ fromRecipe recipe =
 
 
 view : Model -> Element Msg
-view { form, delta } =
+view { form } =
     column [ Region.mainContent, width fill ]
         [ viewForm form
         ]
@@ -513,13 +276,13 @@ type Msg
     | IngredientsChanged String
     | SubmitForm
     | SubmitValidForm Encode.Value
-    | QuillMsgReceived Decode.Value
-    | SendQuillMsg Encode.Value
+    | PortMsgReceived Decode.Value
+    | SendPortlMsg Encode.Value
 
 
 portMsg : Decode.Value -> Msg
 portMsg =
-    QuillMsgReceived
+    PortMsgReceived
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -568,238 +331,13 @@ update msg ({ form } as model) =
             -- Editor deals with this
             ( model, Cmd.none )
 
-        QuillMsgReceived quillMsg ->
-            case Decode.decodeValue quillDecoder quillMsg of
-                Err err ->
-                    Debug.log (Decode.errorToString err)
-                        ( model, Cmd.none )
+        PortMsgReceived m ->
+            Debug.log (Debug.toString m)
+                ( model, Cmd.none )
 
-                Ok textChange ->
-                    onTextChange model textChange
-
-        SendQuillMsg x ->
+        SendPortlMsg x ->
             -- Editor deals with this
             ( model, Cmd.none )
-
-
-onTextChange : Model -> TextChange -> ( Model, Cmd Msg )
-onTextChange model { delta, text, selection, currentLine } =
-    let
-        sendQuillMsg val =
-            Task.succeed (SendQuillMsg val) |> Task.perform identity
-
-        formats =
-            model.formats
-    in
-    case lastCharInsert delta of
-        Just "\n" ->
-            if String.startsWith "|>" currentLine then
-                ( model, sendQuillMsg <| outgoingQuillMsgEncoder Indent )
-
-            else
-                -- parse on newline insert unless currentLine startsWith |>
-                ( model, sendQuillMsg <| outgoingQuillMsgEncoder <| SetContents (markup text) "\n" )
-
-        Just "//*" ->
-            ( model, sendQuillMsg <| outgoingQuillMsgEncoder <| SetContents (markup text) "\n" )
-
-        Just "/*" ->
-            ( { model | formats = { formats | bold = not formats.bold } }
-            , sendQuillMsg <|
-                outgoingQuillMsgEncoder <|
-                    Format Bold (not formats.bold)
-            )
-
-        Just "/dis" ->
-            ( { model | formats = { formats | italic = not formats.italic } }
-            , sendQuillMsg <|
-                outgoingQuillMsgEncoder <|
-                    Format Italic (not formats.italic)
-            )
-
-        Just "~dis" ->
-            ( { model | formats = { formats | strike = not formats.strike } }
-            , sendQuillMsg <|
-                outgoingQuillMsgEncoder <|
-                    Format Strike (not formats.strike)
-            )
-
-        Just x ->
-            ( model, Cmd.none )
-
-        Nothing ->
-            ( model, Cmd.none )
-
-
-lastCharInsert : Delta -> Maybe String
-lastCharInsert delta =
-    case delta of
-        Delta [ Insert x [] ] ->
-            Just x
-
-        Delta (_ :: [ Insert x [] ]) ->
-            Just x
-
-        _ ->
-            Nothing
-
-
-type alias TextChange =
-    { delta : Delta, text : String, selection : Selection, currentLine : String }
-
-
-type alias Selection =
-    { index : Int
-    , length : Int
-    }
-
-
-quillDecoder : Decode.Decoder TextChange
-quillDecoder =
-    Decode.map4 TextChange
-        (Decode.field "delta" deltaDecoder)
-        (Decode.field "text" Decode.string)
-        (Decode.field "selection"
-            (Decode.map2 Selection
-                (Decode.field "index" Decode.int)
-                (Decode.field "length" Decode.int)
-            )
-        )
-        (Decode.field "currentLine" Decode.string)
-
-
-deltaDecoder : Decode.Decoder Delta
-deltaDecoder =
-    Decode.map Delta (Decode.field "ops" (Decode.list (Decode.lazy (\_ -> opDecoder))))
-
-
-opDecoder : Decode.Decoder Op
-opDecoder =
-    Decode.oneOf
-        [ retainDecoder
-        , insertDecoder
-        , deleteDecoder
-        ]
-
-
-insertDecoder : Decode.Decoder Op
-insertDecoder =
-    Decode.field "insert"
-        (Decode.map2 Insert
-            Decode.string
-            (Decode.succeed [])
-        )
-
-
-retainDecoder : Decode.Decoder Op
-retainDecoder =
-    Decode.field "retain"
-        (Decode.map Retain
-            Decode.int
-        )
-
-
-deleteDecoder : Decode.Decoder Op
-deleteDecoder =
-    Decode.field "delete"
-        (Decode.map Delete Decode.int)
-
-
-type OutgoingQuillMsg
-    = SetContents Delta String
-    | Format Attribute Bool
-    | Indent
-
-
-outgoingQuillMsgEncoder : OutgoingQuillMsg -> Encode.Value
-outgoingQuillMsgEncoder quillMsg =
-    case quillMsg of
-        SetContents delta appendix ->
-            Encode.object
-                [ ( "type", Encode.string "setContents" )
-                , ( "payload", deltaEncoder delta appendix )
-                ]
-
-        Format attr active ->
-            Encode.object
-                [ ( "type", Encode.string "format" )
-                , ( "payload"
-                  , Encode.object
-                        [ ( "property"
-                          , Encode.string <|
-                                case attr of
-                                    Bold ->
-                                        "bold"
-
-                                    Italic ->
-                                        "italic"
-
-                                    Strike ->
-                                        "strike"
-
-                                    _ ->
-                                        "nothing"
-                          )
-                        , ( "value", Encode.bool active )
-                        ]
-                  )
-                ]
-
-        Indent ->
-            Encode.object
-                [ ( "type", Encode.string "indent" )
-                , ( "payload", Encode.string "\n    " )
-                ]
-
-
-deltaEncoder : Delta -> String -> Encode.Value
-deltaEncoder (Delta ops) appendix =
-    Encode.object
-        [ ( "ops"
-          , Encode.list opEncoder (List.append ops [ Insert appendix [] ])
-          )
-        ]
-
-
-opEncoder : Op -> Encode.Value
-opEncoder op =
-    case op of
-        Insert str attributes ->
-            Encode.object
-                [ ( "insert", Encode.string str )
-                , ( "attributes", Encode.object (List.map attributeEncoder attributes) )
-                ]
-
-        Retain int ->
-            Encode.object [ ( "retain", Encode.int int ) ]
-
-        Delete int ->
-            Encode.object [ ( "delete", Encode.int int ) ]
-
-
-attributeEncoder : Attribute -> ( String, Encode.Value )
-attributeEncoder attribute =
-    case attribute of
-        Color color ->
-            ( "color", Encode.string color )
-
-        Bold ->
-            ( "bold", Encode.bool True )
-
-        Italic ->
-            ( "italic", Encode.bool True )
-
-        Strike ->
-            ( "strike", Encode.bool True )
-
-        NullAttribute ->
-            ( "nothing", Encode.null )
-
-        Size size ->
-            ( "size", Encode.string size )
-
-        Font font ->
-            ( "font", Encode.string font )
 
 
 toJson : Model -> Maybe Encode.Value
