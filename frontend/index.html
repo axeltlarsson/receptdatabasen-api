@@ -8,12 +8,14 @@
   <link href="/hourglass_loader.css" rel="stylesheet">
   <link href="/fonts.css" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/easymde/dist/easymde.min.css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/latest/css/font-awesome.min.css">
   <script src="https://unpkg.com/easymde/dist/easymde.min.js"></script>
   <script src="/main.js"></script>
 </head>
 
 <body>
   <div id="elm"></div>
+
   <script type="text/javascript">
     const flags = {width: window.innerWidth, height: window.innerHeight}
     const app = Elm.Main.init({
@@ -21,23 +23,45 @@
       flags: flags
     })
 
-    app.ports.portSender.subscribe(function(elmValue) {
-      console.log(elmValue)
-      const easyMDE = new EasyMDE({
-        element: document.getElementById(elmValue.editorElemId),
-        hideIcons: ["heading", "side-by-side", "image", "preview"],
-        showIcons: ["heading-1"],
-        spellChecker: false,
-        placeholder: "Beskriv hur man går tillväga för att laga receptet"
-      })
-      easyMDE.codemirror.on("change", function(){
-        console.log(easyMDE.value())
-        const msg = {
-          type: "change",
-          payload: easyMDE.value()
+    class EasyMDEditor extends HTMLElement {
+      constructor() {
+        super()
+      }
+
+      connectedCallback() {
+        console.log("connectedCallback", this.getAttribute("id"))
+
+        const textArea = document.createElement('textarea')
+        this.appendChild(textArea)
+
+        let options = this.getAttribute("options")
+        if (options) {
+          options = JSON.parse(options)
         }
-        app.ports.portReceiver.send(msg)
-      })
+        options = Object.assign({toolbar: null}, options)
+
+        const easyMDE = new EasyMDE({
+          element:  textArea,
+          toolbar: options["toolbar"],
+          spellChecker: false,
+          placeholder: this.getAttribute("placeholder")
+        })
+
+        easyMDE.codemirror.on("change", () => {
+          const msg = {
+            type: "change",
+            id: this.getAttribute("id"),
+            value: easyMDE.value()
+          }
+          app.ports.portReceiver.send(msg)
+        })
+      }
+    }
+
+    customElements.define('easy-mde', EasyMDEditor)
+
+    app.ports.portSender.subscribe(function(elmValue) {
+      console.log("elmValue", elmValue)
     })
 
   </script>

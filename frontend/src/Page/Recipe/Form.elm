@@ -22,24 +22,40 @@ import Set
 import Task
 
 
-viewMarkdownEditor : Html Msg
-viewMarkdownEditor =
-    Html.textarea [ Html.Attributes.id "mde-editor" ]
+viewInstructionsEditor : Html Msg
+viewInstructionsEditor =
+    let
+        options =
+            """
+        {
+            "toolbar": ["heading-1"]
+        }
+        """
+    in
+    Html.node "easy-mde"
+        [ Html.Attributes.id "instructions-editor"
+        , Html.Attributes.attribute "placeholder" "Gör så här"
+        , Html.Attributes.attribute "options" options
+        ]
         []
 
 
-modulesString : String
-modulesString =
-    """
-    {
-        "elm-port": true,
-        "toolbar": [
-            ["bold", "italic", "strike"],
-            [{ "size": ["small", false, "large", "huge"] }]
-
-            ]
-    }
-    """
+viewIngredientsEditor : Html Msg
+viewIngredientsEditor =
+    let
+        options =
+            """
+        {
+            "toolbar": ["heading-2"]
+        }
+        """
+    in
+    Html.node "easy-mde"
+        [ Html.Attributes.id "ingredients-editor"
+        , Html.Attributes.attribute "placeholder" "Fyll i en lista av ingredienser"
+        , Html.Attributes.attribute "options" options
+        ]
+        []
 
 
 
@@ -165,7 +181,8 @@ viewForm form =
             , viewDescriptionInput form.description
             , viewPortionsInput form.portions
             , el [ Font.size 36, Font.semiBold ] (text "Gör så här")
-            , el [ height fill, width fill ] (Element.html viewMarkdownEditor)
+            , el [ height fill, width fill ] (Element.html viewInstructionsEditor)
+            , el [ height fill, width fill ] (Element.html viewIngredientsEditor)
             , viewInstructionsInput form.instructions
             , column [ width fill, spacing 20 ]
                 [ el [ Font.size 20 ] (text "Ingredienser")
@@ -331,21 +348,50 @@ update msg ({ form } as model) =
                     Debug.log (Decode.errorToString err)
                         ( model, Cmd.none )
 
-                Ok textChange ->
-                    ( { model | form = { form | instructions = textChange } }, Cmd.none )
+                Ok (InstructionsChange value) ->
+                    ( { model | form = { form | instructions = value } }, Cmd.none )
+
+                Ok (IngredientsChange value) ->
+                    ( { model | form = { form | ingredients = value } }, Cmd.none )
 
         SendPortMsg x ->
             -- Editor deals with this
             ( model, Cmd.none )
 
 
-type alias PortMsg =
-    String
+type PortMsg
+    = InstructionsChange String
+    | IngredientsChange String
 
 
 portMsgDecoder : Decode.Decoder PortMsg
 portMsgDecoder =
-    Decode.field "payload" Decode.string
+    Decode.field "type" Decode.string |> Decode.andThen typeDecoder
+
+
+typeDecoder : String -> Decode.Decoder PortMsg
+typeDecoder t =
+    case t of
+        "change" ->
+            Decode.field "id" Decode.string |> Decode.andThen changeDecoder
+
+        _ ->
+            Decode.fail ("trying to decode port message, but " ++ t ++ "is not supported")
+
+
+changeDecoder : String -> Decode.Decoder PortMsg
+changeDecoder id =
+    case id of
+        "ingredients-editor" ->
+            Decode.map IngredientsChange
+                (Decode.field "value" Decode.string)
+
+        "instructions-editor" ->
+            Decode.map InstructionsChange
+                (Decode.field "value" Decode.string)
+
+        _ ->
+            Decode.fail ("trying to decode change message, but " ++ id ++ " is not supported")
 
 
 toJson : Model -> Maybe Encode.Value
