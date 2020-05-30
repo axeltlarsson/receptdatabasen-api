@@ -1,7 +1,7 @@
 module Page.Recipe.Form exposing (Model, Msg(..), fromRecipe, init, portMsg, toJson, update, view)
 
 import Dict exposing (Dict)
-import Element exposing (Element, alignBottom, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, paragraph, rgb255, row, spacing, text, width)
+import Element exposing (Element, alignBottom, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, paddingEach, paragraph, rgb255, row, spacing, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -22,40 +22,44 @@ import Set
 import Task
 
 
-viewInstructionsEditor : Html Msg
+viewInstructionsEditor : Element Msg
 viewInstructionsEditor =
     let
         options =
             """
         {
-            "toolbar": ["heading-1"]
+            "toolbar": ["bold", "italic", "strikethrough", "heading-1", "|", "unordered-list", "link", "|", "preview", "fullscreen", "|", "guide" ]
         }
         """
     in
-    Html.node "easy-mde"
-        [ Html.Attributes.id "instructions-editor"
-        , Html.Attributes.attribute "placeholder" "Gör så här"
-        , Html.Attributes.attribute "options" options
-        ]
-        []
+    Element.html
+        (Html.node "easy-mde"
+            [ Html.Attributes.id "instructions-editor"
+            , Html.Attributes.attribute "placeholder" "Gör så här"
+            , Html.Attributes.attribute "options" options
+            ]
+            []
+        )
 
 
-viewIngredientsEditor : Html Msg
+viewIngredientsEditor : Element Msg
 viewIngredientsEditor =
     let
         options =
             """
         {
-            "toolbar": ["heading-2"]
+            "toolbar": ["bold", "italic", "heading-2", "|", "unordered-list", "|", "preview", "fullscreen", "|", "guide" ]
         }
         """
     in
-    Html.node "easy-mde"
-        [ Html.Attributes.id "ingredients-editor"
-        , Html.Attributes.attribute "placeholder" "Fyll i en lista av ingredienser"
-        , Html.Attributes.attribute "options" options
-        ]
-        []
+    Element.html
+        (Html.node "easy-mde"
+            [ Html.Attributes.id "ingredients-editor"
+            , Html.Attributes.attribute "placeholder" "Fyll i en lista av ingredienser"
+            , Html.Attributes.attribute "options" options
+            ]
+            []
+        )
 
 
 
@@ -176,20 +180,24 @@ view { form } =
 viewForm : RecipeForm -> Element Msg
 viewForm form =
     column [ width fill, spacing 30, padding 10, Font.extraLight ]
-        [ column [ width (fill |> Element.maximum 700), centerX, spacing 30 ]
+        [ column [ width (fill |> Element.maximum 700), centerX, spacing 20 ]
             [ viewTitleInput form.title
             , viewDescriptionInput form.description
             , viewPortionsInput form.portions
             , el [ Font.size 36, Font.semiBold ] (text "Gör så här")
-            , el [ height fill, width fill ] (Element.html viewInstructionsEditor)
-            , el [ height fill, width fill ] (Element.html viewIngredientsEditor)
-            , viewInstructionsInput form.instructions
-            , column [ width fill, spacing 20 ]
-                [ el [ Font.size 20 ] (text "Ingredienser")
-                , viewIngredientsInput form.ingredients
-                ]
+            , el [ paddingEach { edges | bottom = 83 }, height fill, width fill ] viewInstructionsEditor
+            , el [ Font.size 36, Font.semiBold ] (text "Ingredienser")
+            , el [ paddingEach { edges | bottom = 83 }, height fill, width fill ] viewIngredientsEditor
             ]
         ]
+
+
+edges =
+    { top = 0
+    , right = 0
+    , bottom = 0
+    , left = 0
+    }
 
 
 debug : Element.Attribute Msg
