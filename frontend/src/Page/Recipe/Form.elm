@@ -32,13 +32,15 @@ viewInstructionsEditor =
         }
         """
     in
-    Element.html
-        (Html.node "easy-mde"
-            [ Html.Attributes.id "instructions-editor"
-            , Html.Attributes.attribute "placeholder" "Gör så här"
-            , Html.Attributes.attribute "options" options
-            ]
-            []
+    el [ paddingEach { edges | bottom = 44 }, height fill, width fill ]
+        (Element.html
+            (Html.node "easy-mde"
+                [ Html.Attributes.id "instructions-editor"
+                , Html.Attributes.attribute "placeholder" "Fyll i instruktioner..."
+                , Html.Attributes.attribute "options" options
+                ]
+                []
+            )
         )
 
 
@@ -52,13 +54,15 @@ viewIngredientsEditor =
         }
         """
     in
-    Element.html
-        (Html.node "easy-mde"
-            [ Html.Attributes.id "ingredients-editor"
-            , Html.Attributes.attribute "placeholder" "Fyll i en lista av ingredienser"
-            , Html.Attributes.attribute "options" options
-            ]
-            []
+    el [ paddingEach { edges | bottom = 44 }, height fill, width fill ]
+        (Element.html
+            (Html.node "easy-mde"
+                [ Html.Attributes.id "ingredients-editor"
+                , Html.Attributes.attribute "placeholder" "Fyll i en lista av ingredienser..."
+                , Html.Attributes.attribute "options" options
+                ]
+                []
+            )
         )
 
 
@@ -185,9 +189,9 @@ viewForm form =
             , viewDescriptionInput form.description
             , viewPortionsInput form.portions
             , el [ Font.size 36, Font.semiBold ] (text "Gör så här")
-            , el [ paddingEach { edges | bottom = 83 }, height fill, width fill ] viewInstructionsEditor
+            , viewInstructionsEditor
             , el [ Font.size 36, Font.semiBold ] (text "Ingredienser")
-            , el [ paddingEach { edges | bottom = 83 }, height fill, width fill ] viewIngredientsEditor
+            , viewIngredientsEditor
             ]
         ]
 
