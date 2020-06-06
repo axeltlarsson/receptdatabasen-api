@@ -9,7 +9,7 @@ create table data.recipe(
   instructions  text not null constraint instructions_length check (length(instructions) >= 5 and length(instructions) <= 4000),
   tags          text[] not null default '{}',
   portions      integer not null constraint portions_size check (portions > 0 and portions <= 100),
-  ingredients   jsonb not null,
+  ingredients   text not null constraint ingredients_length check (length(ingredients) <= 4000),
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
   search        tsvector generated always as (
@@ -17,7 +17,7 @@ create table data.recipe(
     || setweight(to_tsvector('swedish', coalesce(description, '')), 'c')
     || setweight(to_tsvector('swedish', instructions), 'c')
     || setweight(to_tsvector('swedish', immutable_array_to_string(tags)), 'b')
-    || setweight(jsonb_to_tsvector('swedish', ingredients, '["all"]'), 'd')
+    || setweight(to_tsvector('swedish', ingredients), 'd')
   ) stored
 );
 

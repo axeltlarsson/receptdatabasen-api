@@ -19,16 +19,6 @@ as $$
   declare ingredient text;
 
   begin
-    -- validate ingredients json input
-    if new.ingredients is null or new.ingredients::text = '{}'::text then
-      raise exception 'a recipe must have ingredients!';
-    end if;
-    for g, ingredients in select * from jsonb_each(new.ingredients) loop
-        if ingredients is null or json_array_length(ingredients) = 0 then
-          raise exception 'ingredient group "%" must not be empty!', g;
-        end if;
-    end loop;
-
     -- insert the recipe
     insert into data.recipe (title, description, instructions, tags, portions, ingredients)
            values (new.title, new.description, new.instructions, new.tags, new.portions, new.ingredients)
@@ -53,16 +43,6 @@ as $$
   declare ingredient text;
 
   begin
-    -- validate ingredients json input
-    if new.ingredients is null or new.ingredients::text = '{}'::text then
-      raise exception 'a recipe must have ingredients!';
-    end if;
-    for g, ingredients in select * from jsonb_each(new.ingredients) loop
-        if ingredients is null or json_array_length(ingredients) = 0 then
-          raise exception 'ingredient group "%" must not be empty!', g;
-        end if;
-    end loop;
-
     -- update the recipe
     update data.recipe
     set title = new.title, description = new.description, instructions = new.instructions,

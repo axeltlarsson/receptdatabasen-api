@@ -37,21 +37,20 @@ Låt kakan kallna helt och lossa den sedan från formen med en kniv eller liten 
 [source](recept.axellarsson.nu)',
   '{"efterrätt"}',
   12,
-  '{
-    "botten": [
-      "12 st digestivekex",
-    "75 g smör"
-    ],
-    "fyllningen": [
-      "800 g philedphiaost",
-    "2 dl strösocker",
-    "1 msk vaniljsocker",
-    "2 msk vetemjöl",
-    "0,5 tsk salt",
-    "4 st ägg",
-    "citronskal och citronsaft"
-    ]
-  }'
+  '
+## botten
+- 12 st digestivekex,
+- 75 g smör
+
+## fyllningen
+ - 800 g philedphiaost,
+ - 2 dl strösocker,
+ - 1 msk vaniljsocker,
+ - 2 msk vetemjöl,
+ - 0,5 tsk salt,
+ - 4 st ägg,
+ - citronskal och citronsaft
+  '
 ),
 (
   'Fläskpannkaka i ugn',
@@ -67,17 +66,16 @@ Tillagning:
 ',
   '{"vardagsmat"}',
   4,
-  '{
-    "ingredienser": [
-      "6 dl mjölk",
-      "200 - 300 g rimmat fläsk",
-      "3 ägg",
-      "2,5 dl mjölk"
-    ],
-    "tillbehör": [
-      "rårörda lingon"
-    ]
-  }'
+  '
+## ingredienser
+ - 6 dl mjölk
+ - 200 - 300 g rimmat fläsk
+ - 3 ägg
+ - 2,5 dl mjölk
+
+## tillbehör
+ - rårörda lingon
+  '
 
 ),
 (
@@ -89,13 +87,13 @@ Tillagning:
 ',
   '{"frukost"}',
   4,
-  '{
-    "ingredienser": [
-      "6 ägg",
-      "1 dl mjölk",
-      "salt och peppar",
-      "2 msk smör"
-    ]  }'
+  '
+## ingredienser
+- 6 ägg
+- 1 dl mjölk
+- salt och peppar
+- 2 msk smör
+'
 
 ),
 (
@@ -108,18 +106,17 @@ Tillagning:
 ',
   '{"drink"}',
   4,
-  '{
-    "dag 1": [
-      "1 dl malet kaffe",
-      "4 dl vatten",
-      "2 msk kakao"
-    ],
-    "dag 2": [
-      "3 dl vatten",
-      "1 1/2 dl kondenserad mjölk",
-      "3 dl mjölk",
-      "is"
-    ]}'
+  '
+## dag 1
+ - 1 dl malet kaffe,
+ - 4 dl vatten,
+ - 2 msk kakao
+## dag 2
+  - 3 dl vatten,
+  - 1 1/2 dl kondenserad mjölk,
+  - 3 dl mjölk,
+  - is
+'
 ),
 (
   'Rabarberlemonad',
@@ -129,15 +126,14 @@ Tillagning:
   ',
   '{"drink"}',
   4,
-  '{
-    "ingredienser": [
-      "200 g rabarber",
-      "1 dl strösocker",
-      "12 dl vatten",
-      "1 1/2 dl färskpressad citronjuice",
-      "is till servering"
-    ]
-   }'
+  '
+## ingredienser
+ - 200 g rabarber,
+ - 1 dl strösocker,
+ - 12 dl vatten,
+ - 1 1/2 dl färskpressad citronjuice,
+ - is till servering
+'
 ),
 (
   'Boeuf bourguignon',
@@ -163,25 +159,24 @@ När baconet har börjat släppa sitt goda fett tillsätt champinjonerna.
 ',
   '{"kött", "gryta", "franskt", "höst", "vinter"}',
   4,
-  '{
-    "ingredienser": [
-      "800 g nötkött i bitar",
-      "1 msk smör",
-      "1 morot",
-      "1 gul lök",
-      "2 vitlöksklyftor",
-      "2 msk tomatpuré",
-      "1,5 msk vetemjöl",
-      "3 dl rött vin",
-      "3 msk oxfond",
-      "2 dl vatten",
-      "1 krm torkad timjan",
-      "1 lagerblad",
-      "12 st steklökar",
-      "200 g champinjoner",
-      "150 g skivad bacon"
-    ]
-    }'
+  '
+## ingredienser
+ - 800 g nötkött i bitar,
+ - 1 msk smör,
+ - 1 morot,
+ - 1 gul lök,
+ - 2 vitlöksklyftor,
+ - 2 msk tomatpuré,
+ - 1,5 msk vetemjöl,
+ - 3 dl rött vin,
+ - 3 msk oxfond,
+ - 2 dl vatten,
+ - 1 krm torkad timjan,
+ - 1 lagerblad,
+ - 12 st steklökar,
+ - 200 g champinjoner,
+ - 150 g skivad bacon
+ '
 );
 
 insert into data.recipe (title, instructions, tags, portions, ingredients) values
@@ -190,5 +185,10 @@ insert into data.recipe (title, instructions, tags, portions, ingredients) value
   'in i ugnen med kakao bara!',
   '{"efterrätt"}',
   4,
-  '{"ingredienser": [ "1 kg mjöl", "1 kg socker", "1 kg kakao" ]}'
+  '
+## ingredienser
+- 1 kg mjöl
+- 1 kg socker
+- 1 kg kakao
+'
 );
