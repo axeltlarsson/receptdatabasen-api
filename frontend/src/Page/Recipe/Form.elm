@@ -130,22 +130,20 @@ view : Model -> Element Msg
 view { form } =
     column [ Region.mainContent, width fill ]
         [ viewForm form
-        , viewSaveButton
         ]
 
 
 viewForm : RecipeForm -> Element Msg
 viewForm form =
-    column [ width fill, spacing 30, padding 10, Font.extraLight ]
-        [ column [ width (fill |> Element.maximum 700), centerX, spacing 20 ]
-            [ viewTitleInput form.title
-            , viewDescriptionInput form.description
-            , viewPortionsInput form.portions
-            , el [ Font.size 36, Font.semiBold ] (text "Gör så här")
-            , viewInstructionsEditor form.instructions
-            , el [ Font.size 36, Font.semiBold ] (text "Ingredienser")
-            , viewIngredientsEditor form.ingredients
-            ]
+    column [ width (fill |> Element.maximum 700), centerX, spacing 20, padding 10, Font.extraLight ]
+        [ viewTitleInput form.title
+        , viewDescriptionInput form.description
+        , viewPortionsInput form.portions
+        , el [ Font.size 36, Font.semiBold ] (text "Gör så här")
+        , viewInstructionsEditor form.instructions
+        , el [ Font.size 36, Font.semiBold ] (text "Ingredienser")
+        , viewIngredientsEditor form.ingredients
+        , viewSaveButton
         ]
 
 

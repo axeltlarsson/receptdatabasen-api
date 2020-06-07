@@ -358,7 +358,7 @@ update msg model =
             )
 
         Deleted (Err error) ->
-            ( { model | recipe = Failed (Recipe.ServerError error) }, Cmd.none )
+            ( { model | recipe = Failed (Recipe.serverErrorFromHttp error) }, Cmd.none )
 
 
 

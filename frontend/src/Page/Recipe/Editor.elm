@@ -2,7 +2,7 @@ port module Page.Recipe.Editor exposing (Model, Msg, initEdit, initNew, portMsg,
 
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
-import Element exposing (Element, column, fill, row, spacing, text, width)
+import Element exposing (Element, centerX, column, el, fill, row, spacing, text, width)
 import Element.Input as Input
 import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder)
@@ -92,8 +92,12 @@ view model =
             column [ width fill ]
                 (List.append
                     [ Element.map FormMsg children ]
-                    [ prob
-                        |> (Maybe.map viewServerError >> Maybe.withDefault Element.none)
+                    [ el [ centerX ]
+                        (prob
+                            |> (Maybe.map (Recipe.viewServerError "Något gick fel när receptet skulle sparas!")
+                                    >> Maybe.withDefault Element.none
+                               )
+                        )
                     ]
                 )
     in
@@ -124,32 +128,6 @@ view model =
             Saving slug form ->
                 skeleton Nothing <| Form.view form
     }
-
-
-viewServerError : ServerError -> Element Msg
-viewServerError serverError =
-    let
-        errorCode =
-            case serverError of
-                Recipe.ServerError httpError ->
-                    Recipe.httpErrorToString httpError
-
-                Recipe.ServerErrorWithBody httpError _ ->
-                    Recipe.httpErrorToString httpError
-
-        errorBody =
-            case serverError of
-                Recipe.ServerErrorWithBody e pgErr ->
-                    text pgErr.message
-
-                _ ->
-                    Element.none
-    in
-    column []
-        [ text "Något gick fel när servern försökte spara receptet"
-        , text errorCode
-        , errorBody
-        ]
 
 
 type Msg

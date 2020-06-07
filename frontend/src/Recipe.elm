@@ -1,10 +1,9 @@
 module Recipe exposing
     ( Full
     , Metadata
-    , PGError
     , Preview
     , Recipe(..)
-    , ServerError(..)
+    , ServerError
     , contents
     , create
     , delete
@@ -16,8 +15,10 @@ module Recipe exposing
     , metadata
     , previewDecoder
     , search
+    , serverErrorFromHttp
     , serverErrorToString
     , slug
+    , viewServerError
     )
 
 {- The interface to the Recipe data structure.
@@ -30,9 +31,12 @@ module Recipe exposing
 -}
 
 import Dict exposing (Dict)
+import Element exposing (Element, column, el, text)
+import Element.Font as Font
 import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder, dict, field, index, int, list, map2, map8, maybe, string, value)
 import Json.Encode as Encode
+import Palette
 import Recipe.Slug as Slug exposing (Slug)
 import Url
 import Url.Builder exposing (QueryParameter)
@@ -258,6 +262,12 @@ expectJsonWithBody toMsg decoder =
                             Err (ServerError (Http.BadBody (Decode.errorToString err)))
 
 
+
+{--
+  - ServerError
+  --}
+
+
 type ServerError
     = ServerError Http.Error
     | ServerErrorWithBody Http.Error PGError
@@ -269,6 +279,11 @@ type alias PGError =
     , code : String
     , hint : Maybe String
     }
+
+
+serverErrorFromHttp : Http.Error -> ServerError
+serverErrorFromHttp =
+    ServerError
 
 
 httpErrorToString : Http.Error -> String
@@ -298,6 +313,31 @@ serverErrorToString error =
 
         ServerErrorWithBody httpErr pgError ->
             httpErrorToString httpErr ++ " " ++ pgErrorToString pgError
+
+
+viewServerError : String -> ServerError -> Element msg
+viewServerError prefix serverError =
+    case serverError of
+        ServerError httpError ->
+            column []
+                [ el [ Font.heavy ] (text prefix)
+                , text <| httpErrorToString httpError
+                ]
+
+        ServerErrorWithBody httpError pgError ->
+            column []
+                [ el [ Font.heavy ] (text prefix)
+                , text <| httpErrorToString httpError
+                , viewPgError pgError
+                ]
+
+
+viewPgError : PGError -> Element msg
+viewPgError error =
+    column [ Font.color Palette.red ]
+        [ text error.message
+        , text error.details
+        ]
 
 
 pgErrorDecoder : Decode.Decoder PGError
