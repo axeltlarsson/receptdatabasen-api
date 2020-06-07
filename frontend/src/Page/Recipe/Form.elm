@@ -12,14 +12,14 @@ import Html.Attributes
 import Html.Events
 import Json.Decode as Decode
 import Json.Encode as Encode
-import Mark
-import Mark.Error
 import Palette
 import Recipe
 import Recipe.Slug as Slug
 import Regex
 import Set
+import String.Verify
 import Task
+import Verify
 
 
 
@@ -141,8 +141,10 @@ viewForm form =
         , viewPortionsInput form.portions
         , el [ Font.size 36, Font.semiBold ] (text "Gör så här")
         , viewInstructionsEditor form.instructions
+        , viewSingleValidationError form.instructions instructionsValidator
         , el [ Font.size 36, Font.semiBold ] (text "Ingredienser")
         , viewIngredientsEditor form.ingredients
+        , viewSingleValidationError form.ingredients ingredientsValidator
         , viewSaveButton
         ]
 
@@ -162,14 +164,30 @@ debug =
 
 viewTitleInput : String -> Element Msg
 viewTitleInput title =
-    Input.text
-        [ Font.bold
+    column [ spacing 10, width fill ]
+        [ Input.text
+            [ Font.bold
+            ]
+            { onChange = TitleChanged
+            , text = title
+            , placeholder = Just (Input.placeholder [] (el [] (text "Titel")))
+            , label = Input.labelHidden "Titel"
+            }
+        , viewSingleValidationError title titleValidator
         ]
-        { onChange = TitleChanged
-        , text = title
-        , placeholder = Just (Input.placeholder [] (el [] (text "Titel")))
-        , label = Input.labelHidden "Titel"
-        }
+
+
+viewSingleValidationError : a -> Verify.Validator String a String -> Element Msg
+viewSingleValidationError input theValidator =
+    {--
+      - TODO: give the uses a chance to type something before showing an error!
+      --}
+    case validateSingle input theValidator of
+        Ok _ ->
+            Element.none
+
+        Err ( err, errs ) ->
+            el [ Font.color Palette.red ] (text (err ++ Debug.toString errs))
 
 
 viewDescriptionInput : String -> Element Msg
@@ -224,7 +242,7 @@ viewInstructionsEditor initialValue =
         }
         """
     in
-    el [ paddingEach { edges | bottom = 44 }, height fill, width fill ]
+    el [ height fill, width fill ]
         (Element.html
             (Html.node "easy-mde"
                 [ Html.Attributes.id "instructions-editor"
@@ -247,7 +265,7 @@ viewIngredientsEditor initialValue =
         }
         """
     in
-    el [ paddingEach { edges | bottom = 44 }, height fill, width fill ]
+    el [ height fill, width fill ]
         (Element.html
             (Html.node "easy-mde"
                 [ Html.Attributes.id "ingredients-editor"
@@ -319,17 +337,16 @@ update msg ({ form } as model) =
             )
 
         SubmitForm ->
-            Debug.log "SubmitForm" <|
-                case toJson model of
-                    Just jsonForm ->
+            case validator model.form of
+                Ok verifiedForm ->
+                    Debug.log "submitting"
                         ( model
-                          --| form = Form.update validate Form.Submit form }
-                        , Task.succeed (SubmitValidForm jsonForm) |> Task.perform identity
+                        , submitForm verifiedForm
                         )
 
-                    Nothing ->
+                Err err ->
+                    Debug.log ("error" ++ Debug.toString err)
                         ( model
-                          --| form = Form.update validate Form.Submit form }
                         , Cmd.none
                         )
 
@@ -352,6 +369,16 @@ update msg ({ form } as model) =
         SendPortMsg x ->
             -- Editor deals with this
             ( model, Cmd.none )
+
+
+submitForm : VerifiedForm -> Cmd Msg
+submitForm verifiedForm =
+    case toJson verifiedForm of
+        Just jsonForm ->
+            Task.succeed (SubmitValidForm jsonForm) |> Task.perform identity
+
+        Nothing ->
+            Cmd.none
 
 
 type PortMsg
@@ -389,8 +416,58 @@ changeDecoder id =
             Decode.fail ("trying to decode change message, but " ++ id ++ " is not supported")
 
 
-toJson : Model -> Maybe Encode.Value
-toJson { form } =
+
+{--
+  - Validation
+  --}
+
+
+type alias VerifiedForm =
+    { title : String
+    , description : String
+    , portions : Int
+    , instructions : String
+    , ingredients : String
+    , tags : List String
+    }
+
+
+validator : Verify.Validator String RecipeForm VerifiedForm
+validator =
+    Verify.validate VerifiedForm
+        |> Verify.verify .title titleValidator
+        |> Verify.verify .description (String.Verify.notBlank "empty descr")
+        |> Verify.keep .portions
+        |> Verify.verify .instructions instructionsValidator
+        |> Verify.keep .ingredients
+        |> Verify.keep .tags
+
+
+titleValidator : Verify.Validator String String String
+titleValidator title =
+    String.Verify.notBlank "Fyll i titeln på receptet, 🙏" title
+
+
+instructionsValidator : Verify.Validator String String String
+instructionsValidator instr =
+    String.Verify.notBlank "Vänligen beskriv hur man tillagar detta recept ❤️" instr
+
+
+ingredientsValidator : Verify.Validator String String String
+ingredientsValidator ingredients =
+    String.Verify.notBlank "Vänligen lista ingredienserna i detta recept 🙏" ingredients
+
+
+validateSingle : a -> Verify.Validator String a String -> Result ( String, List String ) String
+validateSingle value theValidator =
+    (Verify.validate identity
+        |> Verify.verify (\_ -> value) theValidator
+    )
+        value
+
+
+toJson : VerifiedForm -> Maybe Encode.Value
+toJson form =
     let
         portionsString recipe =
             String.fromInt recipe.portions
