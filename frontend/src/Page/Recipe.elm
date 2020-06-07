@@ -219,12 +219,12 @@ viewInstructions : String -> Element Msg
 viewInstructions instructions =
     column [ alignTop, alignLeft, width fill, Font.color Palette.nearBlack ]
         [ el [ Font.size 28 ] (text "Gör så här")
-        , el [ paddingXY 0 10 ] (paragraph [] [ viewInstructionsMd instructions ])
+        , el [ paddingXY 0 10 ] (paragraph [] [ viewMarkdown instructions ])
         ]
 
 
-viewInstructionsMd : String -> Element Msg
-viewInstructionsMd instructions =
+viewMarkdown : String -> Element Msg
+viewMarkdown instructions =
     {--
     - TODO: Font.color Palette.nearBlack
     - TODO: lists have an annoying left-margin/padding which doesn't align with "Gör så här" header
@@ -249,14 +249,14 @@ edges =
     }
 
 
-viewIngredients : Dict String (List String) -> Int -> Element Msg
+viewIngredients : String -> Int -> Element Msg
 viewIngredients ingredients portions =
     column [ alignTop, width fill ]
         [ column []
             -- TODO: centerX ^ a good idea?
             [ el [ Font.size 28 ] (text "Ingredienser")
             , paragraph [ paddingXY 0 20 ] [ text <| String.fromInt portions, text " portioner" ]
-            , column [] (Dict.toList ingredients |> List.map viewGroupedIngredients)
+            , column [] [ viewMarkdown ingredients ]
             ]
         ]
 
@@ -264,19 +264,6 @@ viewIngredients ingredients portions =
 debug : Element.Attribute Msg
 debug =
     Element.explain Debug.todo
-
-
-viewGroupedIngredients : ( String, List String ) -> Element Msg
-viewGroupedIngredients ( groupKey, ingredients ) =
-    column [ spacing 20, paddingXY 0 10 ]
-        [ el [ Font.heavy ] (text groupKey)
-        , column [ spacing 10, paddingXY 0 10 ] (List.map viewIngredient ingredients)
-        ]
-
-
-viewIngredient : String -> Element Msg
-viewIngredient ingredient =
-    el [] (text ingredient)
 
 
 pancakeImgUrl : String

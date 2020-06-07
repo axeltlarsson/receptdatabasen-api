@@ -1,6 +1,7 @@
 module Recipe exposing
     ( Full
     , Metadata
+    , PGError
     , Preview
     , Recipe(..)
     , ServerError(..)
@@ -11,6 +12,7 @@ module Recipe exposing
     , fetch
     , fetchMany
     , fullDecoder
+    , httpErrorToString
     , metadata
     , previewDecoder
     , search
@@ -66,7 +68,7 @@ type alias Contents =
     { instructions : String
     , tags : List String
     , portions : Int
-    , ingredients : Dict String (List String)
+    , ingredients : String
     }
 
 
@@ -116,7 +118,7 @@ xDecoder =
         (field "instructions" string)
         (field "tags" (list string))
         (field "portions" int)
-        (field "ingredients" (dict (list string)))
+        (field "ingredients" string)
 
 
 contentsDecoder : Decoder Full
@@ -245,7 +247,7 @@ expectJsonWithBody toMsg decoder =
                     Err (ServerError Http.NetworkError)
 
                 Http.BadStatus_ md body ->
-                    Err (ServerErrorWithBody (Http.BadStatus md.statusCode) body)
+                    Err (ServerErrorWithBody (Http.BadStatus md.statusCode) (decodeServerError body))
 
                 Http.GoodStatus_ md body ->
                     case Decode.decodeString decoder body of
@@ -258,32 +260,80 @@ expectJsonWithBody toMsg decoder =
 
 type ServerError
     = ServerError Http.Error
-    | ServerErrorWithBody Http.Error String
+    | ServerErrorWithBody Http.Error PGError
+
+
+type alias PGError =
+    { message : String
+    , details : String
+    , code : String
+    , hint : Maybe String
+    }
+
+
+httpErrorToString : Http.Error -> String
+httpErrorToString err =
+    case err of
+        Http.BadUrl str ->
+            "BadUrl " ++ str
+
+        Http.Timeout ->
+            "Timeout"
+
+        Http.NetworkError ->
+            "NetworkError"
+
+        Http.BadStatus code ->
+            "BadStatus " ++ String.fromInt code
+
+        Http.BadBody str ->
+            "BadBody " ++ str
 
 
 serverErrorToString : ServerError -> String
 serverErrorToString error =
-    let
-        httpErrorStr err =
-            case err of
-                Http.BadUrl str ->
-                    "BadUrl " ++ str
-
-                Http.Timeout ->
-                    "Timeout"
-
-                Http.NetworkError ->
-                    "NetworkError"
-
-                Http.BadStatus code ->
-                    "BadStatus " ++ String.fromInt code
-
-                Http.BadBody str ->
-                    "BadBody " ++ str
-    in
     case error of
         ServerError httpErr ->
-            httpErrorStr httpErr
+            httpErrorToString httpErr
 
-        ServerErrorWithBody httpErr str ->
-            httpErrorStr httpErr ++ " " ++ str
+        ServerErrorWithBody httpErr pgError ->
+            httpErrorToString httpErr ++ " " ++ pgErrorToString pgError
+
+
+pgErrorDecoder : Decode.Decoder PGError
+pgErrorDecoder =
+    Decode.map4 PGError
+        (Decode.field "message" Decode.string)
+        (Decode.field "details" Decode.string)
+        (Decode.field "code" Decode.string)
+        (Decode.field "hint" <| Decode.nullable Decode.string)
+
+
+pgErrorToString : PGError -> String
+pgErrorToString err =
+    "message: "
+        ++ err.message
+        ++ "\n"
+        ++ "details: "
+        ++ err.details
+        ++ "\n"
+        ++ "code: "
+        ++ err.code
+        ++ "\n"
+        ++ "hint: "
+        ++ Maybe.withDefault "" err.hint
+        ++ "\n"
+
+
+decodeServerError : String -> PGError
+decodeServerError str =
+    case Decode.decodeString pgErrorDecoder str of
+        Err err ->
+            { message = "Error! I ouldn't decode the PostgREST error response "
+            , code = ""
+            , details = Decode.errorToString err
+            , hint = Nothing
+            }
+
+        Ok pgError ->
+            pgError

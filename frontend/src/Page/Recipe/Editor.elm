@@ -92,7 +92,9 @@ view model =
             column [ width fill ]
                 (List.append
                     [ Element.map FormMsg children ]
-                    [ viewServerError prob ]
+                    [ prob
+                        |> (Maybe.map viewServerError >> Maybe.withDefault Element.none)
+                    ]
                 )
     in
     { title = "Skapa nytt recept"
@@ -124,21 +126,30 @@ view model =
     }
 
 
-viewServerError : Maybe ServerError -> Element Msg
-viewServerError maybeError =
+viewServerError : ServerError -> Element Msg
+viewServerError serverError =
     let
-        maybeErrorStr =
-            Maybe.map Recipe.serverErrorToString maybeError
-    in
-    case maybeErrorStr of
-        Just errorStr ->
-            row []
-                [ text "Något gick fel när servern försökte spara receptet"
-                , text errorStr
-                ]
+        errorCode =
+            case serverError of
+                Recipe.ServerError httpError ->
+                    Recipe.httpErrorToString httpError
 
-        Nothing ->
-            row [] [ Element.none ]
+                Recipe.ServerErrorWithBody httpError _ ->
+                    Recipe.httpErrorToString httpError
+
+        errorBody =
+            case serverError of
+                Recipe.ServerErrorWithBody e pgErr ->
+                    text pgErr.message
+
+                _ ->
+                    Element.none
+    in
+    column []
+        [ text "Något gick fel när servern försökte spara receptet"
+        , text errorCode
+        , errorBody
+        ]
 
 
 type Msg

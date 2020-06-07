@@ -22,50 +22,6 @@ import Set
 import Task
 
 
-viewInstructionsEditor : Element Msg
-viewInstructionsEditor =
-    let
-        options =
-            """
-        {
-            "toolbar": ["bold", "italic", "strikethrough", "heading-1", "|", "unordered-list", "link", "|", "preview", "fullscreen", "|", "guide" ]
-        }
-        """
-    in
-    el [ paddingEach { edges | bottom = 44 }, height fill, width fill ]
-        (Element.html
-            (Html.node "easy-mde"
-                [ Html.Attributes.id "instructions-editor"
-                , Html.Attributes.attribute "placeholder" "Fyll i instruktioner..."
-                , Html.Attributes.attribute "options" options
-                ]
-                []
-            )
-        )
-
-
-viewIngredientsEditor : Element Msg
-viewIngredientsEditor =
-    let
-        options =
-            """
-        {
-            "toolbar": ["bold", "italic", "heading-2", "|", "unordered-list", "|", "preview", "fullscreen", "|", "guide" ]
-        }
-        """
-    in
-    el [ paddingEach { edges | bottom = 44 }, height fill, width fill ]
-        (Element.html
-            (Html.node "easy-mde"
-                [ Html.Attributes.id "ingredients-editor"
-                , Html.Attributes.attribute "placeholder" "Fyll i en lista av ingredienser..."
-                , Html.Attributes.attribute "options" options
-                ]
-                []
-            )
-        )
-
-
 
 -- MODEL
 
@@ -76,9 +32,8 @@ type alias RecipeForm =
     , portions : Int
     , instructions : String
     , ingredients : String
+    , tags : List String
 
-    -- , newIngredientGroupInput : String
-    -- , tags : List String
     -- , newTagInput : String
     }
 
@@ -92,7 +47,7 @@ init : ( Model, Cmd Msg )
 init =
     ( { form = initialForm
       }
-    , Task.succeed (SendPortMsg (Encode.object [ ( "editorElemId", Encode.string "mde-editor" ) ])) |> Task.perform identity
+    , Cmd.none
     )
 
 
@@ -102,12 +57,8 @@ initialForm =
     , description = ""
     , portions = 4
     , instructions = ""
-    , ingredients = """|> List
-    - Ingredienser
-        - 1 kg mjöl
-        - 1 kg mjölk
-    - Tillbehör
-        - koriander"""
+    , ingredients = ""
+    , tags = []
     }
 
 
@@ -125,7 +76,8 @@ fromRecipe recipe =
         , description = Maybe.withDefault "" description
         , portions = portions
         , instructions = instructions
-        , ingredients = "" -- TODO
+        , ingredients = ingredients
+        , tags = tags
         }
     }
 
@@ -178,6 +130,7 @@ view : Model -> Element Msg
 view { form } =
     column [ Region.mainContent, width fill ]
         [ viewForm form
+        , viewSaveButton
         ]
 
 
@@ -189,9 +142,9 @@ viewForm form =
             , viewDescriptionInput form.description
             , viewPortionsInput form.portions
             , el [ Font.size 36, Font.semiBold ] (text "Gör så här")
-            , viewInstructionsEditor
+            , viewInstructionsEditor form.instructions
             , el [ Font.size 36, Font.semiBold ] (text "Ingredienser")
-            , viewIngredientsEditor
+            , viewIngredientsEditor form.ingredients
             ]
         ]
 
@@ -209,18 +162,6 @@ debug =
     Element.explain Debug.todo
 
 
-viewDescriptionInput : String -> Element Msg
-viewDescriptionInput description =
-    Input.multiline
-        [ height (fill |> Element.minimum 120 |> Element.maximum 240) ]
-        { onChange = DescriptionChanged
-        , text = description
-        , placeholder = Just (Input.placeholder [] (el [] (text "Beskriv receptet med en trevlig introduktion...")))
-        , label = Input.labelHidden "Beskrivning"
-        , spellcheck = True
-        }
-
-
 viewTitleInput : String -> Element Msg
 viewTitleInput title =
     Input.text
@@ -230,6 +171,18 @@ viewTitleInput title =
         , text = title
         , placeholder = Just (Input.placeholder [] (el [] (text "Titel")))
         , label = Input.labelHidden "Titel"
+        }
+
+
+viewDescriptionInput : String -> Element Msg
+viewDescriptionInput description =
+    Input.multiline
+        [ height (fill |> Element.minimum 120 |> Element.maximum 240) ]
+        { onChange = DescriptionChanged
+        , text = description
+        , placeholder = Just (Input.placeholder [] (el [] (text "Beskriv receptet med en trevlig introduktion...")))
+        , label = Input.labelHidden "Beskrivning"
+        , spellcheck = True
         }
 
 
@@ -263,27 +216,58 @@ viewPortionsInput portions =
         }
 
 
-viewInstructionsInput : String -> Element Msg
-viewInstructionsInput instructions =
-    Input.multiline
-        [ height (fill |> Element.minimum 120 |> Element.maximum 240) ]
-        { onChange = InstructionsChanged
-        , text = instructions
-        , placeholder = Just (Input.placeholder [] (el [] (text "Gör så här...")))
-        , label = Input.labelHidden "Instruktioner"
-        , spellcheck = True
+viewInstructionsEditor : String -> Element Msg
+viewInstructionsEditor initialValue =
+    let
+        options =
+            """
+        {
+            "toolbar": ["bold", "italic", "strikethrough", "heading-1", "|", "unordered-list", "link", "|", "preview", "fullscreen", "|", "guide" ]
         }
+        """
+    in
+    el [ paddingEach { edges | bottom = 44 }, height fill, width fill ]
+        (Element.html
+            (Html.node "easy-mde"
+                [ Html.Attributes.id "instructions-editor"
+                , Html.Attributes.attribute "placeholder" "Fyll i instruktioner..."
+                , Html.Attributes.attribute "options" options
+                , Html.Attributes.attribute "initialValue" initialValue
+                ]
+                []
+            )
+        )
 
 
-viewIngredientsInput : String -> Element Msg
-viewIngredientsInput instructions =
-    Input.multiline
-        []
-        { onChange = IngredientsChanged
-        , text = instructions
-        , placeholder = Just (Input.placeholder [] (el [] (text "- Ingredienser")))
-        , label = Input.labelHidden "Ingredienser"
-        , spellcheck = True
+viewIngredientsEditor : String -> Element Msg
+viewIngredientsEditor initialValue =
+    let
+        options =
+            """
+        {
+            "toolbar": ["bold", "italic", "heading-2", "|", "unordered-list", "|", "preview", "fullscreen", "|", "guide" ]
+        }
+        """
+    in
+    el [ paddingEach { edges | bottom = 44 }, height fill, width fill ]
+        (Element.html
+            (Html.node "easy-mde"
+                [ Html.Attributes.id "ingredients-editor"
+                , Html.Attributes.attribute "placeholder" "Fyll i en lista av ingredienser..."
+                , Html.Attributes.attribute "options" options
+                , Html.Attributes.attribute "initialValue" initialValue
+                ]
+                []
+            )
+        )
+
+
+viewSaveButton : Element Msg
+viewSaveButton =
+    Input.button
+        [ Background.color (rgb255 255 127 0), Border.rounded 3, padding 10, Font.color Palette.white ]
+        { onPress = Just SubmitForm
+        , label = text "Spara"
         }
 
 
@@ -337,18 +321,19 @@ update msg ({ form } as model) =
             )
 
         SubmitForm ->
-            case toJson model of
-                Just jsonForm ->
-                    ( model
-                      --| form = Form.update validate Form.Submit form }
-                    , Task.succeed (SubmitValidForm jsonForm) |> Task.perform identity
-                    )
+            Debug.log "SubmitForm" <|
+                case toJson model of
+                    Just jsonForm ->
+                        ( model
+                          --| form = Form.update validate Form.Submit form }
+                        , Task.succeed (SubmitValidForm jsonForm) |> Task.perform identity
+                        )
 
-                Nothing ->
-                    ( model
-                      --| form = Form.update validate Form.Submit form }
-                    , Cmd.none
-                    )
+                    Nothing ->
+                        ( model
+                          --| form = Form.update validate Form.Submit form }
+                        , Cmd.none
+                        )
 
         SubmitValidForm _ ->
             -- Editor deals with this
@@ -412,29 +397,22 @@ toJson { form } =
         portionsString recipe =
             String.fromInt recipe.portions
 
-        ingredientTuple { group, ingredients, newIngredientInput } =
-            ( group, ingredients )
+        maybeAddDescription description =
+            case description of
+                "" ->
+                    []
 
-        ingredientDict recipe =
-            Dict.fromList <| List.map ingredientTuple recipe.ingredients
-
-        maybeAddDescription l recipe =
-            case recipe.description of
-                Just descr ->
-                    l ++ [ ( "description", Encode.string descr ) ]
-
-                Nothing ->
-                    l
+                descr ->
+                    [ ( "description", Encode.string descr ) ]
     in
     Just
         (Encode.object <|
-            [ ( "title", Encode.string form.title )
-
-            {--
-            - , ( "instructions", Encode.string recipe.instructions )
-            - , ( "portions", Encode.string (portionsString recipe) )
-            - , ( "tags", Encode.set Encode.string <| Set.fromList recipe.tags )
-            - , ( "ingredients", Encode.dict identity (Encode.list Encode.string) (ingredientDict recipe) )
-            --}
-            ]
+            ([ ( "title", Encode.string form.title )
+             , ( "instructions", Encode.string form.instructions )
+             , ( "portions", Encode.string (portionsString form) )
+             , ( "ingredients", Encode.string form.ingredients )
+             , ( "tags", Encode.set Encode.string <| Set.fromList form.tags )
+             ]
+                ++ maybeAddDescription form.description
+            )
         )

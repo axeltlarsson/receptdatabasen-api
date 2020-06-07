@@ -55,7 +55,8 @@
           element:  textArea,
           toolbar: options["toolbar"],
           spellChecker: false,
-          placeholder: this.getAttribute("placeholder")
+          placeholder: this.getAttribute("placeholder"),
+          initialValue: this.getAttribute("initialValue")
         })
 
         easyMDE.codemirror.on("change", () => {
@@ -66,6 +67,14 @@
           }
           app.ports.portReceiver.send(msg)
         })
+      }
+
+      static get observedAttributes() {
+        return ["initialValue"]
+      }
+
+      attributeChangedCallback(name, oldValue, newValue) {
+        console.log('Custom element attributes changed.');
       }
     }
 
