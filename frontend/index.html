@@ -69,6 +69,14 @@
           }
           app.ports.portReceiver.send(msg)
         })
+
+        easyMDE.codemirror.on("blur", () => {
+          const msg = {
+            type: "blur",
+            id: this.getAttribute("id")
+          }
+          app.ports.portReceiver.send(msg)
+        })
       }
 
       static get observedAttributes() {

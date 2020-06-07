@@ -4,6 +4,7 @@ import Dict exposing (Dict)
 import Element exposing (Element, alignBottom, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, paddingEach, paragraph, rgb255, row, spacing, text, width)
 import Element.Background as Background
 import Element.Border as Border
+import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
@@ -28,14 +29,25 @@ import Verify
 
 type alias RecipeForm =
     { title : String
+    , titleValidationActive : Bool
     , description : String
+    , descriptionValidationActive : Bool
     , portions : Int
     , instructions : String
+    , instructionsValidationActive : Bool
     , ingredients : String
+    , ingredientsValidationActive : Bool
     , tags : List String
+    , validationStatus : ValidationStatus -- TODO: is this the way?
 
     -- , newTagInput : String
     }
+
+
+type ValidationStatus
+    = NotActivated
+    | Invalid
+    | Valid
 
 
 type alias Model =
@@ -54,11 +66,16 @@ init =
 initialForm : RecipeForm
 initialForm =
     { title = ""
+    , titleValidationActive = False
     , description = ""
+    , descriptionValidationActive = False
     , portions = 4
     , instructions = ""
+    , instructionsValidationActive = False
     , ingredients = ""
+    , ingredientsValidationActive = False
     , tags = []
+    , validationStatus = NotActivated
     }
 
 
@@ -73,57 +90,18 @@ fromRecipe recipe =
     in
     { form =
         { title = Slug.toString title
+        , titleValidationActive = False
         , description = Maybe.withDefault "" description
+        , descriptionValidationActive = False
         , portions = portions
         , instructions = instructions
+        , instructionsValidationActive = False
         , ingredients = ingredients
+        , ingredientsValidationActive = False
         , tags = tags
+        , validationStatus = NotActivated
         }
     }
-
-
-
-{--
-  - validate : Validation CustomError RecipeDetails
-  - validate =
-  -     succeed RecipeDetails
-  -         -- TODO: validate title uniqueness (async against server)
-  -         |> andMap (field "title" (trimmedTitle |> andThen (minLength 3) |> andThen (maxLength 100)))
-  -         |> andMap
-  -             (field "description"
-  -                 (oneOf
-  -                     [ emptyString |> Validate.map (\_ -> Nothing)
-  -                     , trimmedString |> andThen (maxLength 500) |> Validate.map Just
-  -                     ]
-  -                 )
-  -             )
-  -         |> andMap (field "portions" (int |> andThen (minInt 1) |> andThen (maxInt 100)))
-  -         |> andMap (field "instructions" (trimmedString |> andThen (minLength 5) |> andThen (maxLength 4000)))
-  -         |> andMap (field "ingredients" (nonEmptyList validateIngredientGroups))
-  -         |> andMap (field "newIngredientGroupInput" emptyString)
-  -         |> andMap (field "tags" (list trimmedString))
-  -         |> andMap (field "newTagInput" emptyString)
-  --}
-{--
-  - validateIngredientGroups : Validation CustomError IngredientGroup
-  - validateIngredientGroups =
-  -     succeed IngredientGroup
-  -         |> andMap (field "group" trimmedString)
-  -         |> andMap (field "ingredients" (nonEmptyList trimmedString))
-  -         |> andMap (field "newIngredientInput" emptyString)
-  --}
-{--
-  - errorFor : Form.FieldState CustomError a -> Element Form.Msg
-  - errorFor field =
-  -     case field.liveError of
-  -         Just error ->
-  -             -- div [ class "error text-danger" ] [ text (errorString error field.path) ]
-  -             el [] (text (errorString error field.path))
-  -
-  -         Nothing ->
-  -             text ""
-  -
-  --}
 
 
 view : Model -> Element Msg
@@ -136,15 +114,15 @@ view { form } =
 viewForm : RecipeForm -> Element Msg
 viewForm form =
     column [ width (fill |> Element.maximum 700), centerX, spacing 20, padding 10, Font.extraLight ]
-        [ viewTitleInput form.title
-        , viewDescriptionInput form.description
+        [ viewTitleInput form.titleValidationActive form.title
+        , viewDescriptionInput form.descriptionValidationActive form.description
         , viewPortionsInput form.portions
         , el [ Font.size 36, Font.semiBold ] (text "Gör så här")
         , viewInstructionsEditor form.instructions
-        , viewSingleValidationError form.instructions instructionsValidator
+        , viewSingleValidationError form.instructionsValidationActive form.instructions instructionsValidator
         , el [ Font.size 36, Font.semiBold ] (text "Ingredienser")
         , viewIngredientsEditor form.ingredients
-        , viewSingleValidationError form.ingredients ingredientsValidator
+        , viewSingleValidationError form.ingredientsValidationActive form.ingredients ingredientsValidator
         , viewSaveButton
         ]
 
@@ -162,44 +140,49 @@ debug =
     Element.explain Debug.todo
 
 
-viewTitleInput : String -> Element Msg
-viewTitleInput title =
+viewTitleInput : Bool -> String -> Element Msg
+viewTitleInput validationActive title =
     column [ spacing 10, width fill ]
         [ Input.text
             [ Font.bold
+            , Events.onLoseFocus BlurredTitle
             ]
             { onChange = TitleChanged
             , text = title
             , placeholder = Just (Input.placeholder [] (el [] (text "Titel")))
             , label = Input.labelHidden "Titel"
             }
-        , viewSingleValidationError title titleValidator
+        , viewSingleValidationError validationActive title titleValidator
         ]
 
 
-viewSingleValidationError : a -> Verify.Validator String a String -> Element Msg
-viewSingleValidationError input theValidator =
-    {--
-      - TODO: give the uses a chance to type something before showing an error!
-      --}
-    case validateSingle input theValidator of
-        Ok _ ->
-            Element.none
+viewSingleValidationError : Bool -> a -> Verify.Validator String a String -> Element Msg
+viewSingleValidationError active input theValidator =
+    if active then
+        case validateSingle input theValidator of
+            Ok _ ->
+                Element.none
 
-        Err ( err, errs ) ->
-            el [ Font.color Palette.red ] (text (err ++ Debug.toString errs))
+            Err ( err, errs ) ->
+                el [ Font.color Palette.red ] (text err)
+
+    else
+        Element.none
 
 
-viewDescriptionInput : String -> Element Msg
-viewDescriptionInput description =
-    Input.multiline
-        [ height (fill |> Element.minimum 120 |> Element.maximum 240) ]
-        { onChange = DescriptionChanged
-        , text = description
-        , placeholder = Just (Input.placeholder [] (el [] (text "Beskriv receptet med en trevlig introduktion...")))
-        , label = Input.labelHidden "Beskrivning"
-        , spellcheck = True
-        }
+viewDescriptionInput : Bool -> String -> Element Msg
+viewDescriptionInput validationActive description =
+    column [ width fill, spacing 10, Events.onLoseFocus BlurredDescription ]
+        [ Input.multiline
+            [ height (fill |> Element.minimum 120 |> Element.maximum 240) ]
+            { onChange = DescriptionChanged
+            , text = description
+            , placeholder = Just (Input.placeholder [] (el [] (text "Beskriv receptet med en trevlig introduktion...")))
+            , label = Input.labelHidden "Beskrivning"
+            , spellcheck = True
+            }
+        , viewSingleValidationError validationActive description descriptionValidator
+        ]
 
 
 viewPortionsInput : Int -> Element Msg
@@ -223,7 +206,7 @@ viewPortionsInput portions =
         , label =
             Input.labelAbove []
                 (text ("Portioner: " ++ String.fromInt portions))
-        , min = 0
+        , min = 1
         , max = 75
         , step = Just 1
         , value = toFloat portions
@@ -301,6 +284,8 @@ type Msg
     | SubmitValidForm Encode.Value
     | PortMsgReceived Decode.Value
     | SendPortMsg Encode.Value
+    | BlurredTitle
+    | BlurredDescription
 
 
 portMsg : Decode.Value -> Msg
@@ -315,6 +300,12 @@ update msg ({ form } as model) =
             ( { model | form = { form | title = title } }
             , Cmd.none
             )
+
+        BlurredTitle ->
+            ( { model | form = { form | titleValidationActive = True } }, Cmd.none )
+
+        BlurredDescription ->
+            ( { model | form = { form | descriptionValidationActive = True } }, Cmd.none )
 
         DescriptionChanged description ->
             ( { model | form = { form | description = description } }
@@ -337,16 +328,28 @@ update msg ({ form } as model) =
             )
 
         SubmitForm ->
+            let
+                activatedModel =
+                    { model
+                        | form =
+                            { form
+                                | titleValidationActive = True
+                                , descriptionValidationActive = True
+                                , instructionsValidationActive = True
+                                , ingredientsValidationActive = True
+                            }
+                    }
+            in
             case validator model.form of
                 Ok verifiedForm ->
                     Debug.log "submitting"
-                        ( model
+                        ( activatedModel
                         , submitForm verifiedForm
                         )
 
                 Err err ->
                     Debug.log ("error" ++ Debug.toString err)
-                        ( model
+                        ( activatedModel
                         , Cmd.none
                         )
 
@@ -366,6 +369,12 @@ update msg ({ form } as model) =
                 Ok (IngredientsChange value) ->
                     ( { model | form = { form | ingredients = value } }, Cmd.none )
 
+                Ok IngredientsBlur ->
+                    ( { model | form = { form | ingredientsValidationActive = True } }, Cmd.none )
+
+                Ok InstructionsBlur ->
+                    ( { model | form = { form | instructionsValidationActive = True } }, Cmd.none )
+
         SendPortMsg x ->
             -- Editor deals with this
             ( model, Cmd.none )
@@ -384,6 +393,8 @@ submitForm verifiedForm =
 type PortMsg
     = InstructionsChange String
     | IngredientsChange String
+    | IngredientsBlur
+    | InstructionsBlur
 
 
 portMsgDecoder : Decode.Decoder PortMsg
@@ -397,8 +408,24 @@ typeDecoder t =
         "change" ->
             Decode.field "id" Decode.string |> Decode.andThen changeDecoder
 
+        "blur" ->
+            Decode.field "id" Decode.string |> Decode.andThen blurDecoder
+
         _ ->
             Decode.fail ("trying to decode port message, but " ++ t ++ "is not supported")
+
+
+blurDecoder : String -> Decode.Decoder PortMsg
+blurDecoder id =
+    case id of
+        "ingredients-editor" ->
+            Decode.succeed IngredientsBlur
+
+        "instructions-editor" ->
+            Decode.succeed InstructionsBlur
+
+        _ ->
+            Decode.fail ("trying to decode blur message, but " ++ id ++ " is not supported")
 
 
 changeDecoder : String -> Decode.Decoder PortMsg
@@ -436,26 +463,54 @@ validator : Verify.Validator String RecipeForm VerifiedForm
 validator =
     Verify.validate VerifiedForm
         |> Verify.verify .title titleValidator
-        |> Verify.verify .description (String.Verify.notBlank "empty descr")
+        |> Verify.verify .description descriptionValidator
         |> Verify.keep .portions
         |> Verify.verify .instructions instructionsValidator
-        |> Verify.keep .ingredients
+        |> Verify.verify .ingredients ingredientsValidator
         |> Verify.keep .tags
 
 
+trim : Verify.Validator error String String
+trim input =
+    Ok (String.trim input)
+
+
 titleValidator : Verify.Validator String String String
-titleValidator title =
-    String.Verify.notBlank "Fyll i titeln på receptet, 🙏" title
+titleValidator =
+    trim
+        |> Verify.compose
+            (String.Verify.notBlank "Fyll i titeln på receptet 🙏")
+        |> Verify.compose
+            (String.Verify.minLength 3 "Titeln måste vara minst 3 tecken lång 👮\u{200D}♀️")
+        |> Verify.compose (String.Verify.maxLength 100 "Titlen får max innehålla 100 tecken 🚫")
+
+
+descriptionValidator : Verify.Validator String String String
+descriptionValidator =
+    trim
+        |> Verify.compose (String.Verify.maxLength 500 "Använd en kortare beskrivning 🙏")
 
 
 instructionsValidator : Verify.Validator String String String
-instructionsValidator instr =
-    String.Verify.notBlank "Vänligen beskriv hur man tillagar detta recept ❤️" instr
+instructionsValidator =
+    trim
+        |> Verify.compose
+            (String.Verify.notBlank "Vänligen beskriv hur man tillagar detta recept ❤️")
+        |> Verify.compose
+            (String.Verify.minLength 5 "Beskriv hur man tillagar detta recept med minst 5 tecken ☝")
+        |> Verify.compose
+            (String.Verify.maxLength 4000 "Skriv inte en hel novell här tack! ⛔️")
 
 
 ingredientsValidator : Verify.Validator String String String
-ingredientsValidator ingredients =
-    String.Verify.notBlank "Vänligen lista ingredienserna i detta recept 🙏" ingredients
+ingredientsValidator =
+    trim
+        |> Verify.compose
+            (String.Verify.notBlank "Vänligen lista ingredienserna i detta recept 🙏")
+        |> Verify.compose
+            (String.Verify.minLength 3 "Vänligen inkludera minst en ingrediens, annars blir det svårt! 😉")
+        |> Verify.compose
+            (String.Verify.maxLength 4000 "Skriv inte en hel novell här tack! ⛔️")
 
 
 validateSingle : a -> Verify.Validator String a String -> Result ( String, List String ) String
@@ -469,13 +524,10 @@ validateSingle value theValidator =
 toJson : VerifiedForm -> Maybe Encode.Value
 toJson form =
     let
-        portionsString recipe =
-            String.fromInt recipe.portions
-
         maybeAddDescription description =
             case description of
                 "" ->
-                    []
+                    [ ( "description", Encode.null ) ]
 
                 descr ->
                     [ ( "description", Encode.string descr ) ]
@@ -484,7 +536,7 @@ toJson form =
         (Encode.object <|
             ([ ( "title", Encode.string form.title )
              , ( "instructions", Encode.string form.instructions )
-             , ( "portions", Encode.string (portionsString form) )
+             , ( "portions", Encode.int form.portions )
              , ( "ingredients", Encode.string form.ingredients )
              , ( "tags", Encode.set Encode.string <| Set.fromList form.tags )
              ]
