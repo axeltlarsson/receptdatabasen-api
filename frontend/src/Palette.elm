@@ -41,6 +41,16 @@ red =
     rgb255 255 0 0
 
 
+green : Element.Color
+green =
+    rgba255 50 224 196 1
+
+
+orange : Element.Color
+orange =
+    rgb255 255 127 0
+
+
 large : Int
 large =
     24

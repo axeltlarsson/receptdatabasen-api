@@ -38,7 +38,7 @@ type alias RecipeForm =
     , ingredients : String
     , ingredientsValidationActive : Bool
     , tags : List String
-    , validationStatus : ValidationStatus -- TODO: is this the way?
+    , validationStatus : ValidationStatus
 
     -- , newTagInput : String
     }
@@ -123,7 +123,7 @@ viewForm form =
         , el [ Font.size 36, Font.semiBold ] (text "Ingredienser")
         , viewIngredientsEditor form.ingredients
         , viewSingleValidationError form.ingredientsValidationActive form.ingredients ingredientsValidator
-        , viewSaveButton
+        , viewSaveButton form.validationStatus
         ]
 
 
@@ -261,13 +261,30 @@ viewIngredientsEditor initialValue =
         )
 
 
-viewSaveButton : Element Msg
-viewSaveButton =
-    Input.button
-        [ Background.color (rgb255 255 127 0), Border.rounded 3, padding 10, Font.color Palette.white ]
-        { onPress = Just SubmitForm
-        , label = text "Spara"
-        }
+viewSaveButton : ValidationStatus -> Element Msg
+viewSaveButton status =
+    let
+        activeButton =
+            case status of
+                Invalid ->
+                    False
+
+                _ ->
+                    True
+    in
+    if activeButton then
+        Input.button
+            [ Background.color Palette.green, Border.rounded 3, padding 10, Font.color Palette.white ]
+            { onPress = Just SubmitForm
+            , label = text "Spara"
+            }
+
+    else
+        Input.button
+            [ Background.color Palette.grey, Border.rounded 3, padding 10, Font.color Palette.white ]
+            { onPress = Nothing
+            , label = text "Fyll i formuläret korrekt ⛔️"
+            }
 
 
 
@@ -295,41 +312,56 @@ portMsg =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg ({ form } as model) =
+    let
+        updateForm : (RecipeForm -> RecipeForm) -> Model
+        updateForm f =
+            let
+                newModel =
+                    { model | form = f model.form }
+
+                newForm =
+                    newModel.form
+            in
+            case validator newModel.form of
+                Ok _ ->
+                    { newModel | form = { newForm | validationStatus = Valid } }
+
+                Err _ ->
+                    { newModel | form = { newForm | validationStatus = Invalid } }
+    in
     case msg of
         TitleChanged title ->
-            ( { model | form = { form | title = title } }
+            ( updateForm (\f -> { f | title = title })
             , Cmd.none
             )
 
         BlurredTitle ->
-            ( { model | form = { form | titleValidationActive = True } }, Cmd.none )
+            ( updateForm (\f -> { f | titleValidationActive = True }), Cmd.none )
 
         BlurredDescription ->
-            ( { model | form = { form | descriptionValidationActive = True } }, Cmd.none )
+            ( updateForm (\f -> { f | descriptionValidationActive = True }), Cmd.none )
 
         DescriptionChanged description ->
-            ( { model | form = { form | description = description } }
-            , Cmd.none
-            )
+            ( updateForm (\f -> { f | description = description }), Cmd.none )
 
         PortionsChanged portions ->
-            ( { model | form = { form | portions = portions } }
+            ( updateForm (\f -> { f | portions = portions })
             , Cmd.none
             )
 
         InstructionsChanged instructions ->
-            ( { model | form = { form | instructions = instructions } }
+            ( updateForm (\f -> { f | instructions = instructions })
             , Cmd.none
             )
 
         IngredientsChanged ingredients ->
-            ( { model | form = { form | ingredients = ingredients } }
+            ( updateForm (\f -> { f | ingredients = ingredients })
             , Cmd.none
             )
 
         SubmitForm ->
             let
-                activatedModel =
+                activatedModel valid =
                     { model
                         | form =
                             { form
@@ -337,19 +369,20 @@ update msg ({ form } as model) =
                                 , descriptionValidationActive = True
                                 , instructionsValidationActive = True
                                 , ingredientsValidationActive = True
+                                , validationStatus = valid
                             }
                     }
             in
             case validator model.form of
                 Ok verifiedForm ->
                     Debug.log "submitting"
-                        ( activatedModel
+                        ( activatedModel Valid
                         , submitForm verifiedForm
                         )
 
                 Err err ->
                     Debug.log ("error" ++ Debug.toString err)
-                        ( activatedModel
+                        ( activatedModel Invalid
                         , Cmd.none
                         )
 
@@ -364,16 +397,16 @@ update msg ({ form } as model) =
                         ( model, Cmd.none )
 
                 Ok (InstructionsChange value) ->
-                    ( { model | form = { form | instructions = value } }, Cmd.none )
+                    ( updateForm (\f -> { f | instructions = value }), Cmd.none )
 
                 Ok (IngredientsChange value) ->
-                    ( { model | form = { form | ingredients = value } }, Cmd.none )
+                    ( updateForm (\f -> { f | ingredients = value }), Cmd.none )
 
                 Ok IngredientsBlur ->
-                    ( { model | form = { form | ingredientsValidationActive = True } }, Cmd.none )
+                    ( updateForm (\f -> { f | ingredientsValidationActive = True }), Cmd.none )
 
                 Ok InstructionsBlur ->
-                    ( { model | form = { form | instructionsValidationActive = True } }, Cmd.none )
+                    ( updateForm (\f -> { f | instructionsValidationActive = True }), Cmd.none )
 
         SendPortMsg x ->
             -- Editor deals with this
