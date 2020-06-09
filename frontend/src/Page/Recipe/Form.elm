@@ -38,7 +38,7 @@ type alias RecipeForm =
     , ingredients : String
     , ingredientsValidationActive : Bool
     , tags : List String
-    , validationStatus : ValidationStatus
+    , validationStatus : ValidationStatus -- TODO: rename to something that is more tied to its single use for the save button?
 
     -- , newTagInput : String
     }
@@ -89,17 +89,13 @@ fromRecipe recipe =
             Recipe.contents recipe
     in
     { form =
-        { title = Slug.toString title
-        , titleValidationActive = False
-        , description = Maybe.withDefault "" description
-        , descriptionValidationActive = False
-        , portions = portions
-        , instructions = instructions
-        , instructionsValidationActive = False
-        , ingredients = ingredients
-        , ingredientsValidationActive = False
-        , tags = tags
-        , validationStatus = NotActivated
+        { initialForm
+            | title = Slug.toString title
+            , description = Maybe.withDefault "" description
+            , portions = portions
+            , instructions = instructions
+            , ingredients = ingredients
+            , tags = tags
         }
     }
 
@@ -118,11 +114,11 @@ viewForm form =
         , viewDescriptionInput form.descriptionValidationActive form.description
         , viewPortionsInput form.portions
         , el [ Font.size 36, Font.semiBold ] (text "Gör så här")
-        , viewInstructionsEditor form.instructions
-        , viewSingleValidationError form.instructionsValidationActive form.instructions instructionsValidator
+        , viewInstructionsEditor form.instructionsValidationActive form.instructions
+        , viewValidationError form.instructionsValidationActive form.instructions instructionsValidator
         , el [ Font.size 36, Font.semiBold ] (text "Ingredienser")
-        , viewIngredientsEditor form.ingredients
-        , viewSingleValidationError form.ingredientsValidationActive form.ingredients ingredientsValidator
+        , viewIngredientsEditor form.ingredientsValidationActive form.ingredients
+        , viewValidationError form.ingredientsValidationActive form.ingredients ingredientsValidator
         , viewSaveButton form.validationStatus
         ]
 
@@ -140,48 +136,74 @@ debug =
     Element.explain Debug.todo
 
 
-viewTitleInput : Bool -> String -> Element Msg
-viewTitleInput validationActive title =
-    column [ spacing 10, width fill ]
-        [ Input.text
-            [ Font.bold
-            , Events.onLoseFocus BlurredTitle
-            ]
-            { onChange = TitleChanged
-            , text = title
-            , placeholder = Just (Input.placeholder [] (el [] (text "Titel")))
-            , label = Input.labelHidden "Titel"
-            }
-        , viewSingleValidationError validationActive title titleValidator
-        ]
+errorBorder : Bool -> a -> Verify.Validator String a String -> List (Element.Attribute Msg)
+errorBorder active input theValidator =
+    let
+        fieldIsInvalid =
+            case validateSingle input theValidator of
+                Ok _ ->
+                    False
+
+                Err _ ->
+                    True
+    in
+    if active && fieldIsInvalid then
+        [ Border.width 1, Border.rounded 6, Border.color Palette.red ]
+
+    else
+        []
 
 
-viewSingleValidationError : Bool -> a -> Verify.Validator String a String -> Element Msg
-viewSingleValidationError active input theValidator =
+viewValidationError : Bool -> a -> Verify.Validator String a String -> Element Msg
+viewValidationError active input theValidator =
     if active then
         case validateSingle input theValidator of
             Ok _ ->
                 Element.none
 
             Err ( err, errs ) ->
-                el [ Font.color Palette.red ] (text err)
+                el
+                    [ Font.color Palette.red ]
+                    (text err)
 
     else
         Element.none
 
 
+viewTitleInput : Bool -> String -> Element Msg
+viewTitleInput validationActive title =
+    column [ spacing 10, width fill ]
+        [ Input.text
+            ([ Font.bold
+             , Events.onLoseFocus BlurredTitle
+             ]
+                ++ errorBorder validationActive title titleValidator
+            )
+            { onChange = TitleChanged
+            , text = title
+            , placeholder = Just (Input.placeholder [] (el [] (text "Titel")))
+            , label = Input.labelHidden "Titel"
+            }
+        , viewValidationError validationActive title titleValidator
+        ]
+
+
 viewDescriptionInput : Bool -> String -> Element Msg
 viewDescriptionInput validationActive description =
-    column [ width fill, spacing 10, Events.onLoseFocus BlurredDescription ]
+    column [ width fill, spacing 10 ]
         [ Input.multiline
-            [ height (fill |> Element.minimum 120 |> Element.maximum 240) ]
+            ([ height (fill |> Element.minimum 120 |> Element.maximum 240)
+             , Events.onLoseFocus BlurredDescription
+             ]
+                ++ errorBorder validationActive description descriptionValidator
+            )
             { onChange = DescriptionChanged
             , text = description
             , placeholder = Just (Input.placeholder [] (el [] (text "Beskriv receptet med en trevlig introduktion...")))
             , label = Input.labelHidden "Beskrivning"
             , spellcheck = True
             }
-        , viewSingleValidationError validationActive description descriptionValidator
+        , viewValidationError validationActive description descriptionValidator
         ]
 
 
@@ -215,8 +237,8 @@ viewPortionsInput portions =
         }
 
 
-viewInstructionsEditor : String -> Element Msg
-viewInstructionsEditor initialValue =
+viewInstructionsEditor : Bool -> String -> Element Msg
+viewInstructionsEditor validationActive instructions =
     let
         options =
             """
@@ -225,21 +247,21 @@ viewInstructionsEditor initialValue =
         }
         """
     in
-    el [ height fill, width fill ]
+    el ([ height fill, width fill ] ++ errorBorder validationActive instructions instructionsValidator)
         (Element.html
             (Html.node "easy-mde"
                 [ Html.Attributes.id "instructions-editor"
                 , Html.Attributes.attribute "placeholder" "Fyll i instruktioner..."
                 , Html.Attributes.attribute "options" options
-                , Html.Attributes.attribute "initialValue" initialValue
+                , Html.Attributes.attribute "initialValue" instructions
                 ]
                 []
             )
         )
 
 
-viewIngredientsEditor : String -> Element Msg
-viewIngredientsEditor initialValue =
+viewIngredientsEditor : Bool -> String -> Element Msg
+viewIngredientsEditor validationActive ingredients =
     let
         options =
             """
@@ -248,13 +270,13 @@ viewIngredientsEditor initialValue =
         }
         """
     in
-    el [ height fill, width fill ]
+    el ([ height fill, width fill ] ++ errorBorder validationActive ingredients ingredientsValidator)
         (Element.html
             (Html.node "easy-mde"
                 [ Html.Attributes.id "ingredients-editor"
                 , Html.Attributes.attribute "placeholder" "Fyll i en lista av ingredienser..."
                 , Html.Attributes.attribute "options" options
-                , Html.Attributes.attribute "initialValue" initialValue
+                , Html.Attributes.attribute "initialValue" ingredients
                 ]
                 []
             )
@@ -321,13 +343,24 @@ update msg ({ form } as model) =
 
                 newForm =
                     newModel.form
-            in
-            case validator newModel.form of
-                Ok _ ->
-                    { newModel | form = { newForm | validationStatus = Valid } }
 
-                Err _ ->
-                    { newModel | form = { newForm | validationStatus = Invalid } }
+                validity =
+                    case validator newModel.form of
+                        Ok _ ->
+                            Valid
+
+                        Err _ ->
+                            Invalid
+            in
+            case model.form.validationStatus of
+                Invalid ->
+                    { newModel | form = { newForm | validationStatus = validity } }
+
+                Valid ->
+                    { newModel | form = { newForm | validationStatus = validity } }
+
+                NotActivated ->
+                    { newModel | form = newForm }
     in
     case msg of
         TitleChanged title ->
@@ -336,13 +369,19 @@ update msg ({ form } as model) =
             )
 
         BlurredTitle ->
-            ( updateForm (\f -> { f | titleValidationActive = True }), Cmd.none )
+            ( updateForm (\f -> { f | titleValidationActive = True })
+            , Cmd.none
+            )
 
         BlurredDescription ->
-            ( updateForm (\f -> { f | descriptionValidationActive = True }), Cmd.none )
+            ( updateForm (\f -> { f | descriptionValidationActive = True })
+            , Cmd.none
+            )
 
         DescriptionChanged description ->
-            ( updateForm (\f -> { f | description = description }), Cmd.none )
+            ( updateForm (\f -> { f | description = description })
+            , Cmd.none
+            )
 
         PortionsChanged portions ->
             ( updateForm (\f -> { f | portions = portions })
@@ -375,10 +414,9 @@ update msg ({ form } as model) =
             in
             case validator model.form of
                 Ok verifiedForm ->
-                    Debug.log "submitting"
-                        ( activatedModel Valid
-                        , submitForm verifiedForm
-                        )
+                    ( activatedModel Valid
+                    , submitForm verifiedForm
+                    )
 
                 Err err ->
                     Debug.log ("error" ++ Debug.toString err)
