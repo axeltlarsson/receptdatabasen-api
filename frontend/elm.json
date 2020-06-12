@@ -15,7 +15,7 @@
             "elm/url": "1.0.0",
             "elm-explorations/markdown": "1.0.0",
             "feathericons/elm-feather": "1.4.0",
-            "mdgriffith/elm-ui": "1.1.5",
+            "mdgriffith/elm-ui": "1.1.7",
             "stoeffel/elm-verify": "5.0.0"
         },
         "indirect": {
