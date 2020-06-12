@@ -174,7 +174,10 @@ errorBorder active input theValidator =
                     True
     in
     if active && fieldIsInvalid then
-        [ Border.width 1, Border.rounded 6, Border.color Palette.red ]
+        [ Border.width 1
+        , Border.rounded 2
+        , Border.color Palette.red
+        ]
 
     else
         []
@@ -200,7 +203,9 @@ viewTitleInput : Bool -> String -> Element Msg
 viewTitleInput validationActive title =
     column [ spacing 10, width fill ]
         [ Input.text
-            ([ Font.bold
+            ([ Font.size 44
+             , Font.semiBold
+             , Border.rounded 2
              , Events.onLoseFocus BlurredTitle
              ]
                 ++ errorBorder validationActive title titleValidator
@@ -219,6 +224,7 @@ viewDescriptionInput validationActive description =
     column [ width fill, spacing 10 ]
         [ Input.multiline
             ([ height (fill |> Element.minimum 120 |> Element.maximum 240)
+             , Border.rounded 2
              , Events.onLoseFocus BlurredDescription
              ]
                 ++ errorBorder validationActive description descriptionValidator
@@ -317,7 +323,7 @@ viewTagsInput validationActive newTag tags =
     in
     column [ width fill, spacing 10 ]
         [ row [ width fill, spacing 10 ]
-            [ Input.text [ Element.htmlAttribute (onEnter NewTagEntered) ]
+            [ Input.text [ Element.htmlAttribute (onEnter NewTagEntered), Border.rounded 2 ]
                 { onChange = NewTagInputChanged
                 , text = newTag
                 , placeholder = Just (Input.placeholder [] (text "Ny tagg"))
@@ -326,6 +332,8 @@ viewTagsInput validationActive newTag tags =
             , Input.button
                 [ Background.color Palette.green
                 , padding 10
+                , height fill
+                , Border.rounded 2
                 , Font.color Palette.white
                 ]
                 { onPress = Just NewTagEntered, label = plusIcon }
