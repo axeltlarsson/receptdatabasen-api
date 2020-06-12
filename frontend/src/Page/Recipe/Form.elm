@@ -1,13 +1,36 @@
 module Page.Recipe.Form exposing (Model, Msg(..), fromRecipe, init, portMsg, toJson, update, view)
 
 import Dict exposing (Dict)
-import Element exposing (Element, alignBottom, alignLeft, alignRight, alignTop, centerX, centerY, column, el, fill, height, padding, paddingEach, paragraph, rgb255, row, spacing, text, width)
+import Element
+    exposing
+        ( Element
+        , alignBottom
+        , alignLeft
+        , alignRight
+        , alignTop
+        , centerX
+        , centerY
+        , column
+        , el
+        , fill
+        , height
+        , mouseOver
+        , padding
+        , paddingEach
+        , paragraph
+        , rgb255
+        , row
+        , spacing
+        , text
+        , width
+        )
 import Element.Background as Background
 import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
+import FeatherIcons
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
@@ -17,7 +40,7 @@ import Palette
 import Recipe
 import Recipe.Slug as Slug
 import Regex
-import Set
+import Set exposing (Set)
 import String.Verify
 import Task
 import Verify
@@ -38,9 +61,9 @@ type alias RecipeForm =
     , ingredients : String
     , ingredientsValidationActive : Bool
     , tags : List String
+    , newTagInput : String
+    , tagValidationActive : Bool
     , validationStatus : ValidationStatus -- TODO: rename to something that is more tied to its single use for the save button?
-
-    -- , newTagInput : String
     }
 
 
@@ -75,6 +98,8 @@ initialForm =
     , ingredients = ""
     , ingredientsValidationActive = False
     , tags = []
+    , newTagInput = ""
+    , tagValidationActive = False
     , validationStatus = NotActivated
     }
 
@@ -113,12 +138,13 @@ viewForm form =
         [ viewTitleInput form.titleValidationActive form.title
         , viewDescriptionInput form.descriptionValidationActive form.description
         , viewPortionsInput form.portions
-        , el [ Font.size 36, Font.semiBold ] (text "Gör så här")
+        , el [ Font.size 36, Font.semiBold ] (text "Instruktioner")
         , viewInstructionsEditor form.instructionsValidationActive form.instructions
         , viewValidationError form.instructionsValidationActive form.instructions instructionsValidator
         , el [ Font.size 36, Font.semiBold ] (text "Ingredienser")
         , viewIngredientsEditor form.ingredientsValidationActive form.ingredients
         , viewValidationError form.ingredientsValidationActive form.ingredients ingredientsValidator
+        , viewTagsInput form.tagValidationActive form.newTagInput form.tags
         , viewSaveButton form.validationStatus
         ]
 
@@ -283,6 +309,46 @@ viewIngredientsEditor validationActive ingredients =
         )
 
 
+viewTagsInput : Bool -> String -> List String -> Element Msg
+viewTagsInput validationActive newTag tags =
+    let
+        plusIcon =
+            FeatherIcons.plus |> FeatherIcons.toHtml [] |> Element.html
+    in
+    column [ width fill, spacing 10 ]
+        [ row [ width fill, spacing 10 ]
+            [ Input.text [ Element.htmlAttribute (onEnter NewTagEntered) ]
+                { onChange = NewTagInputChanged
+                , text = newTag
+                , placeholder = Just (Input.placeholder [] (text "Ny tagg"))
+                , label = Input.labelHidden "Taggar"
+                }
+            , Input.button
+                [ Background.color Palette.green
+                , padding 10
+                , Font.color Palette.white
+                ]
+                { onPress = Just NewTagEntered, label = plusIcon }
+            ]
+        , viewValidationError validationActive newTag tagValidator
+        , row [ width fill, spacing 10 ]
+            (List.map viewTag tags)
+        ]
+
+
+viewTag : String -> Element Msg
+viewTag tag =
+    el
+        [ Background.color Palette.grey
+        , padding 10
+        , Font.color Palette.white
+        , Events.onClick (RemoveTag tag)
+        , mouseOver [ Element.alpha 0.5 ]
+        , Element.pointer
+        ]
+        (text tag)
+
+
 viewSaveButton : ValidationStatus -> Element Msg
 viewSaveButton status =
     let
@@ -309,6 +375,19 @@ viewSaveButton status =
             }
 
 
+onEnter : msg -> Html.Attribute msg
+onEnter msg =
+    let
+        isEnter code =
+            if code == 13 then
+                Decode.succeed ( msg, True )
+
+            else
+                Decode.fail "not ENTER"
+    in
+    Html.Events.preventDefaultOn "keydown" (Decode.andThen isEnter Html.Events.keyCode)
+
+
 
 -- UPDATE
 
@@ -319,6 +398,9 @@ type Msg
     | PortionsChanged Int
     | InstructionsChanged String
     | IngredientsChanged String
+    | NewTagInputChanged String
+    | NewTagEntered
+    | RemoveTag String
     | SubmitForm
     | SubmitValidForm Encode.Value
     | PortMsgReceived Decode.Value
@@ -397,6 +479,27 @@ update msg ({ form } as model) =
             ( updateForm (\f -> { f | ingredients = ingredients })
             , Cmd.none
             )
+
+        NewTagInputChanged newTag ->
+            ( updateForm (\f -> { f | newTagInput = newTag })
+            , Cmd.none
+            )
+
+        NewTagEntered ->
+            ( updateForm
+                (\f ->
+                    case validateSingle f.newTagInput tagValidator of
+                        Ok _ ->
+                            { f | newTagInput = "", tags = List.append f.tags [ f.newTagInput ], tagValidationActive = False }
+
+                        Err _ ->
+                            { f | tagValidationActive = True }
+                )
+            , Cmd.none
+            )
+
+        RemoveTag tag ->
+            ( updateForm (\f -> { f | tags = List.filter (\t -> t /= tag) f.tags }), Cmd.none )
 
         SubmitForm ->
             let
@@ -538,6 +641,7 @@ validator =
         |> Verify.keep .portions
         |> Verify.verify .instructions instructionsValidator
         |> Verify.verify .ingredients ingredientsValidator
+        -- Verification of tags on input
         |> Verify.keep .tags
 
 
@@ -570,7 +674,7 @@ instructionsValidator =
         |> Verify.compose
             (String.Verify.minLength 5 "Beskriv hur man tillagar detta recept med minst 5 tecken ☝")
         |> Verify.compose
-            (String.Verify.maxLength 4000 "Skriv inte en hel novell här tack! ⛔️")
+            (String.Verify.maxLength 4000 "Skriv inte en hel roman här tack! ⛔️")
 
 
 ingredientsValidator : Verify.Validator String String String
@@ -581,7 +685,16 @@ ingredientsValidator =
         |> Verify.compose
             (String.Verify.minLength 3 "Vänligen inkludera minst en ingrediens, annars blir det svårt! 😉")
         |> Verify.compose
-            (String.Verify.maxLength 4000 "Skriv inte en hel novell här tack! ⛔️")
+            (String.Verify.maxLength 4000 "Skriv inte en hel roman här tack! ⛔️")
+
+
+tagValidator : Verify.Validator String String String
+tagValidator =
+    trim
+        |> Verify.compose
+            (String.Verify.notBlank "Taggen får inte vara tom! ⚠️")
+        |> Verify.compose
+            (String.Verify.maxLength 32 "Taggar bör vara korta och koncisa! ⚡️")
 
 
 validateSingle : a -> Verify.Validator String a String -> Result ( String, List String ) String
