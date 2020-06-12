@@ -150,6 +150,7 @@ viewHeader id title =
         [ Element.el
             [ width fill
             , height fill
+            , Border.rounded 2
             , Background.image <| imgUrl id
             ]
             (el
