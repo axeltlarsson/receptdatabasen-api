@@ -1,4 +1,4 @@
-module Page.Recipe.Markdown exposing (render)
+module Page.Recipe.Markdown exposing (onlyListAndHeading, render)
 
 import Dict exposing (Dict)
 import Element
@@ -47,6 +47,42 @@ render markdown checkboxStatus clickedCheckbox =
         |> Markdown.Parser.parse
         |> Result.mapError (\e -> e |> List.map Markdown.Parser.deadEndToString |> String.join "\n")
         |> Result.andThen (Markdown.Renderer.render (renderer checkboxStatus clickedCheckbox))
+
+
+all : (Block -> Bool) -> String -> Bool
+all predicate markdown =
+    let
+        astResult =
+            Markdown.Parser.parse markdown
+    in
+    case astResult of
+        Ok blocks ->
+            blocks
+                |> Block.foldl
+                    (\block soFar ->
+                        predicate block
+                    )
+                    False
+
+        Err _ ->
+            False
+
+
+onlyListAndHeading : String -> Bool
+onlyListAndHeading input =
+    all
+        (\block ->
+            case block of
+                Block.Heading _ _ ->
+                    True
+
+                Block.UnorderedList _ ->
+                    True
+
+                _ ->
+                    False
+        )
+        input
 
 
 renderer : Dict Int Bool -> (Int -> Bool -> msg) -> Markdown.Renderer.Renderer (Element msg)

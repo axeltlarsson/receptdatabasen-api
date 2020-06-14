@@ -676,6 +676,15 @@ descriptionValidator =
         |> Verify.compose (String.Verify.maxLength 500 "Använd en kortare beskrivning 🙏")
 
 
+ingredientsMardkownValidator : Verify.Validator String String String
+ingredientsMardkownValidator input =
+    if Markdown.onlyListAndHeading input then
+        Ok input
+
+    else
+        Verify.fail "Only lists and headings are allowed here" input
+
+
 instructionsValidator : Verify.Validator String String String
 instructionsValidator =
     trim
@@ -685,6 +694,8 @@ instructionsValidator =
             (String.Verify.minLength 5 "Beskriv hur man tillagar detta recept med minst 5 tecken ☝")
         |> Verify.compose
             (String.Verify.maxLength 4000 "Skriv inte en hel roman här tack! ⛔️")
+        |> Verify.compose
+            ingredientsMardkownValidator
 
 
 ingredientsValidator : Verify.Validator String String String
