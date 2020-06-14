@@ -24,6 +24,7 @@ import Element
         , spacing
         , text
         , width
+        , wrappedRow
         )
 import Element.Background as Background
 import Element.Border as Border
@@ -88,37 +89,30 @@ view : Model -> { title : String, content : Element Msg }
 view model =
     let
         ui =
-            viewUi model
+            case model.recipe of
+                Loading ->
+                    { title = "Laddar..."
+                    , content = Element.html Loading.animation
+                    }
+
+                Failed err ->
+                    { title = "Kunde ej hämta recept"
+                    , content = Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err)
+                    }
+
+                Loaded recipe ->
+                    let
+                        { title } =
+                            Recipe.metadata recipe
+                    in
+                    { title = Slug.toString title
+                    , content = viewRecipe recipe (Session.device model.session)
+                    }
     in
     { title = ui.title
     , content =
-        column [ Region.mainContent, width fill ]
-            [ ui.content
-            ]
+        column [ Region.mainContent, width fill ] [ ui.content ]
     }
-
-
-viewUi : Model -> { title : String, content : Element Msg }
-viewUi model =
-    case model.recipe of
-        Loading ->
-            { title = "Laddar..."
-            , content = Element.html Loading.animation
-            }
-
-        Failed err ->
-            { title = "Kunde ej hämta recept"
-            , content = Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err)
-            }
-
-        Loaded recipe ->
-            let
-                { title } =
-                    Recipe.metadata recipe
-            in
-            { title = Slug.toString title
-            , content = viewRecipe recipe (Session.device model.session)
-            }
 
 
 phoneLayout : Element.Device -> Bool
@@ -146,7 +140,7 @@ viewRecipe recipe device =
         { title, description, id, createdAt } =
             Recipe.metadata recipe
 
-        { portions, ingredients, instructions } =
+        { portions, ingredients, instructions, tags } =
             Recipe.contents recipe
 
         responsiveLayout =
@@ -157,7 +151,7 @@ viewRecipe recipe device =
                 row [ width fill, spacing 60 ]
     in
     column [ width fill, spacing 30 ]
-        [ viewHeader (Slug.toString title) description device
+        [ viewHeader (Slug.toString title) tags description device
         , column [ width fill, padding <| paddingPx device, spacing 20 ]
             [ responsiveLayout
                 [ viewInstructions instructions
@@ -171,13 +165,13 @@ viewRecipe recipe device =
         ]
 
 
-viewHeader : String -> Maybe String -> Element.Device -> Element Msg
-viewHeader title description device =
-    column [ width fill, height <| Element.px 400 ]
+viewHeader : String -> List String -> Maybe String -> Element.Device -> Element Msg
+viewHeader title tags description device =
+    column [ width fill, height <| Element.px 600 ]
         [ Element.el
             [ width fill
             , height fill
-            , Background.image iceCoffeeUrl
+            , Background.image lemonadeUrl
             ]
             (column
                 [ alignBottom
@@ -190,7 +184,17 @@ viewHeader title description device =
                 [ viewTitle title
                 ]
             )
-        , viewDescription description (paddingPx device)
+        , column
+            [ paddingXY (paddingPx device) 20
+            , width
+                (fill
+                    |> Element.maximum 800
+                )
+            , spacing 10
+            ]
+            [ viewTags tags
+            , viewDescription description
+            ]
         ]
 
 
@@ -220,23 +224,35 @@ viewTitle title =
         [ text title ]
 
 
-viewDescription : Maybe String -> Int -> Element Msg
-viewDescription description pad =
-    el
-        [ paddingXY pad 20
-        , width
-            (fill
-                |> Element.maximum 800
-            )
-        ]
-        (paragraph [ Font.light, width fill ] [ text <| Maybe.withDefault "" description ])
+viewTags : List String -> Element Msg
+viewTags tags =
+    let
+        viewTag tag =
+            el
+                [ Background.color Palette.grey
+                , Font.color Palette.white
+                , Border.rounded 2
+                , padding 10
+                ]
+                (text tag)
+    in
+    wrappedRow
+        [ spacing 10 ]
+        (List.map viewTag tags)
+
+
+viewDescription : Maybe String -> Element Msg
+viewDescription description =
+    description
+        |> Maybe.map (text >> List.singleton >> paragraph [ Font.light, width fill ])
+        |> Maybe.withDefault Element.none
 
 
 viewInstructions : String -> Element Msg
 viewInstructions instructions =
     column [ alignTop, alignLeft, width fill, Font.color Palette.nearBlack ]
         [ el [ Font.size 32 ] (text "Gör så här")
-        , el [ paddingXY 0 10 ] (paragraph [] [ viewMarkdown instructions ])
+        , el [ paddingXY 0 20 ] (paragraph [] [ viewMarkdown instructions ])
         ]
 
 
@@ -244,9 +260,8 @@ viewIngredients : String -> Int -> Element Msg
 viewIngredients ingredients portions =
     column [ alignTop, width fill ]
         [ column []
-            -- TODO: centerX ^ a good idea?
             [ el [ Font.size 32 ] (text "Ingredienser")
-            , paragraph [ paddingXY 0 20 ] [ text <| String.fromInt portions, text " portioner" ]
+            , paragraph [ paddingEach { edges | top = 10, bottom = 20 } ] [ text <| String.fromInt portions, text " portioner" ]
             , column [] [ viewMarkdown ingredients ]
             ]
         ]
@@ -370,8 +385,10 @@ orderedList startingIndex items =
             |> List.indexedMap
                 (\index itemBlocks ->
                     row [ spacing 5, width fill ]
-                        [ row [ alignTop, width fill, spacing 5 ]
-                            (text (String.fromInt (index + startingIndex) ++ " ") :: itemBlocks)
+                        [ row [ width fill, spacing 5 ]
+                            (el [ alignTop ] (text (String.fromInt (index + startingIndex) ++ ". "))
+                                :: itemBlocks
+                            )
                         ]
                 )
         )
