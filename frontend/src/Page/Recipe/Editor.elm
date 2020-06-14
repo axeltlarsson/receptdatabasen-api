@@ -178,32 +178,55 @@ update msg ({ status, session } as model) =
             ( model, portSender quillMsg )
 
         FormMsg subMsg ->
+            let
+                updateForm form =
+                    Form.update subMsg form
+                        |> updateWith (formToModel model) FormMsg
+            in
             case status of
                 EditingNew _ form ->
-                    Form.update subMsg form
-                        |> updateWith (formToModel model) FormMsg
+                    updateForm form
 
                 Editing slug _ form ->
-                    Form.update subMsg form
-                        |> updateWith (formToModel model) FormMsg
+                    updateForm form
 
                 Creating form ->
-                    Form.update subMsg form
-                        |> updateWith (formToModel model) FormMsg
+                    updateForm form
 
-                _ ->
-                    -- Disallow editing the form in all other situations
+                -- Disallow editing the form in all other situations:
+                Loading _ ->
+                    ( model, Cmd.none )
+
+                LoadingFailed _ ->
+                    ( model, Cmd.none )
+
+                Saving _ _ ->
                     ( model, Cmd.none )
 
         PortMsg value ->
-            case status of
-                EditingNew _ form ->
+            let
+                updateFormWithPortMsg form =
                     Form.update (Form.portMsg value) form
                         |> updateWith (formToModel model) FormMsg
+            in
+            case status of
+                EditingNew _ form ->
+                    updateFormWithPortMsg form
 
-                _ ->
-                    Debug.log "not sending PortMsg through because not EditingNew"
-                        ( model, Cmd.none )
+                Editing slug _ form ->
+                    updateFormWithPortMsg form
+
+                Creating form ->
+                    updateFormWithPortMsg form
+
+                Loading _ ->
+                    ( model, Cmd.none )
+
+                LoadingFailed _ ->
+                    ( model, Cmd.none )
+
+                Saving _ _ ->
+                    ( model, Cmd.none )
 
         -- Server events
         CompletedRecipeLoad _ (Ok recipe) ->
