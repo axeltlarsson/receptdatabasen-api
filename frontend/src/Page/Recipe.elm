@@ -28,6 +28,7 @@ import Element
         )
 import Element.Background as Background
 import Element.Border as Border
+import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
@@ -54,7 +55,7 @@ import Url.Builder
 
 
 type alias Model =
-    { session : Session, recipe : Status (Recipe Full) }
+    { session : Session, recipe : Status (Recipe Full), checkboxStatus : Dict Int Bool }
 
 
 type Status recipe
@@ -69,6 +70,7 @@ init session slug =
         Just recipe ->
             ( { recipe = Loaded recipe
               , session = session
+              , checkboxStatus = Dict.empty
               }
             , Cmd.none
             )
@@ -76,6 +78,7 @@ init session slug =
         Nothing ->
             ( { recipe = Loading
               , session = session
+              , checkboxStatus = Dict.empty
               }
             , Recipe.fetch slug LoadedRecipe
             )
@@ -106,7 +109,7 @@ view model =
                             Recipe.metadata recipe
                     in
                     { title = Slug.toString title
-                    , content = viewRecipe recipe (Session.device model.session)
+                    , content = viewRecipe recipe model.checkboxStatus (Session.device model.session)
                     }
     in
     { title = ui.title
@@ -134,8 +137,8 @@ paddingPx device =
         30
 
 
-viewRecipe : Recipe Full -> Element.Device -> Element Msg
-viewRecipe recipe device =
+viewRecipe : Recipe Full -> Dict Int Bool -> Element.Device -> Element Msg
+viewRecipe recipe checkboxStatus device =
     let
         { title, description, id, createdAt } =
             Recipe.metadata recipe
@@ -154,7 +157,7 @@ viewRecipe recipe device =
         [ viewHeader (Slug.toString title) tags description device
         , column [ width fill, padding <| paddingPx device, spacing 20 ]
             [ responsiveLayout
-                [ viewInstructions instructions
+                [ viewInstructions instructions checkboxStatus
                 , viewIngredients ingredients portions
                 ]
             , row [ spacing 20 ]
@@ -248,11 +251,11 @@ viewDescription description =
         |> Maybe.withDefault Element.none
 
 
-viewInstructions : String -> Element Msg
-viewInstructions instructions =
+viewInstructions : String -> Dict Int Bool -> Element Msg
+viewInstructions instructions checkboxStatus =
     column [ alignTop, alignLeft, width fill, Font.color Palette.nearBlack ]
         [ el [ Font.size 32 ] (text "Gör så här")
-        , el [ paddingXY 0 20 ] (paragraph [] [ viewMarkdown instructions ])
+        , el [ paddingXY 0 20 ] (paragraph [] [ viewMarkdown instructions checkboxStatus ])
         ]
 
 
@@ -262,14 +265,14 @@ viewIngredients ingredients portions =
         [ column []
             [ el [ Font.size 32 ] (text "Ingredienser")
             , paragraph [ paddingEach { edges | top = 10, bottom = 20 } ] [ text <| String.fromInt portions, text " portioner" ]
-            , column [] [ viewMarkdown ingredients ]
+            , column [] [ viewMarkdown ingredients Dict.empty ]
             ]
         ]
 
 
-viewMarkdown : String -> Element Msg
-viewMarkdown instructions =
-    case renderMarkdown instructions of
+viewMarkdown : String -> Dict Int Bool -> Element Msg
+viewMarkdown instructions checkboxStatus =
+    case renderMarkdown instructions checkboxStatus of
         Ok md ->
             column [ width fill, spacing 10, Font.light ]
                 md
@@ -279,16 +282,16 @@ viewMarkdown instructions =
                 [ text err ]
 
 
-renderMarkdown : String -> Result String (List (Element Msg))
-renderMarkdown markdown =
+renderMarkdown : String -> Dict Int Bool -> Result String (List (Element Msg))
+renderMarkdown markdown checkboxStatus =
     markdown
         |> Markdown.Parser.parse
         |> Result.mapError (\e -> e |> List.map Markdown.Parser.deadEndToString |> String.join "\n")
-        |> Result.andThen (Markdown.Renderer.render renderer)
+        |> Result.andThen (Markdown.Renderer.render (renderer checkboxStatus))
 
 
-renderer : Markdown.Renderer.Renderer (Element Msg)
-renderer =
+renderer : Dict Int Bool -> Markdown.Renderer.Renderer (Element Msg)
+renderer checkboxStatus =
     { heading = heading
     , paragraph = paragraph [ spacing 10 ]
     , thematicBreak = Element.none
@@ -318,7 +321,7 @@ renderer =
                 , Background.color (Element.rgb255 245 245 245)
                 ]
                 children
-    , unorderedList = unorderedList
+    , unorderedList = unorderedList checkboxStatus
     , orderedList = orderedList
     , codeBlock = \s -> Element.none
     , html = Markdown.Html.oneOf []
@@ -352,27 +355,41 @@ heading { level, rawText, children } =
         children
 
 
-unorderedList : List (ListItem (Element Msg)) -> Element Msg
-unorderedList items =
+unorderedList : Dict Int Bool -> List (ListItem (Element Msg)) -> Element Msg
+unorderedList checkboxStatus items =
     column [ spacing 15, width fill ]
         (items
-            |> List.map
-                (\(ListItem task children) ->
+            |> List.indexedMap
+                (\idx (ListItem task children) ->
                     row [ width fill ]
-                        [ row [ alignTop, width fill, spacing 5 ]
-                            ((case task of
-                                IncompleteTask ->
-                                    Input.defaultCheckbox False
+                        [ case task of
+                            NoTask ->
+                                row [ width fill, spacing 10 ] ([ text "•" ] ++ children)
 
-                                CompletedTask ->
-                                    Input.defaultCheckbox True
+                            _ ->
+                                -- IncompleteTask and CompletedTask - both treated the same
+                                let
+                                    checked =
+                                        Dict.get idx checkboxStatus |> Maybe.withDefault False
+                                in
+                                row [ width fill, spacing 10 ]
+                                    [ Input.checkbox
+                                        [ alignLeft, alignTop, width (Element.px 15) ]
+                                        { onChange = ClickedCheckbox idx
+                                        , icon = Input.defaultCheckbox
+                                        , checked = checked
+                                        , label = Input.labelHidden "checkbox"
+                                        }
+                                    , row
+                                        [ width fill
+                                        , if checked then
+                                            Font.color Palette.lightGrey
 
-                                NoTask ->
-                                    text "•"
-                             )
-                                :: text " "
-                                :: children
-                            )
+                                          else
+                                            Font.color Palette.nearBlack
+                                        ]
+                                        [ row [ width fill, Element.pointer, Events.onClick (ClickedCheckbox idx (not checked)) ] children ]
+                                    ]
                         ]
                 )
         )
@@ -446,6 +463,7 @@ viewEditButton =
 
 type Msg
     = LoadedRecipe (Result Recipe.ServerError (Recipe Full))
+    | ClickedCheckbox Int Bool
     | ClickedDelete
     | ClickedEdit
     | Deleted (Result Http.Error ())
@@ -459,6 +477,10 @@ update msg model =
 
         LoadedRecipe (Err error) ->
             ( { model | recipe = Failed error }, Cmd.none )
+
+        ClickedCheckbox idx checked ->
+            Debug.log ("clicked checkbox" ++ String.fromInt idx)
+                ( { model | checkboxStatus = Dict.update idx (\x -> Just checked) model.checkboxStatus }, Cmd.none )
 
         ClickedDelete ->
             case model.recipe of
