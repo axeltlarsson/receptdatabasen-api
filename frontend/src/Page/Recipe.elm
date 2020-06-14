@@ -37,10 +37,7 @@ import Html.Attributes
 import Http
 import Json.Decode as Decoder exposing (Decoder, list)
 import Loading
-import Markdown.Block as Block exposing (Block, Inline, ListItem(..), Task(..))
-import Markdown.Html
-import Markdown.Parser
-import Markdown.Renderer
+import Page.Recipe.Markdown as Markdown
 import Palette
 import Recipe exposing (Full, Metadata, Recipe, contents, fullDecoder, metadata)
 import Recipe.Slug as Slug exposing (Slug)
@@ -272,7 +269,7 @@ viewIngredients ingredients portions =
 
 viewMarkdown : String -> Dict Int Bool -> Element Msg
 viewMarkdown instructions checkboxStatus =
-    case renderMarkdown instructions checkboxStatus of
+    case Markdown.render instructions checkboxStatus ClickedCheckbox of
         Ok md ->
             column [ width fill, spacing 10, Font.light ]
                 md
@@ -280,135 +277,6 @@ viewMarkdown instructions checkboxStatus =
         Err err ->
             column [ width fill, Font.light ]
                 [ text err ]
-
-
-renderMarkdown : String -> Dict Int Bool -> Result String (List (Element Msg))
-renderMarkdown markdown checkboxStatus =
-    markdown
-        |> Markdown.Parser.parse
-        |> Result.mapError (\e -> e |> List.map Markdown.Parser.deadEndToString |> String.join "\n")
-        |> Result.andThen (Markdown.Renderer.render (renderer checkboxStatus))
-
-
-renderer : Dict Int Bool -> Markdown.Renderer.Renderer (Element Msg)
-renderer checkboxStatus =
-    { heading = heading
-    , paragraph = paragraph [ spacing 10 ]
-    , thematicBreak = Element.none
-    , text = \t -> el [ width fill ] (text t)
-    , strong = row [ Font.bold ]
-    , emphasis = row [ Font.italic ]
-    , codeSpan = text
-    , link =
-        \{ title, destination } body ->
-            Element.newTabLink
-                [ Element.htmlAttribute (Html.Attributes.style "display" "inline-flex") ]
-                { url = destination
-                , label =
-                    Element.paragraph
-                        [ Font.color (Element.rgb255 0 0 255)
-                        ]
-                        body
-                }
-    , hardLineBreak = Html.br [] [] |> Element.html
-    , image = \image -> Element.image [ width fill ] { src = image.src, description = image.alt }
-    , blockQuote =
-        \children ->
-            Element.column
-                [ Border.widthEach { top = 0, right = 0, bottom = 0, left = 10 }
-                , Element.padding 10
-                , Border.color (Element.rgb255 145 145 145)
-                , Background.color (Element.rgb255 245 245 245)
-                ]
-                children
-    , unorderedList = unorderedList checkboxStatus
-    , orderedList = orderedList
-    , codeBlock = \s -> Element.none
-    , html = Markdown.Html.oneOf []
-    , table = column []
-    , tableHeader = column []
-    , tableBody = column []
-    , tableRow = row []
-    , tableHeaderCell = \maybeAlignment children -> paragraph [] children
-    , tableCell = paragraph []
-    }
-
-
-heading : { level : Block.HeadingLevel, rawText : String, children : List (Element Msg) } -> Element Msg
-heading { level, rawText, children } =
-    paragraph
-        [ Font.size
-            (case level of
-                Block.H1 ->
-                    28
-
-                Block.H2 ->
-                    24
-
-                _ ->
-                    12
-            )
-        , Font.regular
-        , Region.heading (Block.headingLevelToInt level)
-        , paddingEach { edges | bottom = 15, top = 15 }
-        ]
-        children
-
-
-unorderedList : Dict Int Bool -> List (ListItem (Element Msg)) -> Element Msg
-unorderedList checkboxStatus items =
-    column [ spacing 15, width fill ]
-        (items
-            |> List.indexedMap
-                (\idx (ListItem task children) ->
-                    row [ width fill ]
-                        [ case task of
-                            NoTask ->
-                                row [ width fill, spacing 10 ] ([ text "•" ] ++ children)
-
-                            _ ->
-                                -- IncompleteTask and CompletedTask - both treated the same
-                                let
-                                    checked =
-                                        Dict.get idx checkboxStatus |> Maybe.withDefault False
-                                in
-                                row [ width fill, spacing 10 ]
-                                    [ Input.checkbox
-                                        [ alignLeft, alignTop, width (Element.px 15) ]
-                                        { onChange = ClickedCheckbox idx
-                                        , icon = Input.defaultCheckbox
-                                        , checked = checked
-                                        , label = Input.labelHidden "checkbox"
-                                        }
-                                    , row
-                                        [ width fill
-                                        , if checked then
-                                            Font.color Palette.lightGrey
-
-                                          else
-                                            Font.color Palette.nearBlack
-                                        ]
-                                        [ row [ width fill, Element.pointer, Events.onClick (ClickedCheckbox idx (not checked)) ] children ]
-                                    ]
-                        ]
-                )
-        )
-
-
-orderedList : Int -> List (List (Element Msg)) -> Element Msg
-orderedList startingIndex items =
-    column [ spacing 15, width fill ]
-        (items
-            |> List.indexedMap
-                (\index itemBlocks ->
-                    row [ spacing 5, width fill ]
-                        [ row [ width fill, spacing 5 ]
-                            (el [ alignTop ] (text (String.fromInt (index + startingIndex) ++ ". "))
-                                :: itemBlocks
-                            )
-                        ]
-                )
-        )
 
 
 edges =

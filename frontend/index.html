@@ -55,6 +55,7 @@
 
         const textArea = document.createElement('textarea')
         this.appendChild(textArea)
+        const id = this.getAttribute("id")
 
         let options = this.getAttribute("options")
         if (options) {
@@ -67,13 +68,26 @@
           toolbar: options["toolbar"],
           spellChecker: false,
           placeholder: this.getAttribute("placeholder"),
-          initialValue: this.getAttribute("initialValue")
+          initialValue: this.getAttribute("initialValue"),
+          previewRender: function(plainText, preview) {
+            const msg = {
+              type: "previewMarkdown",
+              id: id,
+              value: plainText
+            }
+            app.ports.portReceiver.send(msg)
+            setTimeout(function() {
+              const md = document.getElementsByClassName("markdown-preview")[0]
+              preview.innerHTML = md.innerHTML
+            }, 25)
+            return ""
+          }
         })
 
         easyMDE.codemirror.on("change", () => {
           const msg = {
             type: "change",
-            id: this.getAttribute("id"),
+            id: id,
             value: easyMDE.value()
           }
           app.ports.portReceiver.send(msg)
@@ -82,7 +96,7 @@
         easyMDE.codemirror.on("blur", () => {
           const msg = {
             type: "blur",
-            id: this.getAttribute("id")
+            id: id
           }
           app.ports.portReceiver.send(msg)
         })
