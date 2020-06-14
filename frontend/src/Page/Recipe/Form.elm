@@ -76,14 +76,12 @@ type ValidationStatus
 
 type alias Model =
     { form : RecipeForm
-    , markdownPreview : Element Msg
     }
 
 
 init : ( Model, Cmd Msg )
 init =
     ( { form = initialForm
-      , markdownPreview = Element.none
       }
     , Cmd.none
     )
@@ -125,19 +123,13 @@ fromRecipe recipe =
             , ingredients = ingredients
             , tags = tags
         }
-    , markdownPreview = Element.none
     }
 
 
 view : Model -> Element Msg
-view { form, markdownPreview } =
+view { form } =
     column [ Region.mainContent, width fill ]
         [ viewForm form
-        , el
-            [ Element.htmlAttribute (Html.Attributes.style "visibility" "hidden")
-            , Element.htmlAttribute (Html.Attributes.class "markdown-preview")
-            ]
-            markdownPreview
         ]
 
 
@@ -567,20 +559,6 @@ update msg ({ form } as model) =
                 Ok InstructionsBlur ->
                     ( updateForm (\f -> { f | instructionsValidationActive = True }), Cmd.none )
 
-                Ok (PreviewMarkdown raw) ->
-                    let
-                        result =
-                            -- BlurredTitle is only used as a Dummy
-                            case Markdown.render raw Dict.empty (\x y -> BlurredTitle) of
-                                Ok md ->
-                                    column [] md
-
-                                Err err ->
-                                    text err
-                    in
-                    Debug.log "storing some secret markdown on the page"
-                        ( { model | markdownPreview = result }, Cmd.none )
-
         SendPortMsg x ->
             -- Editor deals with this
             ( model, Cmd.none )
@@ -601,7 +579,6 @@ type PortMsg
     | IngredientsChange String
     | IngredientsBlur
     | InstructionsBlur
-    | PreviewMarkdown String
 
 
 portMsgDecoder : Decode.Decoder PortMsg
@@ -617,9 +594,6 @@ typeDecoder t =
 
         "blur" ->
             Decode.field "id" Decode.string |> Decode.andThen blurDecoder
-
-        "previewMarkdown" ->
-            previewMarkdownDecoder
 
         _ ->
             Decode.fail ("trying to decode port message, but " ++ t ++ "is not supported")
@@ -651,11 +625,6 @@ changeDecoder id =
 
         _ ->
             Decode.fail ("trying to decode change message, but " ++ id ++ " is not supported")
-
-
-previewMarkdownDecoder : Decode.Decoder PortMsg
-previewMarkdownDecoder =
-    Decode.map PreviewMarkdown (Decode.field "value" Decode.string)
 
 
 

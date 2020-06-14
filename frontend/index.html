@@ -68,20 +68,7 @@
           toolbar: options["toolbar"],
           spellChecker: false,
           placeholder: this.getAttribute("placeholder"),
-          initialValue: this.getAttribute("initialValue"),
-          previewRender: function(plainText, preview) {
-            const msg = {
-              type: "previewMarkdown",
-              id: id,
-              value: plainText
-            }
-            app.ports.portReceiver.send(msg)
-            setTimeout(function() {
-              const md = document.getElementsByClassName("markdown-preview")[0]
-              preview.innerHTML = md.innerHTML
-            }, 25)
-            return ""
-          }
+          initialValue: this.getAttribute("initialValue")
         })
 
         easyMDE.codemirror.on("change", () => {
