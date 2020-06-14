@@ -348,8 +348,9 @@ viewTag : String -> Element Msg
 viewTag tag =
     el
         [ Background.color Palette.grey
-        , padding 10
         , Font.color Palette.white
+        , Border.rounded 2
+        , padding 10
         , Events.onClick (RemoveTag tag)
         , mouseOver [ Element.alpha 0.5 ]
         , Element.pointer
