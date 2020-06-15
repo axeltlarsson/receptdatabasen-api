@@ -125,6 +125,19 @@ phoneLayout ({ class, orientation } as device) =
             False
 
 
+tabletOrSmaller : Element.Device -> Bool
+tabletOrSmaller ({ class, orientation } as device) =
+    case ( class, orientation ) of
+        ( Element.Phone, Element.Portrait ) ->
+            True
+
+        ( Element.Tablet, Element.Portrait ) ->
+            True
+
+        _ ->
+            False
+
+
 paddingPx : Element.Device -> Int
 paddingPx device =
     if phoneLayout device then
@@ -137,7 +150,7 @@ paddingPx device =
 viewRecipe : Recipe Full -> Dict Int Bool -> Element.Device -> Element Msg
 viewRecipe recipe checkboxStatus device =
     let
-        { title, description, id, createdAt } =
+        { title, description, id, createdAt, updatedAt } =
             Recipe.metadata recipe
 
         { portions, ingredients, instructions, tags } =
@@ -167,35 +180,43 @@ viewRecipe recipe checkboxStatus device =
 
 viewHeader : String -> List String -> Maybe String -> Element.Device -> Element Msg
 viewHeader title tags description device =
-    column [ width fill, height <| Element.px 600 ]
-        [ Element.el
-            [ width fill
-            , height fill
-            , Background.image lemonadeUrl
-            ]
-            (column
-                [ alignBottom
-                , Element.behindContent <|
-                    el [ width fill, height fill, floorFade ] Element.none
-                , padding <| paddingPx device
-                , spacing 20
-                , width fill
+    if tabletOrSmaller device then
+        column [ width fill, height <| Element.px 600 ]
+            [ Element.el
+                [ width fill
+                , height fill
+                , Background.image lemonadeUrl
                 ]
-                [ viewTitle title
-                ]
-            )
-        , column
-            [ paddingXY (paddingPx device) 20
-            , width
-                (fill
-                    |> Element.maximum 800
+                (column
+                    [ alignBottom
+                    , Element.behindContent <|
+                        el [ width fill, height fill, floorFade ] Element.none
+                    , padding <| paddingPx device
+                    , spacing 20
+                    , width fill
+                    ]
+                    [ viewTitle title
+                    ]
                 )
-            , spacing 10
+            , column
+                [ paddingXY (paddingPx device) 20
+                , width (fill |> Element.maximum 800)
+                , spacing 20
+                ]
+                [ viewTags tags
+                , viewDescription description
+                ]
             ]
-            [ viewTags tags
-            , viewDescription description
+
+    else
+        row [ width fill, Border.glow Palette.lightGrey 0.5 ]
+            [ column [ height (fill |> Element.minimum 400), width fill, alignBottom, spacing 20, paddingXY (paddingPx device) 20 ]
+                [ paragraph [ Font.size Palette.xxLarge, Font.heavy ] [ text title ]
+                , viewTags tags
+                , viewDescription description
+                ]
+            , el [ spacing 0, padding 0, width fill, height fill, Background.image lemonadeUrl ] Element.none
             ]
-        ]
 
 
 floorFade : Element.Attribute msg
@@ -216,10 +237,7 @@ viewTitle title =
         [ Font.size Palette.xxLarge
         , Font.color Palette.white
         , Palette.textShadow
-        , width
-            (fill
-                |> Element.maximum 800
-            )
+        , width (fill |> Element.maximum 800)
         ]
         [ text title ]
 
