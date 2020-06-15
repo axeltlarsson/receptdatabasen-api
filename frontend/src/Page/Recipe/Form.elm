@@ -139,10 +139,10 @@ viewForm form =
         [ viewTitleInput form.titleValidationActive form.title
         , viewDescriptionInput form.descriptionValidationActive form.description
         , viewPortionsInput form.portions
-        , el [ Font.size 36, Font.semiBold ] (text "Instruktioner")
+        , el [ Font.size Palette.large, Font.semiBold ] (text "Instruktioner")
         , viewInstructionsEditor form.instructionsValidationActive form.instructions
         , viewValidationError form.instructionsValidationActive form.instructions instructionsValidator
-        , el [ Font.size 36, Font.semiBold ] (text "Ingredienser")
+        , el [ Font.size Palette.large, Font.semiBold ] (text "Ingredienser")
         , viewIngredientsEditor form.ingredientsValidationActive form.ingredients
         , viewValidationError form.ingredientsValidationActive form.ingredients ingredientsValidator
         , viewTagsInput form.tagValidationActive form.newTagInput form.tags
@@ -203,8 +203,8 @@ viewValidationError active input theValidator =
 viewTitleInput : Bool -> String -> Element Msg
 viewTitleInput validationActive title =
     column [ spacing 10, width fill ]
-        [ Input.text
-            ([ Font.size 44
+        [ Input.multiline
+            ([ Font.size Palette.xLarge
              , Font.semiBold
              , Border.rounded 2
              , Events.onLoseFocus BlurredTitle
@@ -215,6 +215,7 @@ viewTitleInput validationActive title =
             , text = title
             , placeholder = Just (Input.placeholder [] (el [] (text "Titel")))
             , label = Input.labelHidden "Titel"
+            , spellcheck = False
             }
         , viewValidationError validationActive title titleValidator
         ]
@@ -323,7 +324,7 @@ viewTagsInput validationActive newTag tags =
             FeatherIcons.plus |> FeatherIcons.toHtml [] |> Element.html
     in
     column [ width fill, spacing 10 ]
-        [ row [ width fill, spacing 10 ]
+        [ row [ width (fill |> Element.maximum 400), spacing 10 ]
             [ Input.text [ Element.htmlAttribute (onEnter NewTagEntered), Border.rounded 2 ]
                 { onChange = NewTagInputChanged
                 , text = newTag
@@ -676,13 +677,13 @@ descriptionValidator =
         |> Verify.compose (String.Verify.maxLength 500 "Använd en kortare beskrivning 🙏")
 
 
-ingredientsMardkownValidator : Verify.Validator String String String
-ingredientsMardkownValidator input =
+ingredientsMarkdownValidator : Verify.Validator String String String
+ingredientsMarkdownValidator input =
     if Markdown.onlyListAndHeading input then
         Ok input
 
     else
-        Verify.fail "Only lists and headings are allowed here" input
+        Verify.fail "Skriv ingrediensera i en eller flera listor, eventuellt med rubriker emellan ❤️" input
 
 
 instructionsValidator : Verify.Validator String String String
@@ -694,8 +695,6 @@ instructionsValidator =
             (String.Verify.minLength 5 "Beskriv hur man tillagar detta recept med minst 5 tecken ☝")
         |> Verify.compose
             (String.Verify.maxLength 4000 "Skriv inte en hel roman här tack! ⛔️")
-        |> Verify.compose
-            ingredientsMardkownValidator
 
 
 ingredientsValidator : Verify.Validator String String String
@@ -707,6 +706,8 @@ ingredientsValidator =
             (String.Verify.minLength 3 "Vänligen inkludera minst en ingrediens, annars blir det svårt! 😉")
         |> Verify.compose
             (String.Verify.maxLength 4000 "Skriv inte en hel roman här tack! ⛔️")
+        |> Verify.compose
+            ingredientsMarkdownValidator
 
 
 tagValidator : Verify.Validator String String String

@@ -32,6 +32,7 @@ view page { title, content } =
     , body =
         [ Element.layout
             [ Font.family [ Font.typeface "Metropolis" ]
+            , Font.color Palette.nearBlack
             , width fill
             ]
             (column [ width (fill |> Element.maximum 1440), Element.centerX ]

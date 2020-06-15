@@ -169,7 +169,7 @@ viewHeader id title =
                         [ Font.medium
                         , Font.color Palette.white
                         , Palette.textShadow
-                        , Font.size 24
+                        , Font.size Palette.medium
                         , padding 20
                         ]
                         [ text title ]

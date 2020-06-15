@@ -6,6 +6,12 @@ import Element.Border as Border
 import Element.Font as Font
 
 
+
+{--
+  - Colours
+  --}
+
+
 black : Element.Color
 black =
     rgb255 0 0 0
@@ -51,9 +57,25 @@ orange =
     rgb255 255 127 0
 
 
+
+{--
+  - Typography
+  --}
+
+
+medium : Int
+medium =
+    24
+
+
 large : Int
 large =
-    24
+    32
+
+
+xLarge : Int
+xLarge =
+    48
 
 
 textShadow : Element.Attribute msg
@@ -63,6 +85,7 @@ textShadow =
 
 
 {--
+  - Card shadow
   - https://codepen.io/sdthornton/pen/wBZdXq
   --}
 

@@ -60,9 +60,9 @@ all predicate markdown =
             blocks
                 |> Block.foldl
                     (\block soFar ->
-                        predicate block
+                        soFar && predicate block
                     )
-                    False
+                    True
 
         Err _ ->
             False
