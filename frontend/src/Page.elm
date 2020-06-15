@@ -33,6 +33,7 @@ view page { title, content } =
         [ Element.layout
             [ Font.family [ Font.typeface "Metropolis" ]
             , Font.color Palette.nearBlack
+            , Font.size Palette.normal
             , width fill
             ]
             (column [ width (fill |> Element.maximum 1440), Element.centerX ]
@@ -88,7 +89,7 @@ navbarLink page route linkContent =
             [ Element.mouseOver [ Element.alpha 0.5, Background.color Palette.grey, Font.color Palette.white ]
             , Font.size Palette.large
             , height fill
-            , padding 20
+            , padding 15
             ]
             activeAttrs
         )

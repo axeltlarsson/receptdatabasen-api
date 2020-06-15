@@ -135,13 +135,13 @@ heading { level, rawText, children } =
         [ Font.size
             (case level of
                 Block.H1 ->
-                    28
+                    Palette.large
 
                 Block.H2 ->
-                    24
+                    Palette.medium
 
                 _ ->
-                    12
+                    Palette.normal
             )
         , Font.regular
         , Region.heading (Block.headingLevelToInt level)

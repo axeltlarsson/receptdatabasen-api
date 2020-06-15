@@ -63,6 +63,11 @@ orange =
   --}
 
 
+normal : Int
+normal =
+    20
+
+
 medium : Int
 medium =
     24
@@ -70,11 +75,16 @@ medium =
 
 large : Int
 large =
-    32
+    28
 
 
 xLarge : Int
 xLarge =
+    42
+
+
+xxLarge : Int
+xxLarge =
     48
 
 

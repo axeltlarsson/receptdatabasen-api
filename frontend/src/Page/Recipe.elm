@@ -213,7 +213,7 @@ floorFade =
 viewTitle : String -> Element Msg
 viewTitle title =
     paragraph
-        [ Font.size Palette.xLarge
+        [ Font.size Palette.xxLarge
         , Font.color Palette.white
         , Palette.textShadow
         , width
@@ -251,7 +251,7 @@ viewDescription description =
 viewInstructions : String -> Dict Int Bool -> Element Msg
 viewInstructions instructions checkboxStatus =
     column [ alignTop, alignLeft, width fill, Font.color Palette.nearBlack ]
-        [ el [ Font.size Palette.large ] (text "Gör så här")
+        [ el [ Font.size Palette.xLarge ] (text "Gör så här")
         , el [ paddingXY 0 20 ] (paragraph [] [ viewMarkdown instructions checkboxStatus ])
         ]
 
@@ -260,7 +260,7 @@ viewIngredients : String -> Int -> Element Msg
 viewIngredients ingredients portions =
     column [ alignTop, width fill ]
         [ column []
-            [ el [ Font.size Palette.large ] (text "Ingredienser")
+            [ el [ Font.size Palette.xLarge ] (text "Ingredienser")
             , paragraph [ paddingEach { edges | top = 10, bottom = 20 } ] [ text <| String.fromInt portions, text " portioner" ]
             , column [] [ viewMarkdown ingredients Dict.empty ]
             ]

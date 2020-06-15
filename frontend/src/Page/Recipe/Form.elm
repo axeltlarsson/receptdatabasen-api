@@ -139,10 +139,10 @@ viewForm form =
         [ viewTitleInput form.titleValidationActive form.title
         , viewDescriptionInput form.descriptionValidationActive form.description
         , viewPortionsInput form.portions
-        , el [ Font.size Palette.large, Font.semiBold ] (text "Instruktioner")
+        , el [ Font.size Palette.xLarge, Font.semiBold ] (text "Instruktioner")
         , viewInstructionsEditor form.instructionsValidationActive form.instructions
         , viewValidationError form.instructionsValidationActive form.instructions instructionsValidator
-        , el [ Font.size Palette.large, Font.semiBold ] (text "Ingredienser")
+        , el [ Font.size Palette.xLarge, Font.semiBold ] (text "Ingredienser")
         , viewIngredientsEditor form.ingredientsValidationActive form.ingredients
         , viewValidationError form.ingredientsValidationActive form.ingredients ingredientsValidator
         , viewTagsInput form.tagValidationActive form.newTagInput form.tags
@@ -204,7 +204,7 @@ viewTitleInput : Bool -> String -> Element Msg
 viewTitleInput validationActive title =
     column [ spacing 10, width fill ]
         [ Input.multiline
-            ([ Font.size Palette.xLarge
+            ([ Font.size Palette.xxLarge
              , Font.semiBold
              , Border.rounded 2
              , Events.onLoseFocus BlurredTitle
@@ -277,7 +277,7 @@ viewInstructionsEditor validationActive instructions =
         options =
             """
         {
-            "toolbar": ["bold", "italic", "strikethrough", "heading-1", "|", "unordered-list", "link", "|", "preview", "fullscreen", "|", "guide" ]
+            "toolbar": ["bold", "italic", "strikethrough", "heading-1", "heading-2", "|", "unordered-list", "link", "|", "preview", "fullscreen", "|", "guide" ]
         }
         """
     in
