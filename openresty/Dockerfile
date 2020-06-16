@@ -1,9 +1,9 @@
 # Build vips in a builder container, taken from:
 # https://github.com/h2non/imaginary/blob/master/Dockerfile
-ARG GOLANG="1.11.5"
+ARG GOLANG="1.13"
 FROM golang:${GOLANG} as builder
 
-ARG LIBVIPS_VERSION="8.8.3"
+ARG LIBVIPS_VERSION="8.9.2"
 
 # Installs libvips + required libraries
 RUN DEBIAN_FRONTEND=noninteractive \
@@ -13,7 +13,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
       automake build-essential curl \
       gobject-introspection gtk-doc-tools libglib2.0-dev libjpeg62-turbo-dev libpng-dev \
       libwebp-dev libtiff5-dev libgif-dev libexif-dev libxml2-dev \
-      swig libgsf-1-dev fftw3-dev liborc-0.4-dev librsvg2-dev && \
+      swig libgsf-1-dev fftw3-dev liborc-0.4-dev librsvg2-dev libheif-dev && \
       cd /tmp && \
       curl -fsSLO https://github.com/libvips/libvips/releases/download/v${LIBVIPS_VERSION}/vips-${LIBVIPS_VERSION}.tar.gz && \
       tar zvxf vips-${LIBVIPS_VERSION}.tar.gz && \
@@ -39,7 +39,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
       make install && \
       ldconfig
 
-FROM openresty/openresty:stretch
+FROM openresty/openresty:buster
 
 COPY --from=builder /usr/local/lib /usr/local/lib
 
@@ -48,8 +48,8 @@ RUN DEBIAN_FRONTEND=noninteractive \
       apt-get update && \
       apt-get install --no-install-recommends -y \
       libglib2.0-0 libjpeg62-turbo libpng16-16 \
-      libwebp6 libwebpmux2 libwebpdemux2 libtiff5 libgif7 libexif12 libxml2 \
-      libgsf-1-114 fftw3 liborc-0.4-0 librsvg2-2 && \
+      libwebp6 libwebpmux3 libwebpdemux2 libtiff5 libgif7 libexif12 libxml2 \
+      libgsf-1-114 fftw3 liborc-0.4-0 librsvg2-2 libheif1 && \
       apt-get autoremove -y && \
       apt-get autoclean && \
       apt-get clean && \
