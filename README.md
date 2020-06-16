@@ -28,13 +28,10 @@ PostgREST enables a different way of building data driven API backends. It does 
 │       ├── sample_data       # A few sample rows
 │       └── init.sql          # Schema definition entry point
 ├── openresty                 # Reverse proxy configurations and Lua code
-│   ├── lualib
-│   │   └── user_code         # Application Lua code
-│   ├── nginx                 # Nginx files
-│   │   ├── conf              # Configuration files
-│   │   └── html              # Static frontend files
-│   ├── Dockerfile            # Dockerfile definition for production
-│   └── entrypoint.sh         # Custom entrypoint
+│   ├── lua                   # Application Lua code
+│   ├── nginx                 # Nginx configuration files
+│   ├── html                  # Static frontend files
+│   └── Dockerfile            # Dockerfile definition for building production images
 ├── tests                     # Tests for all the components
 │   ├── db                    # pgTap tests for the db
 │   └── rest                  # REST interface tests
