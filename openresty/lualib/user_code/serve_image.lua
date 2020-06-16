@@ -40,7 +40,11 @@ local dest_fname = cache_dir .. ngx.md5(size .. "/" .. path) .. "." .. ext
 local vips = require "vips"
 
 -- fast thumbnail generator
-local image = vips.Image.thumbnail(source_fname, 128)
+print(path .. " not found in cache, resizing image to width " .. size)
+local image = vips.Image.thumbnail(source_fname, tonumber(size))
+-- write the result to file (/uploads/cache)
 image:write_to_file(dest_fname)
 
+-- redirect back to same location again, this time try_files will pick up the
+-- cached file!
 ngx.exec(ngx.var.request_uri)

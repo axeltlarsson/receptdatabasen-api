@@ -20,7 +20,7 @@ end
 
 -- Body is read from memory (true if client_max_body_size == client_body_buffer_size)
 ngx.req.read_body()
-local body_data =  ngx.req.get_body_data()
+local body_data = ngx.req.get_body_data()
 
 if body_data then
   local file_name = file_name()
