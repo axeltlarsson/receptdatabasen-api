@@ -71,7 +71,6 @@ services:
       - DB_SCHEMA=${DB_SCHEMA}
       - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
-      - IMAGE_UPLOAD_MAX_SIZE=${IMAGE_UPLOAD_MAX_SIZE}
     volumes:
       - ./openresty/nginx/conf/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf
       - ./openresty/nginx/conf/includes:/usr/local/openresty/nginx/conf/includes
