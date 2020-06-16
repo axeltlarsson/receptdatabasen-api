@@ -5,7 +5,7 @@ local str = require 'resty.string'
 
 local content_type = ngx.var.content_type
 
-if not string.match(content_type, 'image/*') then
+if not content_type or not string.match(content_type, 'image/*') then
   -- ngx.say(cjson.encode({error = 'bad content-type'}))
   ngx.log(ngx.WARN, "Bad content-type")
   ngx.exit(ngx.HTTP_NOT_ALLOWED)

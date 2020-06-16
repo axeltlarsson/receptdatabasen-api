@@ -23,6 +23,10 @@ export function rest_service () {
   return request(process.env.SERVER_PROXY_URI)
 }
 
+export function image_service () {
+  return request(process.env.IMAGE_SERVER_PROXY_URI)
+}
+
 export function resetdb () {
   let pg
   if (have_psql) {

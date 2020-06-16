@@ -11,7 +11,7 @@ describe('read', function () {
       .expect('Content-Type', /json/)
       .expect(200, done)
       .expect(r => {
-        r.body.length.should.equal(2)
+        r.body.length.should.equal(7)
         r.body[0].id.should.equal(1)
       })
   })
