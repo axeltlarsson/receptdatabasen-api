@@ -64,7 +64,7 @@ Using [httpie](https://httpie.org/doc) it's very easy to interact with the API:
 
 ## Development workflow and debugging
 
-Execute `subzero dashboard` in the root of your project.<br />
+Execute `subzero dashboard` in the root of your project.<br /> (Install [subzero-cli](https://github.com/subzerocloud/subzero-cli))
 After this step you can view the logs of all the stack components (SQL queries will also be logged) and
 if you edit a sql/conf/lua file in your project, the changes will immediately be applied.
 
