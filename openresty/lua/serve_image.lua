@@ -5,11 +5,10 @@ local secret = "hello_world" -- signature secret key
 local images_dir = "/uploads/" -- where images come from
 local cache_dir = "/uploads/cache/" -- where images are cached
 
-local function return_not_found(msg)
-  ngx.status = ngx.HTTP_NOT_FOUND
-  ngx.header["Content-type"] = "text/html"
-  ngx.say(msg or "not found")
-  ngx.exit(0)
+local function return_error(msg, error_code)
+  ngx.log(ngx.WARN, msg)
+  ngx.say(cjson.encode({error = msg}))
+  ngx.exit(error_code or ngx.HTTP_BAD_REQUEST)
 end
 
 local function calculate_signature(str)
@@ -29,7 +28,7 @@ local source_fname = images_dir .. path
 local file = io.open(source_fname)
 
 if not file then
-  return_not_found()
+  return_error("File not found", ngx.HTTP_NOT_FOUND)
 end
 
 file:close()
