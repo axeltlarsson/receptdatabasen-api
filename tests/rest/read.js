@@ -1,4 +1,4 @@
-import { rest_service, resetdb } from './common'
+import { rest_service, resetdb } from '../common'
 import should from 'should'
 
 describe('read', function () {

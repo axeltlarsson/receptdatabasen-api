@@ -1,4 +1,4 @@
-import { image_service } from './common'
+import { image_service } from '../common'
 import should from 'should'
 import * as fs from 'fs'
 import * as path from 'path'
