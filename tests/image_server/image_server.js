@@ -33,7 +33,7 @@ describe('image server', function () {
     image_service()
       .get('/sig/100/' + uploadedFileName)
       .responseType("blob")
-      .expect('Content-Type', "text/plain; charset=utf-8")
+      .expect('Content-Type', "image/jpeg")
       .then(res => {
         // test.jpg resized to width 100 should have this length
         res.body.length.should.equal(4473)
