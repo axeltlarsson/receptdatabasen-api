@@ -1,5 +1,6 @@
 module Recipe exposing
     ( Full
+    , ImageUrl(..)
     , Metadata
     , Preview
     , Recipe(..)
@@ -18,6 +19,7 @@ module Recipe exposing
     , serverErrorFromHttp
     , serverErrorToString
     , slug
+    , uploadImage
     , viewServerError
     )
 
@@ -33,6 +35,7 @@ module Recipe exposing
 import Dict exposing (Dict)
 import Element exposing (Element, column, el, text)
 import Element.Font as Font
+import File exposing (File)
 import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder, dict, field, index, int, list, map2, map8, maybe, string, value)
 import Json.Encode as Encode
@@ -55,6 +58,7 @@ type alias Metadata =
     { id : Int
     , title : Slug
     , description : Maybe String
+    , image : Maybe String
     , createdAt : String
     , updatedAt : String
     }
@@ -101,10 +105,11 @@ slug (Recipe md _) =
 
 metadataDecoder : Decoder Metadata
 metadataDecoder =
-    Decode.map5 Metadata
+    Decode.map6 Metadata
         (field "id" int)
         (field "title" Slug.decoder)
         (field "description" <| Decode.nullable string)
+        (field "image" <| Decode.nullable string)
         (field "created_at" string)
         (field "updated_at" string)
 
@@ -168,7 +173,7 @@ fetchMany : (Result ServerError (List (Recipe Preview)) -> msg) -> Cmd msg
 fetchMany toMsg =
     let
         params =
-            [ Url.Builder.string "select" "id,title,description,created_at,updated_at" ]
+            [ Url.Builder.string "select" "id,title,description,image,created_at,updated_at" ]
     in
     Http.get
         { url = url params
@@ -236,6 +241,28 @@ edit recipeSlug jsonForm toMsg =
         }
 
 
+uploadImage : File -> (Result ServerError ImageUrl -> msg) -> Cmd msg
+uploadImage file toMsg =
+    Http.request
+        { url = "http://localhost:8080/images/upload"
+        , method = "POST"
+        , timeout = Nothing
+        , tracker = Nothing
+        , headers = []
+        , body = Http.fileBody file
+        , expect = expectJsonWithBody toMsg imageUrlDecoder
+        }
+
+
+type ImageUrl
+    = ImageUrl String
+
+
+imageUrlDecoder : Decode.Decoder ImageUrl
+imageUrlDecoder =
+    Decode.map ImageUrl (field "image" (field "url" string))
+
+
 expectJsonWithBody : (Result ServerError a -> msg) -> Decoder a -> Expect msg
 expectJsonWithBody toMsg decoder =
     Http.expectStringResponse toMsg <|
@@ -275,7 +302,7 @@ type ServerError
 
 type alias PGError =
     { message : String
-    , details : String
+    , details : Maybe String
     , code : String
     , hint : Maybe String
     }
@@ -336,7 +363,7 @@ viewPgError : PGError -> Element msg
 viewPgError error =
     column [ Font.color Palette.red ]
         [ text error.message
-        , text error.details
+        , text <| Maybe.withDefault "" error.details
         ]
 
 
@@ -344,7 +371,7 @@ pgErrorDecoder : Decode.Decoder PGError
 pgErrorDecoder =
     Decode.map4 PGError
         (Decode.field "message" Decode.string)
-        (Decode.field "details" Decode.string)
+        (Decode.field "details" <| Decode.nullable Decode.string)
         (Decode.field "code" Decode.string)
         (Decode.field "hint" <| Decode.nullable Decode.string)
 
@@ -355,7 +382,7 @@ pgErrorToString err =
         ++ err.message
         ++ "\n"
         ++ "details: "
-        ++ err.details
+        ++ Maybe.withDefault "" err.details
         ++ "\n"
         ++ "code: "
         ++ err.code
@@ -371,7 +398,7 @@ decodeServerError str =
         Err err ->
             { message = "Error! I ouldn't decode the PostgREST error response "
             , code = ""
-            , details = Decode.errorToString err
+            , details = Just <| Decode.errorToString err
             , hint = Nothing
             }
 

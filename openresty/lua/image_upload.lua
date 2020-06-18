@@ -57,7 +57,7 @@ if body_data then
   local file = io.open(file_path, 'w+b')
   file:write(body_data)
   file:close()
-  local response = { image = { url = '/images/' .. file_name } }
+  local response = { image = { url = file_name } }
   ngx.say(cjson.encode(response))
 else
   return_error("Could not read the body data")

@@ -10,6 +10,7 @@ create table data.recipe(
   tags          text[] not null default '{}',
   portions      integer not null constraint portions_size check (portions > 0 and portions <= 100),
   ingredients   text not null constraint ingredients_length check (length(ingredients) >= 3 and length(ingredients) <= 4000),
+  image         text,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
   search        tsvector generated always as (

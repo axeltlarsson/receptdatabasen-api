@@ -31,6 +31,8 @@ import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
 import FeatherIcons
+import File exposing (File)
+import File.Select as Select
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
@@ -65,7 +67,23 @@ type alias RecipeForm =
     , newTagInput : String
     , tagValidationActive : Bool
     , validationStatus : ValidationStatus -- TODO: rename to something that is more tied to its single use for the save button?
+    , image : ImageStatus
     }
+
+
+type ImageStatus
+    = NotSelected
+    | Selected File
+    | UrlEncoded File String
+    | Uploaded Base64Url Url
+
+
+type alias Url =
+    String
+
+
+type alias Base64Url =
+    String
 
 
 type ValidationStatus
@@ -102,6 +120,7 @@ initialForm =
     , newTagInput = ""
     , tagValidationActive = False
     , validationStatus = NotActivated
+    , image = NotSelected
     }
 
 
@@ -146,6 +165,7 @@ viewForm form =
         , viewIngredientsEditor form.ingredientsValidationActive form.ingredients
         , viewValidationError form.ingredientsValidationActive form.ingredients ingredientsValidator
         , viewTagsInput form.tagValidationActive form.newTagInput form.tags
+        , viewFileInput form.image
         , viewSaveButton form.validationStatus
         ]
 
@@ -360,6 +380,38 @@ viewTag tag =
         (text tag)
 
 
+viewFileInput : ImageStatus -> Element Msg
+viewFileInput image =
+    case image of
+        NotSelected ->
+            Input.button [ Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
+                { onPress = Just ImageUploadClicked
+                , label = text "Ladda upp fil"
+                }
+
+        Selected file ->
+            text (File.name file)
+
+        UrlEncoded file base64Url ->
+            column []
+                [ Element.image [ width (fill |> Element.maximum 400) ] { src = base64Url, description = "an image" }
+                , Input.button [ Background.color Palette.red, Border.rounded 2, padding 10, Font.color Palette.white ]
+                    { onPress = Just RemoveSelectedImage
+                    , label = text "Ta bort bild"
+                    }
+                ]
+
+        Uploaded base64Url url ->
+            column []
+                [ Element.image [ width (fill |> Element.maximum 400) ] { src = base64Url, description = "an image" }
+                , text url
+                , Input.button [ Background.color Palette.orange, Border.rounded 2, padding 10, Font.color Palette.white ]
+                    { onPress = Just RemoveSelectedImage
+                    , label = text "Ta bort vald bild"
+                    }
+                ]
+
+
 viewSaveButton : ValidationStatus -> Element Msg
 viewSaveButton status =
     let
@@ -373,14 +425,14 @@ viewSaveButton status =
     in
     if activeButton then
         Input.button
-            [ Background.color Palette.green, Border.rounded 3, padding 10, Font.color Palette.white ]
+            [ Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
             { onPress = Just SubmitForm
             , label = text "Spara"
             }
 
     else
         Input.button
-            [ Background.color Palette.grey, Border.rounded 3, padding 10, Font.color Palette.white ]
+            [ Background.color Palette.grey, Border.rounded 2, padding 10, Font.color Palette.white ]
             { onPress = Nothing
             , label = text "Fyll i formuläret korrekt ⛔️"
             }
@@ -418,6 +470,11 @@ type Msg
     | SendPortMsg Encode.Value
     | BlurredTitle
     | BlurredDescription
+    | ImageUploadClicked
+    | ImageSelected File
+    | ImageUrlEncoded File Base64Url
+    | ImageUploadComplete Base64Url (Result Recipe.ServerError Recipe.ImageUrl)
+    | RemoveSelectedImage
 
 
 portMsg : Decode.Value -> Msg
@@ -511,6 +568,30 @@ update msg ({ form } as model) =
 
         RemoveTag tag ->
             ( updateForm (\f -> { f | tags = List.filter (\t -> t /= tag) f.tags }), Cmd.none )
+
+        ImageUploadClicked ->
+            ( model, Select.file [ "image/jpeg", "image/png" ] ImageSelected )
+
+        ImageSelected file ->
+            ( updateForm (\f -> { f | image = Selected file })
+            , Task.perform (ImageUrlEncoded file) (File.toUrl file)
+            )
+
+        ImageUrlEncoded file base64Url ->
+            ( updateForm (\f -> { f | image = UrlEncoded file base64Url }), Recipe.uploadImage file (ImageUploadComplete base64Url) )
+
+        ImageUploadComplete base64Url (Ok (Recipe.ImageUrl url)) ->
+            Debug.log url
+                ( updateForm (\f -> { f | image = Uploaded base64Url url })
+                , Cmd.none
+                )
+
+        ImageUploadComplete base64Url (Err err) ->
+            Debug.log (Debug.toString err)
+                ( model, Cmd.none )
+
+        RemoveSelectedImage ->
+            ( updateForm (\f -> { f | image = NotSelected }), Cmd.none )
 
         SubmitForm ->
             let
@@ -641,6 +722,7 @@ type alias VerifiedForm =
     , instructions : String
     , ingredients : String
     , tags : List String
+    , imageStatus : ImageStatus
     }
 
 
@@ -654,6 +736,7 @@ validator =
         |> Verify.verify .ingredients ingredientsValidator
         -- Verification of tags on input
         |> Verify.keep .tags
+        |> Verify.keep .image
 
 
 trim : Verify.Validator error String String
@@ -737,6 +820,20 @@ toJson form =
 
                 descr ->
                     [ ( "description", Encode.string descr ) ]
+
+        maybeAddImage imageStatus =
+            case imageStatus of
+                Uploaded baset64Url url ->
+                    [ ( "image", Encode.string url ) ]
+
+                NotSelected ->
+                    []
+
+                Selected _ ->
+                    []
+
+                UrlEncoded _ _ ->
+                    []
     in
     Just
         (Encode.object <|
@@ -747,5 +844,6 @@ toJson form =
              , ( "tags", Encode.set Encode.string <| Set.fromList form.tags )
              ]
                 ++ maybeAddDescription form.description
+                ++ maybeAddImage form.imageStatus
             )
         )

@@ -6,10 +6,11 @@ create or replace view api.recipes as (
     instructions,
     tags,
     portions,
-    created_at,
-    updated_at,
+    ingredients,
+    image,
     search,
-    ingredients
+    created_at,
+    updated_at
   from data.recipe
 );
 

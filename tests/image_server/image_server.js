@@ -23,9 +23,7 @@ describe('image server', function () {
       .expect(res => {
         res.body.should.have.keys('image')
         res.body.image.should.have.keys('url')
-        // /images/8341b94cc06107b1641bb323756fcaa6.jpeg
-        // => 8341b94cc06107b1641bb323756fcaa6.jpeg
-        uploadedFileName = res.body.image.url.split("/")[2]
+        uploadedFileName = res.body.image.url
         const ext = uploadedFileName.split(".")[1]
         ext.should.equal("jpeg")
       })

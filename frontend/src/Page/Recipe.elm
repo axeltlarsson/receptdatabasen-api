@@ -150,7 +150,7 @@ paddingPx device =
 viewRecipe : Recipe Full -> Dict Int Bool -> Element.Device -> Element Msg
 viewRecipe recipe checkboxStatus device =
     let
-        { title, description, id, createdAt, updatedAt } =
+        { title, description, id, image, createdAt, updatedAt } =
             Recipe.metadata recipe
 
         { portions, ingredients, instructions, tags } =
@@ -164,7 +164,7 @@ viewRecipe recipe checkboxStatus device =
                 row [ width fill, spacing 60 ]
     in
     column [ width fill, spacing 30 ]
-        [ viewHeader (Slug.toString title) tags description device
+        [ viewHeader (Slug.toString title) tags description image device
         , column [ width fill, padding <| paddingPx device, spacing 20 ]
             [ responsiveLayout
                 [ viewInstructions instructions checkboxStatus
@@ -178,14 +178,19 @@ viewRecipe recipe checkboxStatus device =
         ]
 
 
-viewHeader : String -> List String -> Maybe String -> Element.Device -> Element Msg
-viewHeader title tags description device =
+viewHeader : String -> List String -> Maybe String -> Maybe String -> Element.Device -> Element Msg
+viewHeader title tags description image device =
+    let
+        imageUrl =
+            Debug.log ("viewHeader " ++ Debug.toString image)
+                (image |> Maybe.map (\p -> "http://localhost:8080/images/sig/800/" ++ p) |> Maybe.withDefault lemonadeUrl)
+    in
     if tabletOrSmaller device then
         column [ width fill, height <| Element.px 600 ]
             [ Element.el
                 [ width fill
                 , height fill
-                , Background.image lemonadeUrl
+                , Background.image imageUrl
                 ]
                 (column
                     [ alignBottom
@@ -215,7 +220,7 @@ viewHeader title tags description device =
                 , viewTags tags
                 , viewDescription description
                 ]
-            , el [ spacing 0, padding 0, width fill, height fill, Background.image lemonadeUrl ] Element.none
+            , el [ spacing 0, padding 0, width fill, height fill, Background.image imageUrl ] Element.none
             ]
 
 
