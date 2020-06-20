@@ -68,8 +68,9 @@ type alias RecipeForm =
     , tags : List String
     , newTagInput : String
     , tagValidationActive : Bool
-    , validationStatus : ValidationStatus -- TODO: rename to something that is more tied to its single use for the save button?
     , image : ImageStatus
+    , imageValidationActive : Bool
+    , validationStatus : ValidationStatus -- TODO: rename to something that is more tied to its single use for the save button?
     }
 
 
@@ -125,8 +126,9 @@ initialForm =
     , tags = []
     , newTagInput = ""
     , tagValidationActive = False
-    , validationStatus = NotActivated
     , image = NotSelected
+    , imageValidationActive = False
+    , validationStatus = NotActivated
     }
 
 
@@ -181,6 +183,21 @@ viewForm form =
         , viewIngredientsEditor form.ingredientsValidationActive form.ingredients
         , viewValidationError form.ingredientsValidationActive form.ingredients ingredientsValidator
         , viewTagsInput form.tagValidationActive form.newTagInput form.tags
+        , viewValidationError
+            (form.imageValidationActive
+                && (case form.validationStatus of
+                        Invalid ->
+                            True
+
+                        Valid ->
+                            True
+
+                        NotActivated ->
+                            False
+                   )
+            )
+            form.image
+            imageValidator
         , viewSaveButton form.validationStatus
         ]
 
@@ -219,7 +236,7 @@ errorBorder active input theValidator =
         []
 
 
-viewValidationError : Bool -> a -> Verify.Validator String a String -> Element Msg
+viewValidationError : Bool -> a -> Verify.Validator String a b -> Element Msg
 viewValidationError active input theValidator =
     if active then
         case validateSingle input theValidator of
@@ -308,7 +325,7 @@ viewFileInput image =
                         , label =
                             row []
                                 [ FeatherIcons.x |> FeatherIcons.toHtml [] |> Element.html
-                                , text " Avbryt - "
+                                , text " Avbryt uppladdning - "
                                 , viewUploadProgress progress
                                 ]
                         }
@@ -643,7 +660,7 @@ update msg ({ form } as model) =
             ( updateForm (\f -> { f | tags = List.filter (\t -> t /= tag) f.tags }), Cmd.none )
 
         ImageUploadClicked ->
-            ( model, Select.file [ "image/jpeg", "image/png" ] ImageSelected )
+            ( updateForm (\f -> { f | imageValidationActive = True }), Select.file [ "image/jpeg", "image/png" ] ImageSelected )
 
         ImageSelected file ->
             ( updateForm (\f -> { f | image = Selected file })
@@ -692,6 +709,7 @@ update msg ({ form } as model) =
                                 , descriptionValidationActive = True
                                 , instructionsValidationActive = True
                                 , ingredientsValidationActive = True
+                                , imageValidationActive = True
                                 , validationStatus = valid
                             }
                     }
@@ -825,12 +843,28 @@ validator =
         |> Verify.verify .ingredients ingredientsValidator
         -- Verification of tags on input
         |> Verify.keep .tags
-        |> Verify.keep .image
+        |> Verify.verify .image imageValidator
 
 
 trim : Verify.Validator error String String
 trim input =
     Ok (String.trim input)
+
+
+imageValidator : Verify.Validator String ImageStatus ImageStatus
+imageValidator input =
+    case input of
+        Uploaded _ _ ->
+            Ok input
+
+        NotSelected ->
+            Ok input
+
+        Selected _ ->
+            Verify.fail "Du måste vänta tills bilden laddats upp innan du kan spara ⌛️" input
+
+        Uploading _ _ _ ->
+            Verify.fail "Du måste vänta tills bilden laddats upp innan du kan spara ⌛️" input
 
 
 titleValidator : Verify.Validator String String String
@@ -891,7 +925,7 @@ tagValidator =
             (String.Verify.maxLength 32 "Taggar bör vara korta och koncisa! ⚡️")
 
 
-validateSingle : a -> Verify.Validator String a String -> Result ( String, List String ) String
+validateSingle : a -> Verify.Validator String a b -> Result ( String, List String ) b
 validateSingle value theValidator =
     (Verify.validate identity
         |> Verify.verify (\_ -> value) theValidator
