@@ -303,7 +303,7 @@ type ServerError
 type alias PGError =
     { message : String
     , details : Maybe String
-    , code : String
+    , code : Maybe String
     , hint : Maybe String
     }
 
@@ -372,7 +372,7 @@ pgErrorDecoder =
     Decode.map4 PGError
         (Decode.field "message" Decode.string)
         (Decode.field "details" <| Decode.nullable Decode.string)
-        (Decode.field "code" Decode.string)
+        (Decode.field "code" <| Decode.nullable Decode.string)
         (Decode.field "hint" <| Decode.nullable Decode.string)
 
 
@@ -385,7 +385,7 @@ pgErrorToString err =
         ++ Maybe.withDefault "" err.details
         ++ "\n"
         ++ "code: "
-        ++ err.code
+        ++ Maybe.withDefault "" err.code
         ++ "\n"
         ++ "hint: "
         ++ Maybe.withDefault "" err.hint
@@ -397,7 +397,7 @@ decodeServerError str =
     case Decode.decodeString pgErrorDecoder str of
         Err err ->
             { message = "Error! I ouldn't decode the PostgREST error response "
-            , code = ""
+            , code = Nothing
             , details = Just <| Decode.errorToString err
             , hint = Nothing
             }

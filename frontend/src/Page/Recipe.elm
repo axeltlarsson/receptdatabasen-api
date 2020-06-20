@@ -183,7 +183,7 @@ viewHeader title tags description image device =
     let
         imageUrl =
             Debug.log ("viewHeader " ++ Debug.toString image)
-                (image |> Maybe.map (\p -> "http://localhost:8080/images/sig/800/" ++ p) |> Maybe.withDefault lemonadeUrl)
+                (image |> Maybe.map (\p -> "http://localhost:8080/images/sig/1600/" ++ p) |> Maybe.withDefault lemonadeUrl)
     in
     if tabletOrSmaller device then
         column [ width fill, height <| Element.px 600 ]

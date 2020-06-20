@@ -13,11 +13,6 @@ as $$
   declare recipe_id int;
   declare recipe_created_at timestamptz;
   declare recipe_updated_at timestamptz;
-  declare g text;
-  declare ingredients json;
-  declare ingredient_group_id int;
-  declare ingredient text;
-  declare image text;
 
   begin
     -- insert the recipe
@@ -38,17 +33,12 @@ as $$
   declare recipe_id int;
   declare recipe_created_at timestamptz;
   declare recipe_updated_at timestamptz;
-  declare g text;
-  declare ingredients json;
-  declare ingredient_group_id int;
-  declare ingredient text;
-  -- TODO: handle updating of image url
 
   begin
     -- update the recipe
     update data.recipe
     set title = new.title, description = new.description, instructions = new.instructions,
-        tags = new.tags, portions = new.portions, ingredients = new.ingredients
+        tags = new.tags, portions = new.portions, ingredients = new.ingredients, image = new.image
     where id = new.id
       returning id, created_at, updated_at into recipe_id, recipe_created_at, recipe_updated_at;
 

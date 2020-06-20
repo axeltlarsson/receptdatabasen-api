@@ -74,8 +74,8 @@ type alias RecipeForm =
 type ImageStatus
     = NotSelected
     | Selected File
-    | UrlEncoded File String
-    | Uploaded Base64Url Url
+    | UrlEncoded File Base64Url
+    | Uploaded (Maybe Base64Url) Url
 
 
 type alias Url =
@@ -127,11 +127,19 @@ initialForm =
 fromRecipe : Recipe.Recipe Recipe.Full -> Model
 fromRecipe recipe =
     let
-        { id, title, description } =
+        { id, title, description, image } =
             Recipe.metadata recipe
 
         { instructions, tags, portions, ingredients } =
             Recipe.contents recipe
+
+        imageStatus =
+            case image of
+                Just url ->
+                    Uploaded Nothing url
+
+                Nothing ->
+                    NotSelected
     in
     { form =
         { initialForm
@@ -141,6 +149,7 @@ fromRecipe recipe =
             , instructions = instructions
             , ingredients = ingredients
             , tags = tags
+            , image = imageStatus
         }
     }
 
@@ -156,6 +165,7 @@ viewForm : RecipeForm -> Element Msg
 viewForm form =
     column [ width (fill |> Element.maximum 700), centerX, spacing 20, padding 10, Font.extraLight ]
         [ viewTitleInput form.titleValidationActive form.title
+        , viewFileInput form.image
         , viewDescriptionInput form.descriptionValidationActive form.description
         , viewPortionsInput form.portions
         , el [ Font.size Palette.xLarge, Font.semiBold ] (text "Instruktioner")
@@ -165,7 +175,6 @@ viewForm form =
         , viewIngredientsEditor form.ingredientsValidationActive form.ingredients
         , viewValidationError form.ingredientsValidationActive form.ingredients ingredientsValidator
         , viewTagsInput form.tagValidationActive form.newTagInput form.tags
-        , viewFileInput form.image
         , viewSaveButton form.validationStatus
         ]
 
@@ -239,6 +248,41 @@ viewTitleInput validationActive title =
             }
         , viewValidationError validationActive title titleValidator
         ]
+
+
+viewFileInput : ImageStatus -> Element Msg
+viewFileInput image =
+    case image of
+        NotSelected ->
+            Input.button [ Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
+                { onPress = Just ImageUploadClicked
+                , label = text "Ladda upp fil"
+                }
+
+        Selected file ->
+            text (File.name file)
+
+        UrlEncoded file base64Url ->
+            column []
+                [ Element.image [ width fill ] { src = base64Url, description = "an image" }
+                , Input.button [ Background.color Palette.red, Border.rounded 2, padding 10, Font.color Palette.white ]
+                    { onPress = Just RemoveSelectedImage
+                    , label = text "Ta bort bild"
+                    }
+                ]
+
+        Uploaded maybeBase64Url url ->
+            column []
+                [ Element.image [ width fill ]
+                    { src = Maybe.withDefault ("http://localhost:8080/images/sig/1600/" ++ url) maybeBase64Url
+                    , description = "an image"
+                    }
+                , text url
+                , Input.button [ Background.color Palette.orange, Border.rounded 2, padding 10, Font.color Palette.white ]
+                    { onPress = Just RemoveSelectedImage
+                    , label = text "Ta bort vald bild"
+                    }
+                ]
 
 
 viewDescriptionInput : Bool -> String -> Element Msg
@@ -378,38 +422,6 @@ viewTag tag =
         , Element.pointer
         ]
         (text tag)
-
-
-viewFileInput : ImageStatus -> Element Msg
-viewFileInput image =
-    case image of
-        NotSelected ->
-            Input.button [ Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
-                { onPress = Just ImageUploadClicked
-                , label = text "Ladda upp fil"
-                }
-
-        Selected file ->
-            text (File.name file)
-
-        UrlEncoded file base64Url ->
-            column []
-                [ Element.image [ width (fill |> Element.maximum 400) ] { src = base64Url, description = "an image" }
-                , Input.button [ Background.color Palette.red, Border.rounded 2, padding 10, Font.color Palette.white ]
-                    { onPress = Just RemoveSelectedImage
-                    , label = text "Ta bort bild"
-                    }
-                ]
-
-        Uploaded base64Url url ->
-            column []
-                [ Element.image [ width (fill |> Element.maximum 400) ] { src = base64Url, description = "an image" }
-                , text url
-                , Input.button [ Background.color Palette.orange, Border.rounded 2, padding 10, Font.color Palette.white ]
-                    { onPress = Just RemoveSelectedImage
-                    , label = text "Ta bort vald bild"
-                    }
-                ]
 
 
 viewSaveButton : ValidationStatus -> Element Msg
@@ -582,7 +594,7 @@ update msg ({ form } as model) =
 
         ImageUploadComplete base64Url (Ok (Recipe.ImageUrl url)) ->
             Debug.log url
-                ( updateForm (\f -> { f | image = Uploaded base64Url url })
+                ( updateForm (\f -> { f | image = Uploaded (Just base64Url) url })
                 , Cmd.none
                 )
 
@@ -827,12 +839,14 @@ toJson form =
                     [ ( "image", Encode.string url ) ]
 
                 NotSelected ->
-                    []
+                    [ ( "image", Encode.null ) ]
 
                 Selected _ ->
+                    -- TODO: disallow this - should never happen
                     []
 
                 UrlEncoded _ _ ->
+                    -- TODO: disallow this - should never happen
                     []
     in
     Just
