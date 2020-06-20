@@ -135,8 +135,11 @@ initialForm =
 fromRecipe : Recipe.Recipe Recipe.Full -> Model
 fromRecipe recipe =
     let
-        { id, title, description, image } =
+        { id, title, description, images } =
             Recipe.metadata recipe
+
+        image =
+            List.head images
 
         { instructions, tags, portions, ingredients } =
             Recipe.contents recipe
@@ -947,17 +950,17 @@ toJson form =
         maybeAddImage imageStatus =
             case imageStatus of
                 Uploaded baset64Url url ->
-                    [ ( "image", Encode.string url ) ]
+                    [ ( "images", Encode.list Encode.string [ url ] ) ]
 
                 NotSelected ->
-                    [ ( "image", Encode.null ) ]
+                    [ ( "images", Encode.list Encode.string [] ) ]
 
                 Selected _ ->
-                    -- TODO: disallow this - should never happen
+                    -- Should never happen
                     []
 
                 Uploading _ _ _ ->
-                    -- TODO: disallow this - should never happen
+                    -- Should never happen
                     []
     in
     Just

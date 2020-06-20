@@ -134,16 +134,14 @@ imageWidths =
     }
 
 
-
--- 768 - 10 * 2  = 748
--- (748 - 10 ) /2 = 369
-
-
 viewPreview : Recipe Preview -> Element Msg
 viewPreview recipe =
     let
-        { title, description, id, createdAt, image } =
+        { title, description, id, createdAt, images } =
             Recipe.metadata recipe
+
+        image =
+            List.head images
 
         titleStr =
             Slug.toString title

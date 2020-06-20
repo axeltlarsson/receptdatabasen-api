@@ -37,7 +37,6 @@ select settings.set('jwt_lifetime', '3600');
 
 
 \echo # Loading application definitions
-\ir util/schema.sql
 
 -- private schema where all tables will be defined
 -- you can use other names besides "data" or even spread the tables
@@ -48,7 +47,6 @@ select settings.set('jwt_lifetime', '3600');
 -- exposed as API endpoints. Access to them however is still governed by the
 -- privileges defined for the current PostgreSQL role making the requests
 \ir api/schema.sql
-
 
 
 \echo # Loading roles and privilege settings

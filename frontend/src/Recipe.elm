@@ -58,7 +58,7 @@ type alias Metadata =
     { id : Int
     , title : Slug
     , description : Maybe String
-    , image : Maybe String
+    , images : List String
     , createdAt : String
     , updatedAt : String
     }
@@ -109,7 +109,7 @@ metadataDecoder =
         (field "id" int)
         (field "title" Slug.decoder)
         (field "description" <| Decode.nullable string)
-        (field "image" <| Decode.nullable string)
+        (field "images" <| list string)
         (field "created_at" string)
         (field "updated_at" string)
 
@@ -173,7 +173,7 @@ fetchMany : (Result ServerError (List (Recipe Preview)) -> msg) -> Cmd msg
 fetchMany toMsg =
     let
         params =
-            [ Url.Builder.string "select" "id,title,description,image,created_at,updated_at" ]
+            [ Url.Builder.string "select" "id,title,description,images,created_at,updated_at" ]
     in
     Http.get
         { url = url params

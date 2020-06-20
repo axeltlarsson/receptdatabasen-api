@@ -150,8 +150,11 @@ paddingPx device =
 viewRecipe : Recipe Full -> Dict Int Bool -> Element.Device -> Element Msg
 viewRecipe recipe checkboxStatus device =
     let
-        { title, description, id, image, createdAt, updatedAt } =
+        { title, description, id, images, createdAt, updatedAt } =
             Recipe.metadata recipe
+
+        image =
+            List.head images
 
         { portions, ingredients, instructions, tags } =
             Recipe.contents recipe
