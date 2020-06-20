@@ -1,4 +1,4 @@
-port module Page.Recipe.Editor exposing (Model, Msg, initEdit, initNew, portMsg, toSession, update, view)
+port module Page.Recipe.Editor exposing (Model, Msg, initEdit, initNew, portMsg, toSession, update, uploadProgressMsg, view)
 
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
@@ -132,16 +132,21 @@ view model =
 
 type Msg
     = FormMsg Form.Msg
-      -- Msg:s from the server
     | CompletedCreate (Result Recipe.ServerError (Recipe Full))
     | CompletedRecipeLoad Slug (Result Recipe.ServerError (Recipe Full))
     | CompletedEdit (Result Recipe.ServerError (Recipe Full))
     | PortMsg Decode.Value
+    | GotImageUploadProgress Http.Progress
 
 
 portMsg : Decode.Value -> Msg
 portMsg =
     PortMsg
+
+
+uploadProgressMsg : Http.Progress -> Msg
+uploadProgressMsg =
+    GotImageUploadProgress
 
 
 formToModel : Model -> Form.Model -> Model
@@ -218,6 +223,31 @@ update msg ({ status, session } as model) =
 
                 Creating form ->
                     updateFormWithPortMsg form
+
+                Loading _ ->
+                    ( model, Cmd.none )
+
+                LoadingFailed _ ->
+                    ( model, Cmd.none )
+
+                Saving _ _ ->
+                    ( model, Cmd.none )
+
+        GotImageUploadProgress progress ->
+            let
+                updateFormWithUploadProgress form =
+                    Form.update (Form.uploadProgressMsg progress) form
+                        |> updateWith (formToModel model) FormMsg
+            in
+            case status of
+                EditingNew _ form ->
+                    updateFormWithUploadProgress form
+
+                Editing _ _ form ->
+                    updateFormWithUploadProgress form
+
+                Creating form ->
+                    updateFormWithUploadProgress form
 
                 Loading _ ->
                     ( model, Cmd.none )

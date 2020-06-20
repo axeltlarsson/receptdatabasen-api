@@ -182,8 +182,7 @@ viewHeader : String -> List String -> Maybe String -> Maybe String -> Element.De
 viewHeader title tags description image device =
     let
         imageUrl =
-            Debug.log ("viewHeader " ++ Debug.toString image)
-                (image |> Maybe.map (\p -> "http://localhost:8080/images/sig/1600/" ++ p) |> Maybe.withDefault lemonadeUrl)
+            image |> Maybe.map (\p -> "http://localhost:8080/images/sig/1600/" ++ p) |> Maybe.withDefault lemonadeUrl
     in
     if tabletOrSmaller device then
         column [ width fill, height <| Element.px 600 ]
@@ -370,8 +369,7 @@ update msg model =
             ( { model | recipe = Failed error }, Cmd.none )
 
         ClickedCheckbox idx checked ->
-            Debug.log ("clicked checkbox" ++ String.fromInt idx)
-                ( { model | checkboxStatus = Dict.update idx (\x -> Just checked) model.checkboxStatus }, Cmd.none )
+            ( { model | checkboxStatus = Dict.update idx (\x -> Just checked) model.checkboxStatus }, Cmd.none )
 
         ClickedDelete ->
             case model.recipe of

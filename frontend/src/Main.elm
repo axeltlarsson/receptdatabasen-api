@@ -4,6 +4,7 @@ import Browser exposing (Document)
 import Browser.Events
 import Browser.Navigation as Nav
 import Html
+import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Page exposing (Page)
@@ -101,6 +102,7 @@ type Msg
     | GotRecipeListMsg RecipeList.Msg
     | GotEditorMsg Editor.Msg
     | GotWindowResize Session.Window
+    | GotImageUploadProgress Http.Progress
 
 
 toSession : Model -> Session
@@ -198,6 +200,15 @@ update msg model =
                 NotFound session ->
                     ( NotFound (updateSession window), Cmd.none )
 
+        ( GotImageUploadProgress progress, page ) ->
+            case page of
+                Editor slug editor ->
+                    Editor.update (Editor.uploadProgressMsg progress) editor
+                        |> updateWith (Editor slug) GotEditorMsg
+
+                _ ->
+                    ( model, Cmd.none )
+
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page
             ( model, Cmd.none )
@@ -223,6 +234,7 @@ subscriptions _ =
     Sub.batch
         [ Browser.Events.onResize (\w h -> GotWindowResize { width = w, height = h })
         , portReceiver (\v -> GotEditorMsg (Editor.portMsg v))
+        , Http.track "image" GotImageUploadProgress
         ]
 
 

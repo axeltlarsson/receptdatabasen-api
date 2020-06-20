@@ -1,4 +1,4 @@
-module Page.Recipe.Form exposing (Model, Msg(..), fromRecipe, init, portMsg, toJson, update, view)
+module Page.Recipe.Form exposing (Model, Msg(..), fromRecipe, init, portMsg, toJson, update, uploadProgressMsg, view)
 
 import Dict exposing (Dict)
 import Element
@@ -8,6 +8,7 @@ import Element
         , alignLeft
         , alignRight
         , alignTop
+        , alpha
         , centerX
         , centerY
         , column
@@ -36,6 +37,7 @@ import File.Select as Select
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
+import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Page.Recipe.Markdown as Markdown
@@ -74,8 +76,12 @@ type alias RecipeForm =
 type ImageStatus
     = NotSelected
     | Selected File
-    | UrlEncoded File Base64Url
+    | Uploading File Base64Url UploadProgress
     | Uploaded (Maybe Base64Url) Url
+
+
+type alias UploadProgress =
+    { sent : Int, size : Int }
 
 
 type alias Url =
@@ -252,37 +258,86 @@ viewTitleInput validationActive title =
 
 viewFileInput : ImageStatus -> Element Msg
 viewFileInput image =
+    let
+        rect =
+            el
+                [ Border.color Palette.lightGrey
+                , Border.width 1
+                , Border.rounded 2
+                , width fill
+                , height (Element.px 400)
+                ]
+
+        imageRect imageUrl =
+            el
+                [ width fill
+                , height (Element.px 400)
+                , Background.image imageUrl
+                , Border.rounded 2
+                ]
+    in
     case image of
         NotSelected ->
-            Input.button [ Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
-                { onPress = Just ImageUploadClicked
-                , label = text "Ladda upp fil"
-                }
+            rect
+                (Input.button
+                    [ centerX
+                    , centerY
+                    , padding 10
+                    , Background.color Palette.green
+                    , Border.rounded 2
+                    , Font.color Palette.white
+                    ]
+                    { onPress = Just ImageUploadClicked
+                    , label =
+                        row []
+                            [ FeatherIcons.upload |> FeatherIcons.toHtml [] |> Element.html
+                            , text " Ladda upp en bild"
+                            ]
+                    }
+                )
 
         Selected file ->
-            text (File.name file)
+            rect
+                Element.none
 
-        UrlEncoded file base64Url ->
-            column []
-                [ Element.image [ width fill ] { src = base64Url, description = "an image" }
-                , Input.button [ Background.color Palette.red, Border.rounded 2, padding 10, Font.color Palette.white ]
-                    { onPress = Just RemoveSelectedImage
-                    , label = text "Ta bort bild"
-                    }
-                ]
+        Uploading file base64Url progress ->
+            imageRect base64Url
+                (el [ alignBottom, alignRight, padding 10, spacing 10 ]
+                    (Input.button [ Background.color Palette.orange, Border.rounded 2, padding 10, Font.color Palette.white ]
+                        { onPress = Just RemoveSelectedImage
+                        , label =
+                            row []
+                                [ FeatherIcons.x |> FeatherIcons.toHtml [] |> Element.html
+                                , text " Avbryt - "
+                                , viewUploadProgress progress
+                                ]
+                        }
+                    )
+                )
 
         Uploaded maybeBase64Url url ->
-            column []
-                [ Element.image [ width fill ]
-                    { src = Maybe.withDefault ("http://localhost:8080/images/sig/1600/" ++ url) maybeBase64Url
-                    , description = "an image"
-                    }
-                , text url
-                , Input.button [ Background.color Palette.orange, Border.rounded 2, padding 10, Font.color Palette.white ]
-                    { onPress = Just RemoveSelectedImage
-                    , label = text "Ta bort vald bild"
-                    }
-                ]
+            imageRect (Maybe.withDefault ("http://localhost:8080/images/sig/1600/" ++ url) maybeBase64Url)
+                (el [ alignBottom, alignRight, padding 10 ]
+                    (Input.button
+                        [ Background.color Palette.grey
+                        , Border.rounded 2
+                        , padding 10
+                        , Font.color Palette.white
+                        ]
+                        { onPress = Just RemoveSelectedImage
+                        , label =
+                            row []
+                                [ FeatherIcons.trash |> FeatherIcons.toHtml [] |> Element.html
+                                , text " Ta bort vald bild"
+                                ]
+                        }
+                    )
+                )
+
+
+viewUploadProgress : { sent : Int, size : Int } -> Element Msg
+viewUploadProgress ({ sent, size } as sending) =
+    text <| (String.fromInt <| round <| 100 * Http.fractionSent sending) ++ " %"
 
 
 viewDescriptionInput : Bool -> String -> Element Msg
@@ -418,7 +473,7 @@ viewTag tag =
         , Border.rounded 2
         , padding 10
         , Events.onClick (RemoveTag tag)
-        , mouseOver [ Element.alpha 0.5 ]
+        , mouseOver [ alpha 0.5 ]
         , Element.pointer
         ]
         (text tag)
@@ -487,11 +542,17 @@ type Msg
     | ImageUrlEncoded File Base64Url
     | ImageUploadComplete Base64Url (Result Recipe.ServerError Recipe.ImageUrl)
     | RemoveSelectedImage
+    | GotImageUploadProgress Http.Progress
 
 
 portMsg : Decode.Value -> Msg
 portMsg =
     PortMsgReceived
+
+
+uploadProgressMsg : Http.Progress -> Msg
+uploadProgressMsg =
+    GotImageUploadProgress
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -590,20 +651,36 @@ update msg ({ form } as model) =
             )
 
         ImageUrlEncoded file base64Url ->
-            ( updateForm (\f -> { f | image = UrlEncoded file base64Url }), Recipe.uploadImage file (ImageUploadComplete base64Url) )
+            ( updateForm (\f -> { f | image = Uploading file base64Url { size = 0, sent = 0 } })
+            , Recipe.uploadImage file (ImageUploadComplete base64Url)
+            )
+
+        GotImageUploadProgress progress ->
+            case progress of
+                Http.Sending sending ->
+                    case model.form.image of
+                        Uploading file base64Url previousFractionSent ->
+                            ( updateForm (\f -> { f | image = Uploading file base64Url sending })
+                            , Cmd.none
+                            )
+
+                        _ ->
+                            ( model, Cmd.none )
+
+                Http.Receiving _ ->
+                    ( model, Cmd.none )
 
         ImageUploadComplete base64Url (Ok (Recipe.ImageUrl url)) ->
-            Debug.log url
-                ( updateForm (\f -> { f | image = Uploaded (Just base64Url) url })
-                , Cmd.none
-                )
+            ( updateForm (\f -> { f | image = Uploaded (Just base64Url) url })
+            , Cmd.none
+            )
 
         ImageUploadComplete base64Url (Err err) ->
             Debug.log (Debug.toString err)
                 ( model, Cmd.none )
 
         RemoveSelectedImage ->
-            ( updateForm (\f -> { f | image = NotSelected }), Cmd.none )
+            ( updateForm (\f -> { f | image = NotSelected }), Http.cancel "image" )
 
         SubmitForm ->
             let
@@ -845,7 +922,7 @@ toJson form =
                     -- TODO: disallow this - should never happen
                     []
 
-                UrlEncoded _ _ ->
+                Uploading _ _ _ ->
                     -- TODO: disallow this - should never happen
                     []
     in
