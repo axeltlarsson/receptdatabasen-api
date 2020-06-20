@@ -115,19 +115,51 @@ debug =
     Element.explain Debug.todo
 
 
+imageWidths : { min : Int, max : Int }
+imageWidths =
+    let
+        iPadWidth =
+            768
+
+        pagePadding =
+            10
+
+        max =
+            768 - pagePadding * 2
+    in
+    -- iPad width: 768 - page padding x 2 = 748 => one recipe will fill the width on an iPad at most
+    -- minimum: max - 10 for the spacing between recipes x 1/2 for good proportions
+    { max = max
+    , min = floor ((max - pagePadding) / 2)
+    }
+
+
+
+-- 768 - 10 * 2  = 748
+-- (748 - 10 ) /2 = 369
+
+
 viewPreview : Recipe Preview -> Element Msg
 viewPreview recipe =
     let
-        { title, description, id, createdAt } =
+        { title, description, id, createdAt, image } =
             Recipe.metadata recipe
 
         titleStr =
             Slug.toString title
+
+        imageUrl =
+            let
+                width =
+                    -- *2 for Retina TODO: optimise with responsive/progressive images
+                    String.fromInt <| imageWidths.max * 2
+            in
+            image
+                |> Maybe.map (\i -> "http://localhost:8080/images/sig/" ++ width ++ "/" ++ i)
+                |> Maybe.withDefault (placeholderImage id)
     in
     column
-        -- iPad width: 768 - page padding x 2 = 748 => one recipe will fill the width on an iPad at most
-        -- minimum: max - 10 for the spacing between recipes x 1/2 for good proportions
-        [ width (fill |> Element.maximum 748 |> Element.minimum 369)
+        [ width (fill |> Element.maximum imageWidths.max |> Element.minimum imageWidths.min)
         , height <| Element.px 400
         , Palette.cardShadow1
         , Palette.cardShadow2
@@ -137,21 +169,21 @@ viewPreview recipe =
             { url = Route.toString (Route.Recipe title)
             , label =
                 column [ height fill, width fill ]
-                    [ viewHeader id titleStr
+                    [ viewHeader id titleStr imageUrl
                     , viewDescription description
                     ]
             }
         ]
 
 
-viewHeader : Int -> String -> Element Msg
-viewHeader id title =
+viewHeader : Int -> String -> String -> Element Msg
+viewHeader id title imageUrl =
     column [ width fill, height fill, Border.rounded 2 ]
         [ Element.el
             [ width fill
             , height fill
             , Border.rounded 2
-            , Background.image <| imgUrl id
+            , Background.image imageUrl
             ]
             (el
                 [ Element.behindContent <|
@@ -231,8 +263,8 @@ viewDescription description =
             description
 
 
-imgUrl : Int -> String
-imgUrl i =
+placeholderImage : Int -> String
+placeholderImage i =
     case i of
         1 ->
             foodImgUrl "cheese+cake"
