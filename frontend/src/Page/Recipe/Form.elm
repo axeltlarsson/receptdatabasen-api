@@ -24,6 +24,7 @@ import Element
         , spacing
         , text
         , width
+        , wrappedRow
         )
 import Element.Background as Background
 import Element.Border as Border
@@ -264,71 +265,24 @@ viewTitleInput validationActive title =
         ]
 
 
-
-{--
-  -     case image of
-  -         NotSelected ->
-  -             rect
-  -                 (Input.button
-  -                     [ centerX
-  -                     , centerY
-  -                     , padding 10
-  -                     , Background.color Palette.green
-  -                     , Border.rounded 2
-  -                     , Font.color Palette.white
-  -                     ]
-  -                     { onPress = Just ImageUploadClicked
-  -                     , label =
-  -                         row []
-  -                             [ FeatherIcons.upload |> FeatherIcons.toHtml [] |> Element.html
-  -                             , text " Ladda upp huvudbilden"
-  -                             ]
-  -                     }
-  -                 )
-  - 
-  -         Selected file ->
-  -             rect
-  -                 Element.none
-  - 
-  -         Uploading (InProgress file base64Url progress) ->
-  -             imageRect base64Url
-  -                 (el [ alignBottom, alignRight, padding 10, spacing 10 ]
-  -                     (Input.button [ Background.color Palette.orange, Border.rounded 2, padding 10, Font.color Palette.white ]
-  -                         { onPress = Just RemoveSelectedImage
-  -                         , label =
-  -                             row []
-  -                                 [ FeatherIcons.x |> FeatherIcons.toHtml [] |> Element.html
-  -                                 , text " Avbryt uppladdning - "
-  -                                 , viewUploadProgress progress
-  -                                 ]
-  -                         }
-  -                     )
-  -                 )
-  - 
-  -         Uploading (Done maybeBase64Url url) ->
-  -             imageRect (Maybe.withDefault ("http://localhost:8080/images/sig/1600/" ++ url) maybeBase64Url)
-  -                 (el [ alignBottom, alignRight, padding 10 ]
-  -                     (Input.button
-  -                         [ Background.color Palette.grey
-  -                         , Border.rounded 2
-  -                         , padding 10
-  -                         , Font.color Palette.white
-  -                         ]
-  -                         { onPress = Just RemoveSelectedImage
-  -                         , label =
-  -                             row []
-  -                                 [ FeatherIcons.trash |> FeatherIcons.toHtml [] |> Element.html
-  -                                 , text " Ta bort vald bild"
-  -                                 ]
-  -                         }
-  -                     )
-  -                 )
-  --}
-
-
 viewUploadProgress : { sent : Int, size : Int } -> Element Msg
 viewUploadProgress ({ sent, size } as sending) =
-    text <| (String.fromInt <| round <| 100 * Http.fractionSent sending) ++ " %"
+    text <| (String.fromInt <| floor <| 100 * Http.fractionSent sending) ++ " %"
+
+
+xIcon : Element Msg
+xIcon =
+    FeatherIcons.x |> FeatherIcons.toHtml [] |> Element.html
+
+
+trashIcon : Element Msg
+trashIcon =
+    FeatherIcons.trash |> FeatherIcons.toHtml [] |> Element.html
+
+
+uploadIcon : Element Msg
+uploadIcon =
+    FeatherIcons.upload |> FeatherIcons.toHtml [] |> Element.html
 
 
 viewImagesInput : Dict Int UploadStatus -> Element Msg
@@ -362,53 +316,100 @@ viewImagesInput imagesDict =
                 ]
                 { onPress = Just ImagesUploadClicked
                 , label =
-                    row []
-                        [ FeatherIcons.upload |> FeatherIcons.toHtml [] |> Element.html
-                        , text " Ladda upp fler bilder"
-                        ]
+                    row [] [ uploadIcon, text " Ladda upp bilder" ]
                 }
 
-        smallImage url =
-            el [ Border.rounded 2, width (Element.px 100), height (Element.px 100), Background.image url ]
+        smallImage url idx =
+            el
+                [ Border.rounded 2
+                , width (fill |> Element.minimum 150)
+                , height (fill |> Element.maximum 300 |> Element.minimum 200)
+                , Background.image url
+                , Events.onClick (MakeMainImage idx)
+                , Element.pointer
+                , mouseOver [ Border.glow Palette.lightGrey 3 ]
+                , Html.Attributes.title "Gör till huvudbild" |> Element.htmlAttribute
+                ]
 
-        images =
-            Dict.toList imagesDict
+        removeButton attrs { label, idx } =
+            el attrs
+                (Input.button
+                    [ Font.color Palette.white
+                    , Html.Attributes.title "Ta bort bild" |> Element.htmlAttribute
+                    ]
+                    { onPress = Just (RemoveImage idx)
+                    , label = label
+                    }
+                )
     in
-    case images of
+    case Dict.toList imagesDict of
         [] ->
-            column [ width fill, height (Element.px 600) ]
+            column [ width fill, height fill ]
                 [ rect uploadButton ]
 
-        ( x, mainImage ) :: moreImages ->
-            column [ width fill, height (Element.px 600), spacing 10 ]
+        ( idx, mainImage ) :: moreImages ->
+            column [ width fill, height fill, spacing 10 ]
                 [ case mainImage of
                     UrlEncoding _ ->
                         uploadButton
 
                     InProgress _ base64Url progress ->
-                        imageRect base64Url Element.none
+                        imageRect base64Url
+                            (removeButton [ alignBottom, alignRight, padding 10 ]
+                                { idx = idx
+                                , label = row [ spacing 10 ] [ xIcon, viewUploadProgress progress ]
+                                }
+                            )
 
                     Done (Just base64Url) url ->
-                        imageRect base64Url Element.none
+                        imageRect base64Url
+                            (removeButton [ alignBottom, alignRight, padding 10 ]
+                                { idx = idx
+                                , label = row [] [ trashIcon ]
+                                }
+                            )
 
                     Done Nothing url ->
-                        imageRect ("http://localhost:8080/images/sig/1600/" ++ url) Element.none
-                , row [ height fill, width fill, spacing 10 ]
+                        imageRect ("http://localhost:8080/images/sig/1600/" ++ url)
+                            (removeButton [ alignBottom, alignRight, padding 10 ]
+                                { idx = idx
+                                , label = row [] [ trashIcon ]
+                                }
+                            )
+                , wrappedRow [ height fill, width fill, spacing 10 ]
                     (moreImages
                         |> List.map
                             (\( i, image ) ->
                                 case image of
                                     UrlEncoding _ ->
-                                        smallImage "" Element.none
+                                        smallImage "" i Element.none
 
                                     InProgress _ base64Url progress ->
-                                        smallImage base64Url Element.none
+                                        smallImage base64Url
+                                            i
+                                            (removeButton [ alignBottom, alignRight, padding 5 ]
+                                                { idx = i
+                                                , label = row [ spacing 10 ] [ xIcon, viewUploadProgress progress ]
+                                                }
+                                            )
 
                                     Done (Just base64Url) url ->
-                                        smallImage base64Url Element.none
+                                        smallImage base64Url
+                                            i
+                                            (removeButton [ alignBottom, alignRight, padding 5 ]
+                                                { idx = i
+                                                , label = row [] [ trashIcon ]
+                                                }
+                                            )
 
                                     Done Nothing url ->
-                                        smallImage ("http://localhost:8080/images/sig/1600/" ++ url) Element.none
+                                        smallImage ("http://localhost:8080/images/sig/1600/" ++ url)
+                                            i
+                                            (removeButton [ alignBottom, alignRight, padding 5 ]
+                                                { idx = i
+                                                , label = row [] [ trashIcon ]
+                                                }
+                                            )
                             )
                     )
                 , el [ alignLeft ] uploadButton
@@ -549,6 +550,7 @@ viewTag tag =
         , padding 10
         , Events.onClick (RemoveTag tag)
         , mouseOver [ alpha 0.5 ]
+        , Html.Attributes.title "Ta bort tagg" |> Element.htmlAttribute
         , Element.pointer
         ]
         (text tag)
@@ -614,8 +616,9 @@ type Msg
     | BlurredDescription
     | ImageUrlEncoded Int File Base64Url
     | ImageUploadComplete Int (Result Recipe.ServerError Recipe.ImageUrl)
-    | RemoveSelectedImage Int
-    | GotImageUploadProgress Http.Progress
+    | RemoveImage Int
+    | MakeMainImage Int
+    | GotImageUploadProgress Int Http.Progress
     | ImagesUploadClicked
     | ImagesSelected File (List File)
 
@@ -625,7 +628,7 @@ portMsg =
     PortMsgReceived
 
 
-uploadProgressMsg : Http.Progress -> Msg
+uploadProgressMsg : Int -> Http.Progress -> Msg
 uploadProgressMsg =
     GotImageUploadProgress
 
@@ -725,7 +728,8 @@ update msg ({ form } as model) =
         ImagesSelected file moreFiles ->
             let
                 idx =
-                    Dict.size form.images
+                    -- The highest numbered key
+                    Dict.foldl (\k v i -> max k i) 0 form.images + 1
 
                 urlCmd i f =
                     Task.perform (ImageUrlEncoded i f) (File.toUrl f)
@@ -756,7 +760,7 @@ update msg ({ form } as model) =
                         (\status ->
                             case status of
                                 UrlEncoding f ->
-                                    InProgress f base64Url { size = 0, sent = 0 }
+                                    InProgress f base64Url { size = 100, sent = 0 }
 
                                 x ->
                                     -- Should never happen: it would mean base64 encoding completes after server upload
@@ -766,27 +770,36 @@ update msg ({ form } as model) =
                         )
             in
             ( updateForm (\f -> { f | images = Dict.update idx updateImageDict f.images })
-            , Recipe.uploadImage file (ImageUploadComplete idx)
+            , Recipe.uploadImage idx file (ImageUploadComplete idx)
             )
 
-        GotImageUploadProgress progress ->
-            ( model, Cmd.none )
+        GotImageUploadProgress idx progress ->
+            case progress of
+                Http.Sending sending ->
+                    ( updateForm
+                        (\f ->
+                            { f
+                                | images =
+                                    Dict.update idx
+                                        (Maybe.map
+                                            (\image ->
+                                                case image of
+                                                    InProgress file base64Url _ ->
+                                                        InProgress file base64Url sending
 
-        {--
-  -             case progress of
-  -                 Http.Sending sending ->
-  -                     case model.form.mainImage of
-  -                         Uploading (InProgress file base64Url previousFractionSent) ->
-  -                             ( updateForm (\f -> { f | mainImage = Uploading (InProgress file base64Url sending) })
-  -                             , Cmd.none
-  -                             )
-  - 
-  -                         _ ->
-  -                             ( model, Cmd.none )
-  - 
-  -                 Http.Receiving _ ->
-  -                     ( model, Cmd.none )
-  --}
+                                                    x ->
+                                                        x
+                                            )
+                                        )
+                                        f.images
+                            }
+                        )
+                    , Cmd.none
+                    )
+
+                Http.Receiving _ ->
+                    ( model, Cmd.none )
+
         ImageUploadComplete idx (Ok (Recipe.ImageUrl url)) ->
             let
                 updateImageDict =
@@ -810,8 +823,28 @@ update msg ({ form } as model) =
             Debug.log (Debug.toString err)
                 ( model, Cmd.none )
 
-        RemoveSelectedImage idx ->
-            ( updateForm (\f -> { f | images = Dict.remove idx f.images }), Http.cancel "image" )
+        RemoveImage idx ->
+            ( updateForm (\f -> { f | images = Dict.remove idx f.images }), Http.cancel ("image" ++ String.fromInt idx) )
+
+        MakeMainImage idx ->
+            let
+                swapWithMain : Int -> Dict Int a -> Dict Int a
+                swapWithMain i dict =
+                    let
+                        newMain =
+                            Dict.get i dict
+                    in
+                    case Dict.toList dict of
+                        [] ->
+                            -- Can't swap, empty dict
+                            dict
+
+                        ( k, oldMain ) :: _ ->
+                            dict
+                                |> Dict.update i (\_ -> Just oldMain)
+                                |> Dict.update k (\_ -> newMain)
+            in
+            ( updateForm (\f -> { f | images = swapWithMain idx f.images }), Cmd.none )
 
         SubmitForm ->
             let

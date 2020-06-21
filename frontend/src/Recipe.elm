@@ -241,13 +241,13 @@ edit recipeSlug jsonForm toMsg =
         }
 
 
-uploadImage : File -> (Result ServerError ImageUrl -> msg) -> Cmd msg
-uploadImage file toMsg =
+uploadImage : Int -> File -> (Result ServerError ImageUrl -> msg) -> Cmd msg
+uploadImage idx file toMsg =
     Http.request
         { url = "http://localhost:8080/images/upload"
         , method = "POST"
         , timeout = Nothing
-        , tracker = Just "image"
+        , tracker = Just ("image" ++ String.fromInt idx)
         , headers = []
         , body = Http.fileBody file
         , expect = expectJsonWithBody toMsg imageUrlDecoder

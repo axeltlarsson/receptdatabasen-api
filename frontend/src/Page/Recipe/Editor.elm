@@ -136,7 +136,7 @@ type Msg
     | CompletedRecipeLoad Slug (Result Recipe.ServerError (Recipe Full))
     | CompletedEdit (Result Recipe.ServerError (Recipe Full))
     | PortMsg Decode.Value
-    | GotImageUploadProgress Http.Progress
+    | GotImageUploadProgress Int Http.Progress
 
 
 portMsg : Decode.Value -> Msg
@@ -144,7 +144,7 @@ portMsg =
     PortMsg
 
 
-uploadProgressMsg : Http.Progress -> Msg
+uploadProgressMsg : Int -> Http.Progress -> Msg
 uploadProgressMsg =
     GotImageUploadProgress
 
@@ -233,10 +233,10 @@ update msg ({ status, session } as model) =
                 Saving _ _ ->
                     ( model, Cmd.none )
 
-        GotImageUploadProgress progress ->
+        GotImageUploadProgress idx progress ->
             let
                 updateFormWithUploadProgress form =
-                    Form.update (Form.uploadProgressMsg progress) form
+                    Form.update (Form.uploadProgressMsg idx progress) form
                         |> updateWith (formToModel model) FormMsg
             in
             case status of

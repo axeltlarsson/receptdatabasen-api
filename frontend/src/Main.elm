@@ -102,7 +102,7 @@ type Msg
     | GotRecipeListMsg RecipeList.Msg
     | GotEditorMsg Editor.Msg
     | GotWindowResize Session.Window
-    | GotImageUploadProgress Http.Progress
+    | GotImageUploadProgress Int Http.Progress
 
 
 toSession : Model -> Session
@@ -200,10 +200,10 @@ update msg model =
                 NotFound session ->
                     ( NotFound (updateSession window), Cmd.none )
 
-        ( GotImageUploadProgress progress, page ) ->
+        ( GotImageUploadProgress idx progress, page ) ->
             case page of
                 Editor slug editor ->
-                    Editor.update (Editor.uploadProgressMsg progress) editor
+                    Editor.update (Editor.uploadProgressMsg idx progress) editor
                         |> updateWith (Editor slug) GotEditorMsg
 
                 _ ->
@@ -234,7 +234,11 @@ subscriptions _ =
     Sub.batch
         [ Browser.Events.onResize (\w h -> GotWindowResize { width = w, height = h })
         , portReceiver (\v -> GotEditorMsg (Editor.portMsg v))
-        , Http.track "image" GotImageUploadProgress
+        , Http.track "image0" (GotImageUploadProgress 0)
+        , Http.track "image1" (GotImageUploadProgress 1)
+        , Http.track "image2" (GotImageUploadProgress 2)
+        , Http.track "image3" (GotImageUploadProgress 3)
+        , Http.track "image4" (GotImageUploadProgress 4)
         ]
 
 
