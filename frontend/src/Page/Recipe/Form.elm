@@ -68,17 +68,16 @@ type alias RecipeForm =
     , tags : List String
     , newTagInput : String
     , tagValidationActive : Bool
-    , image : ImageStatus
-    , imageValidationActive : Bool
-    , validationStatus : ValidationStatus -- TODO: rename to something that is more tied to its single use for the save button?
+    , images : Dict Int UploadStatus
+    , imagesValidationActive : Bool
+    , formValidationStatus : ValidationStatus
     }
 
 
-type ImageStatus
-    = NotSelected
-    | Selected File
-    | Uploading File Base64Url UploadProgress
-    | Uploaded (Maybe Base64Url) Url
+type UploadStatus
+    = UrlEncoding File
+    | InProgress File Base64Url UploadProgress
+    | Done (Maybe Base64Url) Url -- Nothing for Base64Url if fetched server (fromRecipe)
 
 
 type alias UploadProgress =
@@ -126,9 +125,9 @@ initialForm =
     , tags = []
     , newTagInput = ""
     , tagValidationActive = False
-    , image = NotSelected
-    , imageValidationActive = False
-    , validationStatus = NotActivated
+    , images = Dict.empty
+    , imagesValidationActive = False
+    , formValidationStatus = NotActivated
     }
 
 
@@ -138,19 +137,8 @@ fromRecipe recipe =
         { id, title, description, images } =
             Recipe.metadata recipe
 
-        image =
-            List.head images
-
         { instructions, tags, portions, ingredients } =
             Recipe.contents recipe
-
-        imageStatus =
-            case image of
-                Just url ->
-                    Uploaded Nothing url
-
-                Nothing ->
-                    NotSelected
     in
     { form =
         { initialForm
@@ -160,7 +148,7 @@ fromRecipe recipe =
             , instructions = instructions
             , ingredients = ingredients
             , tags = tags
-            , image = imageStatus
+            , images = List.indexedMap (\i url -> ( i, Done Nothing url )) images |> Dict.fromList
         }
     }
 
@@ -176,7 +164,7 @@ viewForm : RecipeForm -> Element Msg
 viewForm form =
     column [ width (fill |> Element.maximum 700), centerX, spacing 20, padding 10, Font.extraLight ]
         [ viewTitleInput form.titleValidationActive form.title
-        , viewFileInput form.image
+        , viewImagesInput form.images
         , viewDescriptionInput form.descriptionValidationActive form.description
         , viewPortionsInput form.portions
         , el [ Font.size Palette.xLarge, Font.semiBold ] (text "Instruktioner")
@@ -187,8 +175,8 @@ viewForm form =
         , viewValidationError form.ingredientsValidationActive form.ingredients ingredientsValidator
         , viewTagsInput form.tagValidationActive form.newTagInput form.tags
         , viewValidationError
-            (form.imageValidationActive
-                && (case form.validationStatus of
+            (form.imagesValidationActive
+                && (case form.formValidationStatus of
                         Invalid ->
                             True
 
@@ -199,9 +187,9 @@ viewForm form =
                             False
                    )
             )
-            form.image
-            imageValidator
-        , viewSaveButton form.validationStatus
+            form.images
+            imagesValidator
+        , viewSaveButton form.formValidationStatus
         ]
 
 
@@ -276,8 +264,75 @@ viewTitleInput validationActive title =
         ]
 
 
-viewFileInput : ImageStatus -> Element Msg
-viewFileInput image =
+
+{--
+  -     case image of
+  -         NotSelected ->
+  -             rect
+  -                 (Input.button
+  -                     [ centerX
+  -                     , centerY
+  -                     , padding 10
+  -                     , Background.color Palette.green
+  -                     , Border.rounded 2
+  -                     , Font.color Palette.white
+  -                     ]
+  -                     { onPress = Just ImageUploadClicked
+  -                     , label =
+  -                         row []
+  -                             [ FeatherIcons.upload |> FeatherIcons.toHtml [] |> Element.html
+  -                             , text " Ladda upp huvudbilden"
+  -                             ]
+  -                     }
+  -                 )
+  - 
+  -         Selected file ->
+  -             rect
+  -                 Element.none
+  - 
+  -         Uploading (InProgress file base64Url progress) ->
+  -             imageRect base64Url
+  -                 (el [ alignBottom, alignRight, padding 10, spacing 10 ]
+  -                     (Input.button [ Background.color Palette.orange, Border.rounded 2, padding 10, Font.color Palette.white ]
+  -                         { onPress = Just RemoveSelectedImage
+  -                         , label =
+  -                             row []
+  -                                 [ FeatherIcons.x |> FeatherIcons.toHtml [] |> Element.html
+  -                                 , text " Avbryt uppladdning - "
+  -                                 , viewUploadProgress progress
+  -                                 ]
+  -                         }
+  -                     )
+  -                 )
+  - 
+  -         Uploading (Done maybeBase64Url url) ->
+  -             imageRect (Maybe.withDefault ("http://localhost:8080/images/sig/1600/" ++ url) maybeBase64Url)
+  -                 (el [ alignBottom, alignRight, padding 10 ]
+  -                     (Input.button
+  -                         [ Background.color Palette.grey
+  -                         , Border.rounded 2
+  -                         , padding 10
+  -                         , Font.color Palette.white
+  -                         ]
+  -                         { onPress = Just RemoveSelectedImage
+  -                         , label =
+  -                             row []
+  -                                 [ FeatherIcons.trash |> FeatherIcons.toHtml [] |> Element.html
+  -                                 , text " Ta bort vald bild"
+  -                                 ]
+  -                         }
+  -                     )
+  -                 )
+  --}
+
+
+viewUploadProgress : { sent : Int, size : Int } -> Element Msg
+viewUploadProgress ({ sent, size } as sending) =
+    text <| (String.fromInt <| round <| 100 * Http.fractionSent sending) ++ " %"
+
+
+viewImagesInput : Dict Int UploadStatus -> Element Msg
+viewImagesInput imagesDict =
     let
         rect =
             el
@@ -295,69 +350,69 @@ viewFileInput image =
                 , Background.image imageUrl
                 , Border.rounded 2
                 ]
-    in
-    case image of
-        NotSelected ->
-            rect
-                (Input.button
-                    [ centerX
-                    , centerY
-                    , padding 10
-                    , Background.color Palette.green
-                    , Border.rounded 2
-                    , Font.color Palette.white
-                    ]
-                    { onPress = Just ImageUploadClicked
-                    , label =
-                        row []
-                            [ FeatherIcons.upload |> FeatherIcons.toHtml [] |> Element.html
-                            , text " Ladda upp en bild"
-                            ]
-                    }
-                )
 
-        Selected file ->
-            rect
-                Element.none
-
-        Uploading file base64Url progress ->
-            imageRect base64Url
-                (el [ alignBottom, alignRight, padding 10, spacing 10 ]
-                    (Input.button [ Background.color Palette.orange, Border.rounded 2, padding 10, Font.color Palette.white ]
-                        { onPress = Just RemoveSelectedImage
-                        , label =
-                            row []
-                                [ FeatherIcons.x |> FeatherIcons.toHtml [] |> Element.html
-                                , text " Avbryt uppladdning - "
-                                , viewUploadProgress progress
-                                ]
-                        }
-                    )
-                )
-
-        Uploaded maybeBase64Url url ->
-            imageRect (Maybe.withDefault ("http://localhost:8080/images/sig/1600/" ++ url) maybeBase64Url)
-                (el [ alignBottom, alignRight, padding 10 ]
-                    (Input.button
-                        [ Background.color Palette.grey
-                        , Border.rounded 2
-                        , padding 10
-                        , Font.color Palette.white
+        uploadButton =
+            Input.button
+                [ centerX
+                , centerY
+                , padding 10
+                , Background.color Palette.green
+                , Border.rounded 2
+                , Font.color Palette.white
+                ]
+                { onPress = Just ImagesUploadClicked
+                , label =
+                    row []
+                        [ FeatherIcons.upload |> FeatherIcons.toHtml [] |> Element.html
+                        , text " Ladda upp fler bilder"
                         ]
-                        { onPress = Just RemoveSelectedImage
-                        , label =
-                            row []
-                                [ FeatherIcons.trash |> FeatherIcons.toHtml [] |> Element.html
-                                , text " Ta bort vald bild"
-                                ]
-                        }
+                }
+
+        smallImage url =
+            el [ Border.rounded 2, width (Element.px 100), height (Element.px 100), Background.image url ]
+
+        images =
+            Dict.toList imagesDict
+    in
+    case images of
+        [] ->
+            column [ width fill, height (Element.px 600) ]
+                [ rect uploadButton ]
+
+        ( x, mainImage ) :: moreImages ->
+            column [ width fill, height (Element.px 600), spacing 10 ]
+                [ case mainImage of
+                    UrlEncoding _ ->
+                        uploadButton
+
+                    InProgress _ base64Url progress ->
+                        imageRect base64Url Element.none
+
+                    Done (Just base64Url) url ->
+                        imageRect base64Url Element.none
+
+                    Done Nothing url ->
+                        imageRect ("http://localhost:8080/images/sig/1600/" ++ url) Element.none
+                , row [ height fill, width fill, spacing 10 ]
+                    (moreImages
+                        |> List.map
+                            (\( i, image ) ->
+                                case image of
+                                    UrlEncoding _ ->
+                                        smallImage "" Element.none
+
+                                    InProgress _ base64Url progress ->
+                                        smallImage base64Url Element.none
+
+                                    Done (Just base64Url) url ->
+                                        smallImage base64Url Element.none
+
+                                    Done Nothing url ->
+                                        smallImage ("http://localhost:8080/images/sig/1600/" ++ url) Element.none
+                            )
                     )
-                )
-
-
-viewUploadProgress : { sent : Int, size : Int } -> Element Msg
-viewUploadProgress ({ sent, size } as sending) =
-    text <| (String.fromInt <| round <| 100 * Http.fractionSent sending) ++ " %"
+                , el [ alignLeft ] uploadButton
+                ]
 
 
 viewDescriptionInput : Bool -> String -> Element Msg
@@ -557,12 +612,12 @@ type Msg
     | SendPortMsg Encode.Value
     | BlurredTitle
     | BlurredDescription
-    | ImageUploadClicked
-    | ImageSelected File
-    | ImageUrlEncoded File Base64Url
-    | ImageUploadComplete Base64Url (Result Recipe.ServerError Recipe.ImageUrl)
-    | RemoveSelectedImage
+    | ImageUrlEncoded Int File Base64Url
+    | ImageUploadComplete Int (Result Recipe.ServerError Recipe.ImageUrl)
+    | RemoveSelectedImage Int
     | GotImageUploadProgress Http.Progress
+    | ImagesUploadClicked
+    | ImagesSelected File (List File)
 
 
 portMsg : Decode.Value -> Msg
@@ -595,12 +650,12 @@ update msg ({ form } as model) =
                         Err _ ->
                             Invalid
             in
-            case model.form.validationStatus of
+            case model.form.formValidationStatus of
                 Invalid ->
-                    { newModel | form = { newForm | validationStatus = validity } }
+                    { newModel | form = { newForm | formValidationStatus = validity } }
 
                 Valid ->
-                    { newModel | form = { newForm | validationStatus = validity } }
+                    { newModel | form = { newForm | formValidationStatus = validity } }
 
                 NotActivated ->
                     { newModel | form = newForm }
@@ -662,36 +717,92 @@ update msg ({ form } as model) =
         RemoveTag tag ->
             ( updateForm (\f -> { f | tags = List.filter (\t -> t /= tag) f.tags }), Cmd.none )
 
-        ImageUploadClicked ->
-            ( updateForm (\f -> { f | imageValidationActive = True }), Select.file [ "image/jpeg", "image/png" ] ImageSelected )
-
-        ImageSelected file ->
-            ( updateForm (\f -> { f | image = Selected file })
-            , Task.perform (ImageUrlEncoded file) (File.toUrl file)
+        ImagesUploadClicked ->
+            ( updateForm (\f -> { f | imagesValidationActive = True })
+            , Select.files [ "image/jpeg", "image/png" ] ImagesSelected
             )
 
-        ImageUrlEncoded file base64Url ->
-            ( updateForm (\f -> { f | image = Uploading file base64Url { size = 0, sent = 0 } })
-            , Recipe.uploadImage file (ImageUploadComplete base64Url)
+        ImagesSelected file moreFiles ->
+            let
+                idx =
+                    Dict.size form.images
+
+                urlCmd i f =
+                    Task.perform (ImageUrlEncoded i f) (File.toUrl f)
+
+                cmds =
+                    urlCmd idx file
+                        :: List.indexedMap (\i f -> urlCmd (i + idx + 1) f) moreFiles
+
+                newFilesDict =
+                    (file :: moreFiles)
+                        |> List.indexedMap (\i f -> ( i + idx, UrlEncoding f ))
+                        |> Dict.fromList
+            in
+            ( updateForm
+                (\f ->
+                    { f
+                        | images = Dict.union f.images newFilesDict
+                        , imagesValidationActive = True
+                    }
+                )
+            , Cmd.batch cmds
+            )
+
+        ImageUrlEncoded idx file base64Url ->
+            let
+                updateImageDict =
+                    Maybe.map
+                        (\status ->
+                            case status of
+                                UrlEncoding f ->
+                                    InProgress f base64Url { size = 0, sent = 0 }
+
+                                x ->
+                                    -- Should never happen: it would mean base64 encoding completes after server upload
+                                    -- started, which is impossible as we don't upload until that is completed...
+                                    Debug.log "ImageUrlEncoded while in wrong state"
+                                        x
+                        )
+            in
+            ( updateForm (\f -> { f | images = Dict.update idx updateImageDict f.images })
+            , Recipe.uploadImage file (ImageUploadComplete idx)
             )
 
         GotImageUploadProgress progress ->
-            case progress of
-                Http.Sending sending ->
-                    case model.form.image of
-                        Uploading file base64Url previousFractionSent ->
-                            ( updateForm (\f -> { f | image = Uploading file base64Url sending })
-                            , Cmd.none
-                            )
+            ( model, Cmd.none )
 
-                        _ ->
-                            ( model, Cmd.none )
+        {--
+  -             case progress of
+  -                 Http.Sending sending ->
+  -                     case model.form.mainImage of
+  -                         Uploading (InProgress file base64Url previousFractionSent) ->
+  -                             ( updateForm (\f -> { f | mainImage = Uploading (InProgress file base64Url sending) })
+  -                             , Cmd.none
+  -                             )
+  - 
+  -                         _ ->
+  -                             ( model, Cmd.none )
+  - 
+  -                 Http.Receiving _ ->
+  -                     ( model, Cmd.none )
+  --}
+        ImageUploadComplete idx (Ok (Recipe.ImageUrl url)) ->
+            let
+                updateImageDict =
+                    Maybe.map
+                        (\p ->
+                            case p of
+                                InProgress file base64Url progress ->
+                                    Done (Just base64Url) url
 
-                Http.Receiving _ ->
-                    ( model, Cmd.none )
-
-        ImageUploadComplete base64Url (Ok (Recipe.ImageUrl url)) ->
-            ( updateForm (\f -> { f | image = Uploaded (Just base64Url) url })
+                                x ->
+                                    Debug.log ("ImageUploadComplete while not being InProgress!" ++ Debug.toString x)
+                                        -- Should never happen: it can't be done twice!
+                                        x
+                        )
+            in
+            ( updateForm (\f -> { f | images = Dict.update idx updateImageDict f.images })
             , Cmd.none
             )
 
@@ -699,8 +810,8 @@ update msg ({ form } as model) =
             Debug.log (Debug.toString err)
                 ( model, Cmd.none )
 
-        RemoveSelectedImage ->
-            ( updateForm (\f -> { f | image = NotSelected }), Http.cancel "image" )
+        RemoveSelectedImage idx ->
+            ( updateForm (\f -> { f | images = Dict.remove idx f.images }), Http.cancel "image" )
 
         SubmitForm ->
             let
@@ -712,8 +823,8 @@ update msg ({ form } as model) =
                                 , descriptionValidationActive = True
                                 , instructionsValidationActive = True
                                 , ingredientsValidationActive = True
-                                , imageValidationActive = True
-                                , validationStatus = valid
+                                , imagesValidationActive = True
+                                , formValidationStatus = valid
                             }
                     }
             in
@@ -832,7 +943,7 @@ type alias VerifiedForm =
     , instructions : String
     , ingredients : String
     , tags : List String
-    , imageStatus : ImageStatus
+    , images : Dict Int UploadStatus
     }
 
 
@@ -846,7 +957,7 @@ validator =
         |> Verify.verify .ingredients ingredientsValidator
         -- Verification of tags on input
         |> Verify.keep .tags
-        |> Verify.verify .image imageValidator
+        |> Verify.verify .images imagesValidator
 
 
 trim : Verify.Validator error String String
@@ -854,20 +965,27 @@ trim input =
     Ok (String.trim input)
 
 
-imageValidator : Verify.Validator String ImageStatus ImageStatus
-imageValidator input =
-    case input of
-        Uploaded _ _ ->
-            Ok input
+imagesValidator : Verify.Validator String (Dict Int UploadStatus) (Dict Int UploadStatus)
+imagesValidator input =
+    let
+        allDone =
+            input
+                |> Dict.values
+                |> List.all
+                    (\status ->
+                        case status of
+                            Done _ _ ->
+                                True
 
-        NotSelected ->
-            Ok input
+                            _ ->
+                                False
+                    )
+    in
+    if allDone then
+        Ok input
 
-        Selected _ ->
-            Verify.fail "Du måste vänta tills bilden laddats upp innan du kan spara ⌛️" input
-
-        Uploading _ _ _ ->
-            Verify.fail "Du måste vänta tills bilden laddats upp innan du kan spara ⌛️" input
+    else
+        Verify.fail "Du måste vänta tills bilden laddats upp innan du kan spara ⌛️" input
 
 
 titleValidator : Verify.Validator String String String
@@ -947,21 +1065,20 @@ toJson form =
                 descr ->
                     [ ( "description", Encode.string descr ) ]
 
-        maybeAddImage imageStatus =
-            case imageStatus of
-                Uploaded baset64Url url ->
-                    [ ( "images", Encode.list Encode.string [ url ] ) ]
+        imagesEncoder : Dict Int UploadStatus -> Encode.Value
+        imagesEncoder =
+            Dict.map
+                (\i imageStatus ->
+                    case imageStatus of
+                        Done _ url ->
+                            Encode.string url
 
-                NotSelected ->
-                    [ ( "images", Encode.list Encode.string [] ) ]
-
-                Selected _ ->
-                    -- Should never happen
-                    []
-
-                Uploading _ _ _ ->
-                    -- Should never happen
-                    []
+                        _ ->
+                            -- imagesValidator will ensure this never happens
+                            Encode.null
+                )
+                >> Dict.values
+                >> Encode.list identity
     in
     Just
         (Encode.object <|
@@ -970,8 +1087,8 @@ toJson form =
              , ( "portions", Encode.int form.portions )
              , ( "ingredients", Encode.string form.ingredients )
              , ( "tags", Encode.set Encode.string <| Set.fromList form.tags )
+             , ( "images", imagesEncoder form.images )
              ]
                 ++ maybeAddDescription form.description
-                ++ maybeAddImage form.imageStatus
             )
         )
