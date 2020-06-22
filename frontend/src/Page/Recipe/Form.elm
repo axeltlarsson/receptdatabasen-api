@@ -71,6 +71,7 @@ type alias RecipeForm =
     , tagValidationActive : Bool
     , images : Dict Int UploadStatus
     , imagesValidationActive : Bool
+    , tooManyFilesError : Bool
     , formValidationStatus : ValidationStatus
     }
 
@@ -128,6 +129,7 @@ initialForm =
     , tagValidationActive = False
     , images = Dict.empty
     , imagesValidationActive = False
+    , tooManyFilesError = False
     , formValidationStatus = NotActivated
     }
 
@@ -165,7 +167,7 @@ viewForm : RecipeForm -> Element Msg
 viewForm form =
     column [ width (fill |> Element.maximum 700), centerX, spacing 20, padding 10, Font.extraLight ]
         [ viewTitleInput form.titleValidationActive form.title
-        , viewImagesInput form.images
+        , viewImagesInput form.images form.tooManyFilesError
         , viewDescriptionInput form.descriptionValidationActive form.description
         , viewPortionsInput form.portions
         , el [ Font.size Palette.xLarge, Font.semiBold ] (text "Instruktioner")
@@ -285,8 +287,8 @@ uploadIcon =
     FeatherIcons.upload |> FeatherIcons.toHtml [] |> Element.html
 
 
-viewImagesInput : Dict Int UploadStatus -> Element Msg
-viewImagesInput imagesDict =
+viewImagesInput : Dict Int UploadStatus -> Bool -> Element Msg
+viewImagesInput imagesDict tooManyError =
     let
         rect =
             el
@@ -335,6 +337,7 @@ viewImagesInput imagesDict =
             el attrs
                 (Input.button
                     [ Font.color Palette.white
+                    , padding 10
                     , Html.Attributes.title "Ta bort bild" |> Element.htmlAttribute
                     ]
                     { onPress = Just (RemoveImage idx)
@@ -412,7 +415,25 @@ viewImagesInput imagesDict =
                                             )
                             )
                     )
-                , el [ alignLeft ] uploadButton
+                , row [ alignLeft, spacing 10 ]
+                    [ uploadButton
+                    , if tooManyError then
+                        el
+                            [ padding 10
+                            , Border.rounded 2
+                            , Border.width 1
+                            , Border.color Palette.lightGrey
+                            , Font.color Palette.red
+                            , Font.regular
+                            , Events.onClick DismissTooManyFilesError
+                            , Element.pointer
+                            , Html.Attributes.title "Klicka för att avärda" |> Element.htmlAttribute
+                            ]
+                            (text "Max 5 bilder får lov att laddas upp! 🚨")
+
+                      else
+                        Element.none
+                    ]
                 ]
 
 
@@ -621,6 +642,7 @@ type Msg
     | GotImageUploadProgress Int Http.Progress
     | ImagesUploadClicked
     | ImagesSelected File (List File)
+    | DismissTooManyFilesError
 
 
 portMsg : Decode.Value -> Msg
@@ -743,15 +765,20 @@ update msg ({ form } as model) =
                         |> List.indexedMap (\i f -> ( i + idx, UrlEncoding f ))
                         |> Dict.fromList
             in
-            ( updateForm
-                (\f ->
-                    { f
-                        | images = Dict.union f.images newFilesDict
-                        , imagesValidationActive = True
-                    }
+            if Dict.size form.images + List.length moreFiles + 1 > 5 then
+                ( updateForm (\f -> { f | tooManyFilesError = True }), Cmd.none )
+
+            else
+                ( updateForm
+                    (\f ->
+                        { f
+                            | images = Dict.union f.images newFilesDict
+                            , imagesValidationActive = True
+                            , tooManyFilesError = False
+                        }
+                    )
+                , Cmd.batch cmds
                 )
-            , Cmd.batch cmds
-            )
 
         ImageUrlEncoded idx file base64Url ->
             let
@@ -845,6 +872,9 @@ update msg ({ form } as model) =
                                 |> Dict.update k (\_ -> newMain)
             in
             ( updateForm (\f -> { f | images = swapWithMain idx f.images }), Cmd.none )
+
+        DismissTooManyFilesError ->
+            ( updateForm (\f -> { f | tooManyFilesError = False }), Cmd.none )
 
         SubmitForm ->
             let
