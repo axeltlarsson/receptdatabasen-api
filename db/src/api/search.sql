@@ -8,7 +8,7 @@ create function api.search (search_query text)
     id integer,
     title text,
     description text,
-    images text[],
+    images jsonb,
     created_at timestamptz,
     updated_at timestamptz
   )

@@ -1134,7 +1134,7 @@ toJson form =
                 (\i imageStatus ->
                     case imageStatus of
                         Done _ url ->
-                            Encode.string url
+                            Encode.object [ ( "url", Encode.string url ) ]
 
                         _ ->
                             -- imagesValidator will ensure this never happens

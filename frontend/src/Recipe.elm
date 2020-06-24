@@ -109,7 +109,7 @@ metadataDecoder =
         (field "id" int)
         (field "title" Slug.decoder)
         (field "description" <| Decode.nullable string)
-        (field "images" <| list string)
+        (field "images" <| Decode.list <| Decode.field "url" <| string)
         (field "created_at" string)
         (field "updated_at" string)
 
