@@ -153,7 +153,7 @@ previewsDecoder =
 
 url : List QueryParameter -> String
 url queryParams =
-    Url.Builder.crossOrigin "http://localhost:8080/rest" [ "recipes" ] queryParams
+    Url.Builder.crossOrigin "/rest" [ "recipes" ] queryParams
 
 
 fetch : Slug -> (Result ServerError (Recipe Full) -> msg) -> Cmd msg
@@ -190,7 +190,7 @@ search toMsg query =
             [ Url.Builder.string "search_query" query ]
 
         searchUrl queryParams =
-            Url.Builder.crossOrigin "http://localhost:8080/rest" [ "rpc", "search" ] queryParams
+            Url.Builder.crossOrigin "/rest" [ "rpc", "search" ] queryParams
     in
     Http.get
         { url = searchUrl params
@@ -246,7 +246,7 @@ edit recipeSlug jsonForm toMsg =
 uploadImage : Int -> File -> (Result ServerError ImageUrl -> msg) -> Cmd msg
 uploadImage idx file toMsg =
     Http.request
-        { url = "http://localhost:8080/images/upload"
+        { url = "/images/upload"
         , method = "POST"
         , timeout = Nothing
         , tracker = Just ("image" ++ String.fromInt idx)
