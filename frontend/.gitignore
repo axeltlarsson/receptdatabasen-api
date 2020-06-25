@@ -10,4 +10,11 @@ repl-temp-*
 
 # End of https://www.gitignore.io/api/elm
 
-main.js
+# Distribution
+build/
+
+# Dependency directories
+node_modules
+
+# Desktop Services Store on macOS
+.DS_Store

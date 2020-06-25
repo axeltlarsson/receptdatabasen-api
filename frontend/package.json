@@ -1,8 +1,19 @@
 {
-  "scripts": {
-    "ui": "elm-live src/Main.elm --pushstate -- --output=main.js"
+  "name": "frontend",
+  "version": "1.0.0",
+  "description": "Run it in dev mode with: `elm-app start`",
+  "main": "elmapp.config.js",
+  "directories": {
+    "test": "tests"
   },
+  "scripts": {
+    "dev": "PORT=3001 elm-app start",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "uglify-js": "^3.10.0"
+    "easymde": "^2.10.1"
   }
 }
