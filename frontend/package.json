@@ -15,5 +15,8 @@
   "license": "ISC",
   "dependencies": {
     "easymde": "^2.10.1"
+  },
+  "devDependencies": {
+    "http-proxy-middleware": "^1.0.4"
   }
 }
