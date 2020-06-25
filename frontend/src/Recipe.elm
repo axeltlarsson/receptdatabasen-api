@@ -173,7 +173,9 @@ fetchMany : (Result ServerError (List (Recipe Preview)) -> msg) -> Cmd msg
 fetchMany toMsg =
     let
         params =
-            [ Url.Builder.string "select" "id,title,description,images,created_at,updated_at" ]
+            [ Url.Builder.string "select" "id,title,description,images,created_at,updated_at"
+            , Url.Builder.string "order" "title"
+            ]
     in
     Http.get
         { url = url params
