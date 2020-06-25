@@ -110,11 +110,6 @@ viewSearchBox model =
         }
 
 
-debug : Element.Attribute msg
-debug =
-    Element.explain Debug.todo
-
-
 imageWidths : { min : Int, max : Int }
 imageWidths =
     let

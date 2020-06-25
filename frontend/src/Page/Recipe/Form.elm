@@ -204,11 +204,6 @@ edges =
     }
 
 
-debug : Element.Attribute Msg
-debug =
-    Element.explain Debug.todo
-
-
 errorBorder : Bool -> a -> Verify.Validator String a String -> List (Element.Attribute Msg)
 errorBorder active input theValidator =
     let
@@ -792,8 +787,9 @@ update msg ({ form } as model) =
                                 x ->
                                     -- Should never happen: it would mean base64 encoding completes after server upload
                                     -- started, which is impossible as we don't upload until that is completed...
-                                    Debug.log "ImageUrlEncoded while in wrong state"
-                                        x
+                                    -- TODO: handle debug
+                                    -- Debug.log "ImageUrlEncoded while in wrong state"
+                                    x
                         )
             in
             ( updateForm (\f -> { f | images = Dict.update idx updateImageDict f.images })
@@ -837,9 +833,10 @@ update msg ({ form } as model) =
                                     Done (Just base64Url) url
 
                                 x ->
-                                    Debug.log ("ImageUploadComplete while not being InProgress!" ++ Debug.toString x)
-                                        -- Should never happen: it can't be done twice!
-                                        x
+                                    -- TODO: handle debug
+                                    -- Debug.log ("ImageUploadComplete while not being InProgress!" ++ Debug.toString x)
+                                    -- Should never happen: it can't be done twice!
+                                    x
                         )
             in
             ( updateForm (\f -> { f | images = Dict.update idx updateImageDict f.images })
@@ -847,8 +844,9 @@ update msg ({ form } as model) =
             )
 
         ImageUploadComplete base64Url (Err err) ->
-            Debug.log (Debug.toString err)
-                ( model, Cmd.none )
+            -- TODO: handle debug
+            -- Debug.log (Debug.toString err)
+            ( model, Cmd.none )
 
         RemoveImage idx ->
             ( updateForm (\f -> { f | images = Dict.remove idx f.images }), Http.cancel ("image" ++ String.fromInt idx) )
@@ -898,10 +896,11 @@ update msg ({ form } as model) =
                     )
 
                 Err err ->
-                    Debug.log ("error" ++ Debug.toString err)
-                        ( activatedModel Invalid
-                        , Cmd.none
-                        )
+                    -- TODO: handle debug
+                    -- Debug.log ("error" ++ Debug.toString err)
+                    ( activatedModel Invalid
+                    , Cmd.none
+                    )
 
         SubmitValidForm _ ->
             -- Editor deals with this
@@ -910,8 +909,9 @@ update msg ({ form } as model) =
         PortMsgReceived m ->
             case Decode.decodeValue portMsgDecoder m of
                 Err err ->
-                    Debug.log (Decode.errorToString err)
-                        ( model, Cmd.none )
+                    -- TODO: handle debug
+                    -- Debug.log (Decode.errorToString err)
+                    ( model, Cmd.none )
 
                 Ok (InstructionsChange value) ->
                     ( updateForm (\f -> { f | instructions = value }), Cmd.none )

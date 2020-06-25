@@ -312,11 +312,6 @@ edges =
     }
 
 
-debug : Element.Attribute Msg
-debug =
-    Element.explain Debug.todo
-
-
 pancakeImgUrl : String
 pancakeImgUrl =
     "https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_185874/cf_259/pannkakstarta-med-choklad-och-nutella-724305-stor.jpg"

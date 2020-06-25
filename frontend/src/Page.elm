@@ -19,11 +19,6 @@ type Page
     | Other
 
 
-debug : Element.Attribute msg
-debug =
-    Element.explain Debug.todo
-
-
 {-| Takes a page's Html and frames it with header and footer.
 -}
 view : Page -> { title : String, content : Element msg } -> Document msg
