@@ -3,7 +3,6 @@
 trap 'error_handler' ERR
 
 function error_handler {
-  # Guard against $oldrev being set
   if [ -n $"$oldrev" ]; then
     echo "🚨 An error occurred, rolling back to previous deployment $oldrev"
     git --work-tree="$TARGET" --git-dir="$GIT_DIR" checkout -b backup
