@@ -79,5 +79,4 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
 RUN luarocks install lua-vips
 
 COPY openresty/nginx /usr/local/openresty/nginx/conf
-COPY openresty/html /usr/local/openresty/nginx
 COPY openresty/lua /usr/local/openresty/lualib
