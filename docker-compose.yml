@@ -55,8 +55,9 @@ services:
   # After some processing/checks and transformation, the request is forwarded
   # to PostgREST down the stack.
   openresty:
-    build:
-      context: ./openresty
+    build: # openresty image builds the frontend, so needs access to that context
+      dockerfile: ./openresty/Dockerfile
+      context: .
     command: ["/usr/bin/openresty", "-g", "daemon off; error_log /dev/stderr info;"]
     ports:
       - "8080:80"
