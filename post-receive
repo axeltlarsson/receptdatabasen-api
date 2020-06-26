@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Clone the project as a bare repo, and install this hook at $GIT_DIR/hooks/post-receive
 # Then add git remote locally, e.g. git remote add prod <server>:$TARGET
 # to deploy: git push prod master
@@ -16,6 +18,9 @@ do
     then
         echo "Master ref received.  Deploying master branch to production..."
         git --work-tree=$TARGET --git-dir=$GIT_DIR checkout -f
+        cd $TARGET
+        docker-compose build
+        echo "🚀 Deployed $newrev"
     else
         echo "Ref $ref successfully received.  Doing nothing: only the master branch may be deployed on this server."
     fi
