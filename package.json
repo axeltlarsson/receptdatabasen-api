@@ -1,5 +1,5 @@
 {
-  "name": "starter-kit",
+  "name": "receptdatabasen",
   "dependencies": {},
   "devDependencies": {
     "babel-core": "^6.24.0",
@@ -16,6 +16,6 @@
     "test_db": "node tests/bin/test_db.js",
     "test": "npm run test_db && npm run test_rest && npm run test_image_server"
   },
-  "author": "ruslan.talpa@subzero.cloud",
-  "license": "ISC"
+  "author": "mail@axellarsson.nu",
+  "license": "MIT"
 }

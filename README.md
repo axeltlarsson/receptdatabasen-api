@@ -40,10 +40,7 @@ PostgREST enables a different way of building data driven API backends. It does 
 
 ```
 
-
-
 ## Installation
-
 
 ```bash
 docker-compose up -d
@@ -54,6 +51,7 @@ The API server will become available at the following endpoint:
 - REST [http://localhost:8080/rest/](http://localhost:8080/rest/)
 
 ### API
+
 Using [httpie](https://httpie.org/doc) it's very easy to interact with the API:
 
 - `http POST :8080/rest/recipes < data/cheese_cake.json` - to create a recipe
