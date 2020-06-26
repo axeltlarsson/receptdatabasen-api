@@ -22,4 +22,6 @@ docker-compose exec db psql -U superuser -d app -c "truncate table data.recipe;"
 echo "Importing 'converted_dump.sql...'"
 docker-compose exec -T db psql -U superuser -d app < converted_dump.sql
 
+rm converted_dump.sql
+
 echo "✅ Done, please manually transfer any images."
