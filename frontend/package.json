@@ -17,6 +17,9 @@
     "easymde": "^2.10.1"
   },
   "devDependencies": {
+    "eslint": "^7.3.1",
+    "eslint-config-airbnb-base": "^14.2.0",
+    "eslint-plugin-import": "^2.21.2",
     "http-proxy-middleware": "^1.0.4"
   }
 }
