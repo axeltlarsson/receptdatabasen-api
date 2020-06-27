@@ -3,13 +3,7 @@
 trap 'error_handler' ERR
 
 function error_handler {
-  if [ -n $"$oldrev" ]; then
-    echo "🚨 An error occurred, rolling back to previous deployment $oldrev"
-    git --work-tree="$TARGET" --git-dir="$GIT_DIR" checkout -b backup
-    git --work-tree="$TARGET" --git-dir="$GIT_DIR" branch -f master "$oldrev"
-    git --work-tree="$TARGET" --git-dir="$GIT_DIR" checkout master
-    git --work-tree="$TARGET" --git-dir="$GIT_DIR" branch -D backup
-  fi
+  echo "🚨 An error occurred, deploy failed"
   exit 1
 }
 
@@ -30,7 +24,7 @@ do
         echo "Master ref received.  Deploying master branch to production..."
         git --work-tree=$TARGET --git-dir=$GIT_DIR checkout -f
         cd $TARGET || error_handler
-        docker-compose build
+        OLDREV=$oldrev NEWREV=$newrev REF=$ref $TARGET/scripts/deploy.sh
         echo "🚀 Deployed $newrev"
     else
         echo "Ref $ref successfully received.  Doing nothing: only the master branch may be deployed on this server."
