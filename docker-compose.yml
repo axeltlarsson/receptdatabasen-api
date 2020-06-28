@@ -9,8 +9,6 @@ services:
   # commented and in the .env file you will specify the ip of your separate database instance
   db:
     image: postgres:${PG_VERSION}
-    ports:
-      - "5432:5432"
     environment:
       # env vars specific to postgres image used on first boot
       - POSTGRES_USER=${SUPER_USER}
@@ -36,8 +34,6 @@ services:
   # and providing a REST api, (almost) every request that is sent to the database goes through it
   postgrest:
     image: postgrest/postgrest:v7.0.1
-    ports:
-      - "3000:3000"
     environment:
       - PGRST_DB_URI=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
       - PGRST_DB_SCHEMA=${DB_SCHEMA}
@@ -46,7 +42,6 @@ services:
       - PGRST_JWT_SECRET=${JWT_SECRET}
       - PGRST_MAX_ROWS=${MAX_ROWS}
       - PGRST_PRE_REQUEST=${PRE_REQUEST}
-      - PGRST_SERVER_PROXY_URI=${SERVER_PROXY_URI}
     depends_on:
       - db
 
@@ -59,8 +54,6 @@ services:
       dockerfile: ./openresty/Dockerfile
       context: .
     command: ["/usr/bin/openresty", "-g", "daemon off; error_log /dev/stderr info;"]
-    ports:
-      - "8080:80"
     environment:
       - JWT_SECRET=${JWT_SECRET}
       - DEVELOPMENT=${DEVELOPMENT}
