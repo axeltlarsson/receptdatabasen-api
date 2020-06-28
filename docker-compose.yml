@@ -20,7 +20,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
 
     volumes:
-      - db-volume:/var/lib/postgresql/data
+      - db-vol:/var/lib/postgresql/data
 
 
   # PostgREST instance, is responsible for communicating with the database
@@ -62,10 +62,10 @@ services:
       - ./openresty/nginx:/usr/local/openresty/nginx/conf
       - ./openresty/html:/usr/local/openresty/nginx/html
       - ./openresty/lua:/usr/local/openresty/lua
-      - uploads-volume:/uploads
+      - uploads-vol:/uploads
     depends_on:
       - postgrest
 
 volumes:
-  db-volume:
-  uploads-volume:
+  db-vol:
+  uploads-vol:

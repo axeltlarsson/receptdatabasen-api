@@ -80,3 +80,5 @@ RUN luarocks install lua-vips
 
 COPY openresty/nginx /usr/local/openresty/nginx/conf
 COPY openresty/lua /usr/local/openresty/lualib
+
+EXPOSE 80

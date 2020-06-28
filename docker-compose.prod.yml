@@ -17,7 +17,7 @@ services:
     environment:
       - VIRTUAL_HOST=${VIRTUAL_HOST}
       - LETSENCRYPT_HOST=${VIRTUAL_HOST}
-      - EMAIL=${EMAIL}
+      - LETSENCRYPT_EMAIL=${EMAIL}
     networks:
       - webproxy
 
