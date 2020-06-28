@@ -1,8 +1,11 @@
 version: '3.7'
 services:
   db:
+    image: postgres:${PG_VERSION}
     ports:
       - "5432:5432"
+    volumes:
+      - ./db/src:/docker-entrypoint-initdb.d
 
   postgrest:
     ports:
