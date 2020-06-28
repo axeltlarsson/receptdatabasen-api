@@ -14,45 +14,14 @@ services:
 
   openresty:
     restart: unless-stopped
+    environment:
+      - VIRTUAL_HOST=${VIRTUAL_HOST}
+      - LETSENCRYPT_HOST=${VIRTUAL_HOST}
+      - EMAIL=${EMAIL}
+    networks:
+      - webproxy
 
-# networks:
-  # backend:
-  # frontend:
-
-
-# Used in production
-# It adds the app and db to a new isolated network: backend
-
-# version: '3'
-
-# services:
-  # app:
-    # environment:
-      # DB_URL: "jdbc:postgresql://db:5432/listan"
-    # restart: unless-stopped
-    # networks:
-      # - backend
-      # - frontend
-  # frontend:
-    # environment:
-      # VIRTUAL_HOST: "${VIRTUAL_HOST}"
-      # LETSENCRYPT_HOST: "${VIRTUAL_HOST}"
-      # LETSENCRYPT_EMAIL: "${EMAIL}"
-    # restart: unless-stopped
-    # networks:
-      # - frontend
-  # db:
-    # environment:
-      # POSTGRES_PASSWORD: ${DB_PASSWORD}
-    # restart: unless-stopped
-    # volumes:
-      # - db-volume:/var/lib/postgresql/data
-    # networks:
-      # - backend
-
-# volumes:
-  # db-volume:
-# networks:
-  # backend:
-  # frontend:
-
+networks:
+  webproxy:
+    external: true
+    name: ${PROXY_NETWORK}

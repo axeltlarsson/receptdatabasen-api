@@ -6,4 +6,4 @@ set -e
 
 echo "Deploying ${NEWREV:0:6}..."
 docker-compose -f docker-compose.yml -f docker-compose.prod.yml build --pull
-docker-compose -f docker-compose.yml -f docker-compose.prod.yml ps
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
