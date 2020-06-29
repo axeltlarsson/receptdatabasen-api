@@ -59,9 +59,6 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
     volumes:
-      - ./openresty/nginx:/usr/local/openresty/nginx/conf
-      - ./openresty/html:/usr/local/openresty/nginx/html
-      - ./openresty/lua:/usr/local/openresty/lua
       - uploads-vol:/uploads
     depends_on:
       - postgrest

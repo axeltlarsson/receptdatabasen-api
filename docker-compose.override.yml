@@ -14,3 +14,7 @@ services:
   openresty:
     ports:
       - "8080:80"
+    volumes:
+      - ./openresty/nginx:/usr/local/openresty/nginx/conf
+      - ./openresty/html:/usr/local/openresty/nginx/html
+      - ./openresty/lua:/usr/local/openresty/lua

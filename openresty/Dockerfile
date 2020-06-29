@@ -54,7 +54,7 @@ RUN npm run build
 # The final openresty image
 FROM openresty/openresty:buster
 
-COPY --from=frontend_builder /app/build /usr/local/openresty/nginx
+COPY --from=frontend_builder /app/build /usr/local/openresty/nginx/html
 
 COPY --from=builder /usr/local/lib /usr/local/lib
 
@@ -79,6 +79,6 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
 RUN luarocks install lua-vips
 
 COPY openresty/nginx /usr/local/openresty/nginx/conf
-COPY openresty/lua /usr/local/openresty/lualib
+COPY openresty/lua /usr/local/openresty/lua
 
 EXPOSE 80

@@ -8,9 +8,13 @@ services:
       context: ./db
       args:
         - VERSION=${PG_VERSION}
+    networks:
+      - backend
 
   postgrest:
     restart: unless-stopped
+    networks:
+      - backend
 
   openresty:
     restart: unless-stopped
@@ -20,8 +24,10 @@ services:
       - LETSENCRYPT_EMAIL=${EMAIL}
     networks:
       - webproxy
+      - backend
 
 networks:
+  backend:
   webproxy:
     external: true
     name: ${PROXY_NETWORK}
