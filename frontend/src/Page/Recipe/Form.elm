@@ -368,7 +368,7 @@ viewImagesInput imagesDict tooManyError =
                             )
 
                     Done Nothing url ->
-                        imageRect ("http://localhost:8080/images/sig/1600/" ++ url)
+                        imageRect ("/images/sig/1600/" ++ url)
                             (removeButton [ alignBottom, alignRight, padding 10 ]
                                 { idx = idx
                                 , label = row [] [ trashIcon ]
@@ -401,7 +401,7 @@ viewImagesInput imagesDict tooManyError =
                                             )
 
                                     Done Nothing url ->
-                                        smallImage ("http://localhost:8080/images/sig/1600/" ++ url)
+                                        smallImage ("/images/sig/1600/" ++ url)
                                             i
                                             (removeButton [ alignBottom, alignRight, padding 5 ]
                                                 { idx = i

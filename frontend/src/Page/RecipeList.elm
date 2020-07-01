@@ -148,7 +148,7 @@ viewPreview recipe =
                     String.fromInt <| imageWidths.max * 2
             in
             image
-                |> Maybe.map (\i -> "http://localhost:8080/images/sig/" ++ width ++ "/" ++ i)
+                |> Maybe.map (\i -> "/images/sig/" ++ width ++ "/" ++ i)
                 |> Maybe.withDefault (placeholderImage id)
     in
     column
