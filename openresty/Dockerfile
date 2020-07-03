@@ -70,6 +70,7 @@ VOLUME /uploads
 
 COPY --from=receptdatabasen_frontend_builder /app/build /usr/local/openresty/nginx/html
 COPY nginx /usr/local/openresty/nginx/conf
+COPY nginx_prod /usr/local/openresty/nginx/conf/prod
 COPY lua /usr/local/openresty/lua
 
 EXPOSE 80
