@@ -65,7 +65,6 @@ services:
       - uploads-vol:/uploads
     depends_on:
       - postgrest
-      - frontend_builder
 
 volumes:
   db-vol:
