@@ -38,14 +38,17 @@ services:
     depends_on:
       - db
 
+  frontend_builder:
+    build:
+      context: frontend
+
   # OpenResty (Nginx + Lua) instance that sits in front of PostgREST.
   # All the requests coming into the system are first hitting this component.
   # After some processing/checks and transformation, the request is forwarded
   # to PostgREST down the stack.
   openresty:
     build: # openresty image builds the frontend, so needs access to that context
-      dockerfile: ./openresty/Dockerfile
-      context: .
+      context: openresty
     command: ["/usr/bin/openresty", "-g", "daemon off; error_log /dev/stderr info;"]
     environment:
       - JWT_SECRET=${JWT_SECRET}
@@ -62,6 +65,7 @@ services:
       - uploads-vol:/uploads
     depends_on:
       - postgrest
+      - frontend_builder
 
 volumes:
   db-vol:

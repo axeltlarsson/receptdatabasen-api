@@ -38,23 +38,10 @@ RUN DEBIAN_FRONTEND=noninteractive \
       make && \
       make install && \
       ldconfig
-
-# Build the frontend
-# The context - as defined by docker-compose.yml is the root of the project
-FROM node:14 AS frontend_builder
-
-WORKDIR /app
-COPY ./frontend/package*.json /app/
-RUN npm install
-
-COPY ./frontend/ /app/
-RUN ls
-RUN npm run build
-
+#
 # The final openresty image
 FROM openresty/openresty:buster
 
-COPY --from=frontend_builder /app/build /usr/local/openresty/nginx/html
 
 COPY --from=builder /usr/local/lib /usr/local/lib
 
@@ -78,9 +65,11 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
 # Install lua-vips
 RUN luarocks install lua-vips
 
-COPY openresty/nginx /usr/local/openresty/nginx/conf
-COPY openresty/lua /usr/local/openresty/lua
-
 RUN mkdir -p /uploads/cache && chown -R nobody /uploads
 VOLUME /uploads
+
+COPY --from=receptdatabasen_frontend_builder /app/build /usr/local/openresty/nginx/html
+COPY nginx /usr/local/openresty/nginx/conf
+COPY lua /usr/local/openresty/lua
+
 EXPOSE 80
