@@ -1,8 +1,58 @@
 # receptdatabasen-api
+
 *The new PostgREST backend and Elm frontend for receptdatabasen*
 
-See [frontend](./frontend/) for the Elm frontend.
+## Development
 
+To run:
+
+```bash
+docker-compose up
+```
+
+And then see [frontend](./frontend/) for spinning up the Elm frontend.
+
+### Running with nginx prod conf in development
+
+Comment `- ./openresty/nginx:/usr/local/openresty/nginx/conf` in docker-compose.override.yml.
+
+
+### API
+
+Using [httpie](https://httpie.org/doc) it's very easy to interact with the API:
+
+- `http POST :8080/rest/recipes < data/cheese_cake.json` - to create a recipe
+- `http :8080/rest/recipes` - get the list of recipes
+- `http :8080/rest/recipes title=="eq.Cheese Cake"` - get a recipe by title
+- `http PATCH :8080/rest/recipes title=="eq.Cheese Cake" portions:=23 tags:='["efterätt", "dessert"]'` - edit the recipe
+- `http :8080/rest/rpc/search search_query='fläsk'` - full text search with prefix matching
+
+## Testing
+
+The starter kit comes with a testing infrastructure setup.
+You can write pgTAP tests that run directly in your database, useful for testing the logic that resides in your database (user privileges, Row Level Security, stored procedures).
+Integration tests are written in JavaScript.
+
+Here is how you run them
+
+```bash
+npm install                     # Install test dependencies
+npm test                        # Run all tests (db, rest)
+npm run test_db                 # Run pgTAP tests
+npm run test_rest               # Run integration tests
+```
+
+## Image upload endpoint
+Example usage:
+
+```bash
+http -v POST :8080/images/upload Content-type:image/jpeg < test.jpeg
+```
+
+Testing:
+```shell
+npm run test_image_server
+```
 ## PostgREST Starter Kit
 
 Base project and tooling for authoring REST API backends with [PostgREST](https://postgrest.com).
@@ -40,26 +90,6 @@ PostgREST enables a different way of building data driven API backends. It does 
 
 ```
 
-## Installation
-
-```bash
-docker-compose up -d
-```
-
-The API server will become available at the following endpoint:
-
-- REST [http://localhost:8080/rest/](http://localhost:8080/rest/)
-
-### API
-
-Using [httpie](https://httpie.org/doc) it's very easy to interact with the API:
-
-- `http POST :8080/rest/recipes < data/cheese_cake.json` - to create a recipe
-- `http :8080/rest/recipes` - get the list of recipes
-- `http :8080/rest/recipes title=="eq.Cheese Cake"` - get a recipe by title
-- `http PATCH :8080/rest/recipes title=="eq.Cheese Cake" portions:=23 tags:='["efterätt", "dessert"]'` - edit the recipe
-- `http :8080/rest/rpc/search search_query='fläsk'` - full text search with prefix matching
-
 ## Development workflow and debugging
 
 Execute `subzero dashboard` in the root of your project.<br /> (Install [subzero-cli](https://github.com/subzerocloud/subzero-cli))
@@ -69,31 +99,3 @@ if you edit a sql/conf/lua file in your project, the changes will immediately be
 Refresh schema by force: `docker-compose kill -s "SIGUSR1" server`
 
 
-## Testing
-
-The starter kit comes with a testing infrastructure setup.
-You can write pgTAP tests that run directly in your database, useful for testing the logic that resides in your database (user privileges, Row Level Security, stored procedures).
-Integration tests are written in JavaScript.
-
-Here is how you run them
-
-```bash
-npm install                     # Install test dependencies
-npm test                        # Run all tests (db, rest)
-npm run test_db                 # Run pgTAP tests
-npm run test_rest               # Run integration tests
-```
-
-## Image upload endpoint
-Example usage:
-
-```bash
-http -v POST :8080/images/upload Content-type:image/jpeg < test.jpeg
-
-```
-
-### Setup
-
-```shell
-docker-compose exec openresty bash -c 'mkdir /uploads/cache && chown -R nobody /uploads'
-```
