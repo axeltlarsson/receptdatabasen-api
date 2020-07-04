@@ -59,5 +59,16 @@ describe('image server', function () {
 
   })
 
+  it('responds with 404 for missing file', function(done) {
+    image_service()
+      .get('/sig/100/missing_file.jpeg')
+      .expect(res => {
+        res.body.should.have.keys('error')
+        res.body.error.should.match(/File not found/)
+      })
+      .expect('Content-type', 'application/json; charset=utf-8')
+      .expect(404, done)
+  })
+
 
 })
