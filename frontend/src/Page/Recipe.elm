@@ -269,7 +269,7 @@ viewTags tags =
 viewDescription : Maybe String -> Element Msg
 viewDescription description =
     description
-        |> Maybe.map (text >> List.singleton >> paragraph [ Font.light, width fill ])
+        |> Maybe.map (String.split "\n" >> List.map text >> List.map List.singleton >> List.map (paragraph [ Font.light, width fill ]) >> column [ spacing 10 ])
         |> Maybe.withDefault Element.none
 
 
