@@ -1076,6 +1076,13 @@ ingredientsMarkdownValidator input =
         Verify.fail "Skriv ingrediensera i en eller flera listor, eventuellt med rubriker emellan ❤️" input
 
 
+instructionsMarkdownValidator : Verify.Validator String String String
+instructionsMarkdownValidator input =
+    Markdown.parsingErrors input
+        |> Maybe.map (\e -> Verify.fail ("Det gick inte att parsa denna text korrekt, felet som uppstod var:\n" ++ e) input)
+        |> Maybe.withDefault (Ok input)
+
+
 instructionsValidator : Verify.Validator String String String
 instructionsValidator =
     trim
@@ -1085,6 +1092,8 @@ instructionsValidator =
             (String.Verify.minLength 5 "Beskriv hur man tillagar detta recept med minst 5 tecken ☝")
         |> Verify.compose
             (String.Verify.maxLength 4000 "Skriv inte en hel roman här tack! ⛔️")
+        |> Verify.compose
+            instructionsMarkdownValidator
 
 
 ingredientsValidator : Verify.Validator String String String

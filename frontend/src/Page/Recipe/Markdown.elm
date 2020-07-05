@@ -1,4 +1,4 @@
-module Page.Recipe.Markdown exposing (onlyListAndHeading, render)
+module Page.Recipe.Markdown exposing (onlyListAndHeading, parsingErrors, render)
 
 import Dict exposing (Dict)
 import Element
@@ -66,6 +66,20 @@ all predicate markdown =
 
         Err _ ->
             False
+
+
+parsingErrors : String -> Maybe String
+parsingErrors markdown =
+    let
+        astResult =
+            Markdown.Parser.parse markdown
+    in
+    case astResult of
+        Ok _ ->
+            Nothing
+
+        Err errors ->
+            errors |> List.map Markdown.Parser.deadEndToString |> String.join "\n" |> Just
 
 
 onlyListAndHeading : String -> Bool
