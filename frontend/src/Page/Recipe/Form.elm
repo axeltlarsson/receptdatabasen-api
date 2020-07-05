@@ -1064,7 +1064,7 @@ titleValidator =
 descriptionValidator : Verify.Validator String String String
 descriptionValidator =
     trim
-        |> Verify.compose (String.Verify.maxLength 500 "Använd en kortare beskrivning 🙏")
+        |> Verify.compose (String.Verify.maxLength 700 "Använd en kortare beskrivning 🙏")
 
 
 ingredientsMarkdownValidator : Verify.Validator String String String
