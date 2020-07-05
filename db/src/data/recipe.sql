@@ -9,7 +9,7 @@ create or replace function data.immutable_array_to_string (text[])
 create table data.recipe (
   id serial primary key,
   title text not null unique constraint title_length check (length(title) >= 3 and length(title) <= 100),
-  description text constraint description_length check (description = null or length(description) <= 500),
+  description text constraint description_length check (description is null or length(description) <= 500),
   instructions text not null constraint instructions_length check (length(instructions) >= 5 and length(instructions) <= 4000),
   tags text[] not null default '{}',
   portions integer not null constraint portions_size check (portions > 0 and portions <= 100),
