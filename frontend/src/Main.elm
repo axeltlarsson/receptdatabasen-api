@@ -1,10 +1,9 @@
-port module Main exposing (main)
+module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Events
 import Browser.Navigation as Nav
 import Html
-import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 import Page exposing (Page)
@@ -102,7 +101,6 @@ type Msg
     | GotRecipeListMsg RecipeList.Msg
     | GotEditorMsg Editor.Msg
     | GotWindowResize Session.Window
-    | GotImageUploadProgress Int Http.Progress
 
 
 toSession : Model -> Session
@@ -200,15 +198,6 @@ update msg model =
                 NotFound session ->
                     ( NotFound (updateSession window), Cmd.none )
 
-        ( GotImageUploadProgress idx progress, page ) ->
-            case page of
-                Editor slug editor ->
-                    Editor.update (Editor.uploadProgressMsg idx progress) editor
-                        |> updateWith (Editor slug) GotEditorMsg
-
-                _ ->
-                    ( model, Cmd.none )
-
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page
             ( model, Cmd.none )
@@ -230,19 +219,32 @@ updateWith toModel toMsg ( subModel, subCmd ) =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
+subscriptions model =
+    let
+        modelSubs =
+            case model of
+                NotFound _ ->
+                    Sub.none
+
+                Recipe _ ->
+                    Sub.none
+
+                RecipeList _ ->
+                    Sub.none
+
+                Redirect _ ->
+                    Sub.none
+
+                Editor slug editor ->
+                    Sub.map GotEditorMsg (Editor.subscriptions editor)
+
+        windowResizeSub =
+            Browser.Events.onResize (\w h -> GotWindowResize { width = w, height = h })
+    in
     Sub.batch
-        [ Browser.Events.onResize (\w h -> GotWindowResize { width = w, height = h })
-        , portReceiver (\v -> GotEditorMsg (Editor.portMsg v))
-        , Http.track "image0" (GotImageUploadProgress 0)
-        , Http.track "image1" (GotImageUploadProgress 1)
-        , Http.track "image2" (GotImageUploadProgress 2)
-        , Http.track "image3" (GotImageUploadProgress 3)
-        , Http.track "image4" (GotImageUploadProgress 4)
+        [ windowResizeSub
+        , modelSubs
         ]
-
-
-port portReceiver : (Decode.Value -> msg) -> Sub msg
 
 
 

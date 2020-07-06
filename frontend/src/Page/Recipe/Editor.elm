@@ -1,4 +1,4 @@
-port module Page.Recipe.Editor exposing (Model, Msg, initEdit, initNew, portMsg, toSession, update, uploadProgressMsg, view)
+port module Page.Recipe.Editor exposing (Model, Msg, initEdit, initNew, subscriptions, toSession, update, view)
 
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
@@ -18,6 +18,9 @@ import Url.Builder
 
 
 port portSender : Encode.Value -> Cmd msg
+
+
+port portReceiver : (Decode.Value -> msg) -> Sub msg
 
 
 
@@ -137,16 +140,6 @@ type Msg
     | CompletedEdit (Result Recipe.ServerError (Recipe Full))
     | PortMsg Decode.Value
     | GotImageUploadProgress Int Http.Progress
-
-
-portMsg : Decode.Value -> Msg
-portMsg =
-    PortMsg
-
-
-uploadProgressMsg : Int -> Http.Progress -> Msg
-uploadProgressMsg =
-    GotImageUploadProgress
 
 
 formToModel : Model -> Form.Model -> Model
@@ -321,3 +314,15 @@ savingError error status =
 toSession : Model -> Session
 toSession model =
     model.session
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    Sub.batch
+        [ portReceiver PortMsg
+        , Http.track "image0" (GotImageUploadProgress 0)
+        , Http.track "image1" (GotImageUploadProgress 1)
+        , Http.track "image2" (GotImageUploadProgress 2)
+        , Http.track "image3" (GotImageUploadProgress 3)
+        , Http.track "image4" (GotImageUploadProgress 4)
+        ]
