@@ -1,6 +1,7 @@
 module Main exposing (main)
 
 import Browser exposing (Document)
+import Browser.Dom exposing (Viewport, getViewport)
 import Browser.Events
 import Browser.Navigation as Nav
 import Html
@@ -15,6 +16,7 @@ import Page.RecipeList as RecipeList
 import Recipe.Slug as Slug exposing (Slug)
 import Route exposing (Route)
 import Session exposing (Session)
+import Task
 import Url
 
 
@@ -97,6 +99,7 @@ view model =
 type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
+    | GotViewport Url.Url Browser.Dom.Viewport
     | GotRecipeMsg Recipe.Msg
     | GotRecipeListMsg RecipeList.Msg
     | GotEditorMsg Editor.Msg
@@ -152,22 +155,43 @@ changeRouteTo maybeRoute model =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
-        updateSession window =
-            Session.updateWindowSize (toSession model) window
+        updateSession page newSession =
+            case page of
+                Recipe recipe ->
+                    Recipe { recipe | session = newSession }
+
+                RecipeList recipes ->
+                    RecipeList { recipes | session = newSession }
+
+                Editor slug editor ->
+                    Editor slug { editor | session = newSession }
+
+                Redirect session ->
+                    Redirect newSession
+
+                NotFound session ->
+                    NotFound newSession
     in
     case ( msg, model ) of
         ( LinkClicked urlRequest, _ ) ->
             case urlRequest of
                 Browser.Internal url ->
-                    ( model
-                    , Nav.pushUrl (Session.navKey (toSession model)) (Url.toString url)
-                    )
+                    ( model, Task.perform (GotViewport url) Browser.Dom.getViewport )
 
                 Browser.External href ->
                     ( model, Nav.load href )
 
         ( UrlChanged url, _ ) ->
             changeRouteTo (Route.fromUrl url) model
+
+        ( GotViewport url viewport, page ) ->
+            let
+                newSession =
+                    Session.updateViewport (toSession model) viewport
+            in
+            ( updateSession page newSession
+            , Nav.pushUrl (Session.navKey (toSession model)) (Url.toString url)
+            )
 
         ( GotRecipeMsg subMsg, Recipe recipe ) ->
             Recipe.update subMsg recipe
@@ -182,21 +206,11 @@ update msg model =
                 |> updateWith (Editor slug) GotEditorMsg
 
         ( GotWindowResize window, page ) ->
-            case page of
-                Recipe recipe ->
-                    ( Recipe { recipe | session = updateSession window }, Cmd.none )
-
-                RecipeList recipes ->
-                    ( RecipeList { recipes | session = updateSession window }, Cmd.none )
-
-                Editor slug editor ->
-                    ( Editor slug { editor | session = updateSession window }, Cmd.none )
-
-                Redirect session ->
-                    ( Redirect (updateSession window), Cmd.none )
-
-                NotFound session ->
-                    ( NotFound (updateSession window), Cmd.none )
+            let
+                newSession =
+                    Session.updateWindowSize (toSession model) window
+            in
+            ( updateSession page newSession, Cmd.none )
 
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page

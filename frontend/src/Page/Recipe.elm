@@ -1,5 +1,6 @@
 module Page.Recipe exposing (Model, Msg(..), init, toSession, update, view)
 
+import Browser.Dom as Dom
 import Dict exposing (Dict)
 import Element
     exposing
@@ -43,6 +44,7 @@ import Recipe exposing (Full, Metadata, Recipe, contents, fullDecoder, metadata)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
 import Session exposing (Session)
+import Task
 import Url exposing (Url)
 import Url.Builder
 
@@ -69,7 +71,7 @@ init session slug =
               , session = session
               , checkboxStatus = Dict.empty
               }
-            , Cmd.none
+            , resetViewport
             )
 
         Nothing ->
@@ -77,8 +79,13 @@ init session slug =
               , session = session
               , checkboxStatus = Dict.empty
               }
-            , Recipe.fetch slug LoadedRecipe
+            , Cmd.batch [ Recipe.fetch slug LoadedRecipe, resetViewport ]
             )
+
+
+resetViewport : Cmd Msg
+resetViewport =
+    Task.perform (\_ -> SetViewport) (Dom.setViewport 0 0)
 
 
 
@@ -355,6 +362,7 @@ type Msg
     | ClickedDelete
     | ClickedEdit
     | Deleted (Result Http.Error ())
+    | SetViewport
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -397,6 +405,9 @@ update msg model =
 
         Deleted (Err error) ->
             ( { model | recipe = Failed (Recipe.serverErrorFromHttp error) }, Cmd.none )
+
+        SetViewport ->
+            ( model, Cmd.none )
 
 
 

@@ -1,5 +1,6 @@
 port module Page.Recipe.Editor exposing (Model, Msg, initEdit, initNew, subscriptions, toSession, update, view)
 
+import Browser.Dom as Dom
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
 import Element exposing (Element, centerX, column, el, fill, row, spacing, text, width)
@@ -13,6 +14,7 @@ import Recipe exposing (Full, Recipe, ServerError, fullDecoder)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
 import Session exposing (Session)
+import Task
 import Url exposing (Url)
 import Url.Builder
 
@@ -73,15 +75,23 @@ initEdit session slug =
             ( { session = session
               , status = Editing slug Nothing <| Form.fromRecipe recipe
               }
-            , Cmd.none
+            , resetViewport
             )
 
         Nothing ->
             ( { session = session
               , status = Loading slug
               }
-            , Recipe.fetch slug (CompletedRecipeLoad slug)
+            , Cmd.batch
+                [ Recipe.fetch slug (CompletedRecipeLoad slug)
+                , resetViewport
+                ]
             )
+
+
+resetViewport : Cmd Msg
+resetViewport =
+    Task.perform (\_ -> SetViewport) (Dom.setViewport 0 0)
 
 
 
@@ -140,6 +150,7 @@ type Msg
     | CompletedEdit (Result Recipe.ServerError (Recipe Full))
     | PortMsg Decode.Value
     | GotImageUploadProgress Int Http.Progress
+    | SetViewport
 
 
 formToModel : Model -> Form.Model -> Model
@@ -283,6 +294,9 @@ update msg ({ status, session } as model) =
             ( { model | status = savingError error model.status }
             , Cmd.none
             )
+
+        SetViewport ->
+            ( model, Cmd.none )
 
 
 save : Status -> Encode.Value -> ( Status, Cmd Msg )

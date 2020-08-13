@@ -1,5 +1,18 @@
-module Session exposing (Session, Window, addRecipe, build, buildWithRecipe, device, navKey, recipe, updateWindowSize)
+module Session exposing
+    ( Session
+    , Window
+    , addRecipe
+    , build
+    , buildWithRecipe
+    , device
+    , navKey
+    , recipe
+    , updateViewport
+    , updateWindowSize
+    , viewport
+    )
 
+import Browser.Dom as Dom
 import Browser.Navigation as Nav
 import Element exposing (classifyDevice)
 import Recipe exposing (Full, Recipe)
@@ -8,8 +21,8 @@ import Url
 
 
 type Session
-    = Session Nav.Key Element.Device
-    | SessionWithRecipe (Recipe Full) Nav.Key Element.Device
+    = Session Nav.Key Element.Device (Maybe Dom.Viewport)
+    | SessionWithRecipe (Recipe Full) Nav.Key Element.Device (Maybe Dom.Viewport)
 
 
 type alias Window =
@@ -18,62 +31,82 @@ type alias Window =
 
 build : Nav.Key -> Window -> Session
 build key window =
-    Session key (classifyDevice window)
+    Session key (classifyDevice window) Nothing
 
 
 buildWithRecipe : Nav.Key -> Window -> Recipe Full -> Session
 buildWithRecipe key window fullRecipe =
-    SessionWithRecipe fullRecipe key (classifyDevice window)
+    SessionWithRecipe fullRecipe key (classifyDevice window) Nothing
 
 
 addRecipe : Recipe Full -> Session -> Session
 addRecipe fullRecipe session =
     case session of
-        Session key dev ->
-            SessionWithRecipe fullRecipe key dev
+        Session key dev theViewport ->
+            SessionWithRecipe fullRecipe key dev theViewport
 
-        SessionWithRecipe oldRecipe key dev ->
-            SessionWithRecipe fullRecipe key dev
+        SessionWithRecipe oldRecipe key dev theViewport ->
+            SessionWithRecipe fullRecipe key dev theViewport
 
 
 updateWindowSize : Session -> Window -> Session
 updateWindowSize session window =
     case session of
-        Session key dev ->
-            Session key (classifyDevice window)
+        Session key dev theViewport ->
+            Session key (classifyDevice window) theViewport
 
-        SessionWithRecipe fullRecipe key dev ->
-            SessionWithRecipe fullRecipe key (classifyDevice window)
+        SessionWithRecipe fullRecipe key dev theViewport ->
+            SessionWithRecipe fullRecipe key (classifyDevice window) theViewport
+
+
+updateViewport : Session -> Dom.Viewport -> Session
+updateViewport session theViewport =
+    case session of
+        Session key dev oldViewport ->
+            Session key dev (Just theViewport)
+
+        SessionWithRecipe fullRecipe key dev oldViewport ->
+            SessionWithRecipe fullRecipe key dev (Just theViewport)
 
 
 navKey : Session -> Nav.Key
 navKey session =
     case session of
-        Session key _ ->
+        Session key _ _ ->
             key
 
-        SessionWithRecipe _ key _ ->
+        SessionWithRecipe _ key _ _ ->
             key
 
 
 recipe : Session -> Slug -> Maybe (Recipe Full)
 recipe session slug =
     case session of
-        Session _ _ ->
+        Session _ _ _ ->
             Nothing
 
-        SessionWithRecipe recipeFull _ _ ->
+        SessionWithRecipe recipeFull _ _ _ ->
             matchingSlug slug recipeFull
 
 
 device : Session -> Element.Device
 device session =
     case session of
-        Session key dev ->
+        Session _ dev _ ->
             dev
 
-        SessionWithRecipe _ _ dev ->
+        SessionWithRecipe _ _ dev _ ->
             dev
+
+
+viewport : Session -> Maybe Dom.Viewport
+viewport session =
+    case session of
+        Session _ _ theViewport ->
+            theViewport
+
+        SessionWithRecipe _ _ _ theViewport ->
+            theViewport
 
 
 

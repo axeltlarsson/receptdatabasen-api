@@ -1,5 +1,6 @@
 module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, view)
 
+import Browser.Dom as Dom
 import Element
     exposing
         ( Element
@@ -33,6 +34,7 @@ import Recipe exposing (Preview, Recipe, previewDecoder)
 import Recipe.Slug as Slug exposing (Slug)
 import Route exposing (Route)
 import Session exposing (Session)
+import Task
 import Url
 import Url.Builder
 
@@ -305,13 +307,24 @@ iceCoffeeUrl =
 type Msg
     = LoadedRecipes (Result Recipe.ServerError (List (Recipe Preview)))
     | SearchQueryEntered String
+    | SetViewport
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         LoadedRecipes (Ok recipes) ->
-            ( { model | recipes = Loaded recipes }, Cmd.none )
+            let
+                setViewportFromSession session =
+                    Session.viewport session
+                        |> Maybe.map
+                            (\{ viewport } ->
+                                [ Task.perform (\_ -> SetViewport) (Dom.setViewport viewport.x viewport.y) ]
+                            )
+                        |> Maybe.withDefault []
+                        |> Cmd.batch
+            in
+            ( { model | recipes = Loaded recipes }, setViewportFromSession model.session )
 
         LoadedRecipes (Err error) ->
             ( { model | recipes = Failed error }, Cmd.none )
@@ -321,6 +334,9 @@ update msg model =
 
         SearchQueryEntered query ->
             ( { model | query = query }, Recipe.search LoadedRecipes query )
+
+        SetViewport ->
+            ( model, Cmd.none )
 
 
 
