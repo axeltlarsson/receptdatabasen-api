@@ -16,6 +16,7 @@
 .CodeMirror {
   border-bottom-left-radius: 2px;
   border-bottom-right-radius: 2px;
+  line-height: 22px;
 }
 .cm-header-1 {
   font-size: 140% !important;
