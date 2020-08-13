@@ -16,7 +16,7 @@
             "elm/regex": "1.0.0",
             "elm/url": "1.0.0",
             "feathericons/elm-feather": "1.4.0",
-            "mdgriffith/elm-ui": "1.1.7",
+            "mdgriffith/elm-ui": "1.1.8",
             "stoeffel/elm-verify": "5.0.0"
         },
         "indirect": {
