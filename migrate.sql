@@ -30,7 +30,7 @@ agg_sets as (
     when 'ingredienser' then
       '- '
     else
-      '#--  ' || trim(setname) || '
+      '#  ' || trim(setname) || '
 - '
     end || string_agg(ingredient, '
 - ') as ingredients
