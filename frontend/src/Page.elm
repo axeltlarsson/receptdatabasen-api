@@ -30,14 +30,17 @@ view page { title, content } =
             , Font.color Palette.nearBlack
             , Font.size Palette.normal
             , width fill
+            , Element.inFront (viewHeader page)
             ]
-            (column [ width (fill |> Element.maximum 1440), Element.centerX ]
-                [ viewHeader page
-                , content
-                ]
+            (column [ Element.paddingXY 0 headerHeight, width (fill |> Element.maximum 1440), Element.centerX ]
+                [ content ]
             )
         ]
     }
+
+
+headerHeight =
+    58
 
 
 viewHeader : Page -> Element msg
@@ -46,7 +49,17 @@ viewHeader page =
         [ Region.navigation
         , alignTop
         , width fill
+        , height (Element.px headerHeight)
         , Border.glow Palette.lightGrey 0.5
+        , Element.behindContent
+            (el
+                [ Element.alpha 0.95
+                , Background.color <| Palette.white
+                , width fill
+                , height fill
+                ]
+                Element.none
+            )
         ]
         [ viewMenu page ]
 
@@ -63,8 +76,8 @@ viewMenu page =
                 )
     in
     row [ alignLeft, spacingXY 20 0 ]
-        [ linkTo Route.NewRecipe "Nytt recept"
-        , linkTo Route.RecipeList "Alla recept"
+        [ linkTo Route.RecipeList "ALLA RECEPT"
+        , linkTo Route.NewRecipe "NYTT RECEPT"
         ]
 
 

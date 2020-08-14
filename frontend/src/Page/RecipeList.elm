@@ -71,19 +71,19 @@ view : Model -> { title : String, content : Element Msg }
 view model =
     case model.recipes of
         Loading ->
-            { title = "Recipes"
+            { title = "Recept"
             , content = Element.html Loading.animation
             }
 
         Failed err ->
-            { title = "Failed to load"
+            { title = "Kunde ej ladda in recept"
             , content =
                 column [ Region.mainContent ]
                     [ Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err) ]
             }
 
         Loaded recipes ->
-            { title = "Recipes"
+            { title = "Recept"
             , content =
                 column [ Region.mainContent, spacing 20, width fill, padding 10 ]
                     [ viewSearchBox model
