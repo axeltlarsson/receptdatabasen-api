@@ -53,8 +53,11 @@ initNew session =
             { session = session
             , status = EditingNew Nothing subModel
             }
+
+        ( model, msg ) =
+            Form.init |> updateWith toModel FormMsg
     in
-    Form.init |> updateWith toModel FormMsg
+    ( model, Cmd.batch [ msg, resetViewport ] )
 
 
 updateWith :
