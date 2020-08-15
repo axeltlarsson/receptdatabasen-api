@@ -22,7 +22,6 @@ services:
     volumes:
       - db-vol:/var/lib/postgresql/data
 
-
   # PostgREST instance, is responsible for communicating with the database
   # and providing a REST api, (almost) every request that is sent to the database goes through it
   postgrest:
@@ -37,10 +36,6 @@ services:
       - PGRST_PRE_REQUEST=${PRE_REQUEST}
     depends_on:
       - db
-
-  frontend_builder:
-    build:
-      context: frontend
 
   # OpenResty (Nginx + Lua) instance that sits in front of PostgREST.
   # All the requests coming into the system are first hitting this component.
