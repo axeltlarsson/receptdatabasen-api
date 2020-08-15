@@ -76,8 +76,8 @@ viewMenu page =
                 )
     in
     row [ alignLeft, spacingXY 20 0 ]
-        [ linkTo Route.RecipeList "ALLA RECEPT"
-        , linkTo Route.NewRecipe "NYTT RECEPT"
+        [ linkTo Route.RecipeList "Alla recept"
+        , linkTo Route.NewRecipe "Nytt recept"
         ]
 
 
