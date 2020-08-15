@@ -1,5 +1,5 @@
 #hourglass-loader {
-  --duration: 3s; 
+  --duration: 3s;
   --colour: #111;
   --delay: 2s;
 
@@ -7,7 +7,7 @@
   height: 40px;
   width: 41px;
   position: absolute;
-  top:calc(50% - 20px);
+  top:calc(50% + 100px);
   left:calc(50% - 20px);
 }
 @keyframes hourglass-loader {
