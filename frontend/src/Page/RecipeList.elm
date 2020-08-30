@@ -151,7 +151,6 @@ viewPreview recipe =
             in
             image
                 |> Maybe.map (\i -> "/images/sig/" ++ width ++ "/" ++ i)
-                |> Maybe.withDefault (placeholderImage id)
     in
     column
         [ width (fill |> Element.maximum imageWidths.max |> Element.minimum imageWidths.min)
@@ -171,14 +170,20 @@ viewPreview recipe =
         ]
 
 
-viewHeader : Int -> String -> String -> Element Msg
+viewHeader : Int -> String -> Maybe String -> Element Msg
 viewHeader id title imageUrl =
+    let
+        background =
+            imageUrl
+                |> Maybe.map Background.image
+                |> Maybe.withDefault (Background.color Palette.white)
+    in
     column [ width fill, height fill, Border.rounded 2 ]
         [ Element.el
             [ width fill
             , height fill
             , Border.rounded 2
-            , Background.image imageUrl
+            , background
             ]
             (el
                 [ Element.behindContent <|
@@ -256,48 +261,6 @@ viewDescription description =
                 >> paragraph [ padding 20, width fill, Element.alignBottom ]
             )
             description
-
-
-placeholderImage : Int -> String
-placeholderImage i =
-    case i of
-        1 ->
-            foodImgUrl "cheese+cake"
-
-        2 ->
-            foodImgUrl "pancake"
-
-        3 ->
-            foodImgUrl "omelette"
-
-        4 ->
-            iceCoffeeUrl
-
-        5 ->
-            lemonadeUrl
-
-        _ ->
-            foodImgUrl "food"
-
-
-foodImgUrl : String -> String
-foodImgUrl query =
-    "https://source.unsplash.com/640x480/?" ++ query
-
-
-pancakeImgUrl : String
-pancakeImgUrl =
-    "https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_185874/cf_259/pannkakstarta-med-choklad-och-nutella-724305-stor.jpg"
-
-
-lemonadeUrl : String
-lemonadeUrl =
-    "https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_214425/cf_259/rabarberlemonad-721978.jpg"
-
-
-iceCoffeeUrl : String
-iceCoffeeUrl =
-    "https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_214221/cf_259/iskaffe-med-kondenserad-mjolk-och-choklad-726741.jpg"
 
 
 

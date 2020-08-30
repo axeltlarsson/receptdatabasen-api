@@ -192,14 +192,19 @@ viewHeader : String -> List String -> Maybe String -> Maybe String -> Element.De
 viewHeader title tags description image device =
     let
         imageUrl =
-            image |> Maybe.map (\p -> "/images/sig/1600/" ++ p) |> Maybe.withDefault lemonadeUrl
+            image |> Maybe.map (\p -> "/images/sig/1600/" ++ p)
+
+        background =
+            imageUrl
+                |> Maybe.map Background.image
+                |> Maybe.withDefault (Background.color Palette.white)
     in
     if tabletOrSmaller device then
         column [ width fill, height <| Element.px 600 ]
             [ Element.el
                 [ width fill
                 , height fill
-                , Background.image imageUrl
+                , background
                 ]
                 (column
                     [ alignBottom
@@ -229,7 +234,7 @@ viewHeader title tags description image device =
                 , viewTags tags
                 , viewDescription description
                 ]
-            , el [ spacing 0, padding 0, width fill, height fill, Background.image imageUrl ] Element.none
+            , el [ spacing 0, padding 0, width fill, height fill, background ] Element.none
             ]
 
 
@@ -317,21 +322,6 @@ edges =
     , bottom = 0
     , left = 0
     }
-
-
-pancakeImgUrl : String
-pancakeImgUrl =
-    "https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_185874/cf_259/pannkakstarta-med-choklad-och-nutella-724305-stor.jpg"
-
-
-lemonadeUrl : String
-lemonadeUrl =
-    "https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_214425/cf_259/rabarberlemonad-721978.jpg"
-
-
-iceCoffeeUrl : String
-iceCoffeeUrl =
-    "https://assets.icanet.se/q_auto,f_auto/imagevaultfiles/id_214221/cf_259/iskaffe-med-kondenserad-mjolk-och-choklad-726741.jpg"
 
 
 viewDeleteButton : Element Msg
