@@ -12,7 +12,7 @@
   ```
 3. Inspect the source container and find the password, store connection URI:s in some env vars for easy usage:
   ```
-  MY_SOURCE="mysql://recipes:<pass>@172.20.0.2/recipes"
+  MY_SOURCE="mysql://recipe:<pass>@172.20.0.2/recipes"
   PG_DEST="postgresql://postgres:pass@172.20.0.5/postgres"
   ```
 4. Run the migration:
@@ -28,7 +28,7 @@
 6. Create a dump:
   ```
   docker exec -it migrating_receptdatabasen bash
-  pg_dump recipes > dump.sql
+  pg_dump -U recipe > dump.sql
   exit
   docker cp migrating_receptdatabasen:/dump.sql ./
   ```
