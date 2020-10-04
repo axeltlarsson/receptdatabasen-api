@@ -15,13 +15,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "easymde": "^2.11.0"
+    "easymde": "^2.12.0"
   },
   "devDependencies": {
-    "create-elm-app": "^4.2.26",
-    "eslint": "^7.7.0",
+    "create-elm-app": "^4.5.0",
+    "eslint": "^7.10.0",
     "eslint-config-airbnb-base": "^14.2.0",
-    "eslint-plugin-import": "^2.22.0",
+    "eslint-plugin-import": "^2.22.1",
     "http-proxy-middleware": "^1.0.5"
   }
 }
