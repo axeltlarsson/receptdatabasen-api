@@ -1,7 +1,7 @@
 module Page exposing (Page(..), view)
 
 import Browser exposing (Document)
-import Element exposing (Element, alignBottom, alignLeft, alignTop, centerX, column, el, fill, height, link, padding, row, spacing, spacingXY, text, width)
+import Element exposing (Element, alignBottom, alignLeft, alignTop, centerX, column, el, fill, height, link, padding, paddingXY, row, spacing, spacingXY, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -32,7 +32,7 @@ view page { title, content } =
             , width fill
             , Element.inFront (viewHeader page)
             ]
-            (column [ Element.paddingXY 0 headerHeight, width (fill |> Element.maximum 1440), Element.centerX ]
+            (column [ paddingXY 0 headerHeight, width (fill |> Element.maximum 1440), Element.centerX ]
                 [ content ]
             )
         ]
@@ -71,13 +71,25 @@ viewMenu page =
             navbarLink page
                 route
                 (el
-                    [ Font.light ]
+                    [ Font.extraLight ]
                     (text title)
                 )
     in
-    row [ alignLeft, spacingXY 20 0 ]
-        [ linkTo Route.RecipeList "Alla recept"
+    row [ height fill, alignLeft, spacingXY 20 0 ]
+        [ navbarLink page Route.RecipeList logo
         , linkTo Route.NewRecipe "Nytt recept"
+        ]
+
+
+debug =
+    Element.explain Debug.todo
+
+
+logo : Element msg
+logo =
+    row [ height fill, paddingXY 10 0, spacing 10 ]
+        [ Element.image [ height (Element.px (headerHeight - 20)) ] { src = "%PUBLIC_URL%/logo.png", description = "home" }
+        , el [ Font.size Palette.large, Font.extraLight ] (text "Receptdatabasen")
         ]
 
 
@@ -94,10 +106,11 @@ navbarLink page route linkContent =
     in
     link
         (List.append
-            [ Element.mouseOver [ Element.alpha 0.5, Background.color Palette.grey, Font.color Palette.white ]
+            [ Element.mouseOver [ Element.alpha 0.9, Background.color Palette.teal, Font.color Palette.white ]
             , Font.size Palette.large
+            , Font.extraLight
             , height fill
-            , padding 15
+            , padding 10
             ]
             activeAttrs
         )

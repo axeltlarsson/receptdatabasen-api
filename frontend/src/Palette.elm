@@ -57,6 +57,11 @@ orange =
     rgb255 255 127 0
 
 
+teal : Element.Color
+teal =
+    rgb255 118 219 209
+
+
 
 {--
   - Typography
