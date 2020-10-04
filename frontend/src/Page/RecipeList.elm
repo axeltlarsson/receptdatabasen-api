@@ -53,13 +53,18 @@ type Status recipes
     | Failed Recipe.ServerError
 
 
-init : Session -> ( Model, Cmd Msg )
-init session =
+init : Session -> Maybe String -> ( Model, Cmd Msg )
+init session query =
     ( { session = session
       , recipes = Loading
-      , query = ""
+      , query = Maybe.withDefault "" query
       }
-    , Recipe.fetchMany LoadedRecipes
+    , case query of
+        Nothing ->
+            Recipe.fetchMany LoadedRecipes
+
+        Just q ->
+            search session q
     )
 
 
@@ -296,10 +301,19 @@ update msg model =
             ( { model | query = "" }, Recipe.fetchMany LoadedRecipes )
 
         SearchQueryEntered query ->
-            ( { model | query = query }, Recipe.search LoadedRecipes query )
+            ( { model | query = query }, search model.session query )
 
         SetViewport ->
             ( model, Cmd.none )
+
+
+search : Session -> String -> Cmd Msg
+search session query =
+    Cmd.batch
+        [ Route.RecipeList (Just query)
+            |> Route.replaceUrl (Session.navKey session)
+        , Recipe.search LoadedRecipes query
+        ]
 
 
 

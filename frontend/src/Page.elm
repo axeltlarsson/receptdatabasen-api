@@ -76,7 +76,7 @@ viewMenu page =
                 )
     in
     row [ alignLeft, spacingXY 20 0 ]
-        [ linkTo Route.RecipeList "Alla recept"
+        [ linkTo (Route.RecipeList Nothing) "Alla recept"
         , linkTo Route.NewRecipe "Nytt recept"
         ]
 
@@ -109,7 +109,7 @@ navbarLink page route linkContent =
 isActive : Page -> Route -> Bool
 isActive page route =
     case ( page, route ) of
-        ( RecipeList, Route.RecipeList ) ->
+        ( RecipeList, Route.RecipeList q ) ->
             True
 
         ( Recipe, Route.Recipe _ ) ->

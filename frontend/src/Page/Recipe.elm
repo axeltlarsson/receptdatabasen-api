@@ -389,7 +389,7 @@ update msg model =
 
         Deleted (Ok _) ->
             ( model
-            , Route.RecipeList
+            , Route.RecipeList Nothing
                 |> Route.replaceUrl (Session.navKey model.session)
             )
 

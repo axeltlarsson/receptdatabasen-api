@@ -139,9 +139,15 @@ changeRouteTo maybeRoute model =
             Recipe.init session slug
                 |> updateWith Recipe GotRecipeMsg
 
-        Just Route.RecipeList ->
-            RecipeList.init session
-                |> updateWith RecipeList GotRecipeListMsg
+        Just (Route.RecipeList query) ->
+            case model of
+                -- Avoid infinite recursion if URL change is in search query for RecipeList
+                RecipeList list ->
+                    ( model, Cmd.none )
+
+                _ ->
+                    RecipeList.init session query
+                        |> updateWith RecipeList GotRecipeListMsg
 
         Just Route.NewRecipe ->
             Editor.initNew session
