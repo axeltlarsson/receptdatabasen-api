@@ -139,7 +139,7 @@ renderer checkboxStatus clickedCheckbox =
     , tableBody = column []
     , tableRow = row []
     , tableHeaderCell = \maybeAlignment children -> paragraph [] children
-    , tableCell = paragraph []
+    , tableCell = \maybeAlignment children -> paragraph [] children
     }
 
 
