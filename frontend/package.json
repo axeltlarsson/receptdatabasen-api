@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Run it in dev mode with: `elm-app start`",
   "main": "elmapp.config.js",
   "directories": {
