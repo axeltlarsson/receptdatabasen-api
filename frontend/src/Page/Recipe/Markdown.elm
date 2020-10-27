@@ -133,7 +133,12 @@ renderer checkboxStatus clickedCheckbox =
     , unorderedList = unorderedList checkboxStatus clickedCheckbox
     , orderedList = orderedList
     , codeBlock = \s -> Element.none
-    , html = Markdown.Html.oneOf []
+    , html =
+        Markdown.Html.oneOf
+            [ iframe
+
+            -- Markdown.Html.tag "iframe" iframe |> Markdown.Html.withAttribute "src"
+            ]
     , table = column []
     , tableHeader = column []
     , tableBody = column []
@@ -141,6 +146,15 @@ renderer checkboxStatus clickedCheckbox =
     , tableHeaderCell = \maybeAlignment children -> paragraph [] children
     , tableCell = \maybeAlignment children -> paragraph [] children
     }
+
+
+iframe : Markdown.Html.Renderer (a -> Element msg)
+iframe =
+    Markdown.Html.tag "iframe"
+        (\src children ->
+            text ("iframe: " ++ src)
+        )
+        |> Markdown.Html.withAttribute "src"
 
 
 heading : { level : Block.HeadingLevel, rawText : String, children : List (Element msg) } -> Element msg
