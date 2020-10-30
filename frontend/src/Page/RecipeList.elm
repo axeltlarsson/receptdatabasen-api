@@ -260,10 +260,6 @@ shorten limit str =
 
 viewDescription : Maybe String -> Element Msg
 viewDescription description =
-    let
-        c =
-            Debug.log ("test" ++ Debug.toString imageWidths.max)
-    in
     Maybe.withDefault Element.none <|
         Maybe.map
             (shorten 147
