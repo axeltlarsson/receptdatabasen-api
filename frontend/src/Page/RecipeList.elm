@@ -26,6 +26,7 @@ import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
 import FeatherIcons
+import Html.Attributes
 import Http
 import Json.Decode as Decoder exposing (Decoder, list)
 import Loading
@@ -241,29 +242,39 @@ takeWordsUntilCharLimit limit words =
     List.foldl f [] words
 
 
-viewDescription : Maybe String -> Element Msg
-viewDescription description =
+shorten : Int -> String -> String
+shorten limit str =
     let
         append x y =
             -- String.append is weird, so need to switch args
             y ++ x
+    in
+    if String.length str <= limit then
+        str
 
-        shorten descr =
-            if String.length descr <= 147 then
-                descr
+    else
+        takeWordsUntilCharLimit limit (str |> String.trim |> String.words)
+            |> String.join " "
+            |> append "..."
 
-            else
-                takeWordsUntilCharLimit 147 (descr |> String.trim |> String.words)
-                    |> String.join " "
-                    |> append "..."
+
+viewDescription : Maybe String -> Element Msg
+viewDescription description =
+    let
+        c =
+            Debug.log ("test" ++ Debug.toString imageWidths.max)
     in
     Maybe.withDefault Element.none <|
         Maybe.map
-            (shorten
+            (shorten 147
                 >> text
-                >> el [ Font.hairline, Font.color Palette.nearBlack ]
+                >> el
+                    [ Font.hairline
+                    , Font.color Palette.nearBlack
+                    , Element.htmlAttribute <| Html.Attributes.style "overflow-wrap" "anywhere"
+                    ]
                 >> List.singleton
-                >> paragraph [ padding 20, width fill, Element.alignBottom ]
+                >> paragraph [ padding 20, Element.alignBottom ]
             )
             description
 
