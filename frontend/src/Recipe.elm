@@ -174,7 +174,7 @@ fetchMany toMsg =
     let
         params =
             [ Url.Builder.string "select" "id,title,description,images,created_at,updated_at"
-            , Url.Builder.string "order" "title"
+            , Url.Builder.string "order" "created_at.desc"
             ]
     in
     Http.get
