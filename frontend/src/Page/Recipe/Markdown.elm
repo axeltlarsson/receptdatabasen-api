@@ -14,6 +14,7 @@ import Element
         , el
         , fill
         , height
+        , htmlAttribute
         , padding
         , paddingEach
         , paddingXY
@@ -134,11 +135,7 @@ renderer checkboxStatus clickedCheckbox =
     , orderedList = orderedList
     , codeBlock = \s -> Element.none
     , html =
-        Markdown.Html.oneOf
-            [ youtube
-
-            -- Markdown.Html.tag "iframe" iframe |> Markdown.Html.withAttribute "src"
-            ]
+        Markdown.Html.oneOf [ youtube ]
     , table = column []
     , tableHeader = column []
     , tableBody = column []
@@ -152,10 +149,23 @@ youtube : Markdown.Html.Renderer (a -> Element msg)
 youtube =
     Markdown.Html.tag "youtube"
         (\url thumb children ->
-            column []
-                [ text ("youtube: " ++ url)
-                , text ("thumb: " ++ thumb)
+            el
+                [ htmlAttribute (Html.Attributes.attribute "style" "--aspect-ratio: 16/9;")
+                , width fill
+                , height fill
                 ]
+                (Element.html <|
+                    Html.iframe
+                        [ Html.Attributes.src url
+                        , Html.Attributes.width 560
+                        , Html.Attributes.height 315
+                        , Html.Attributes.attribute "frameborder" "0"
+                        , Html.Attributes.attribute "allow" "autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        , Html.Attributes.attribute "allowfullscreen" ""
+                        , Html.Attributes.attribute "style" "width: 100%; height: 100%;"
+                        ]
+                        []
+                )
         )
         |> Markdown.Html.withAttribute "url"
         |> Markdown.Html.withAttribute "thumb"
