@@ -24,34 +24,41 @@ class EasyMDEditor extends HTMLElement {
 
     const youtubeVideoId = (url) => {
       let re = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/gi;
-      // TODO: dont crash on non-youtbe url
-      return re.exec(url)[1]
+      let res = re.exec(url)
+      if (!res) {
+        return
+      }
+      return res[1]
     }
+
     const youtubeThumbnail = (videoId) => {
       // http://img.youtube.com/vi/[video-id]/[thumbnail-number].jpg
       return `http://img.youtube.com/vi/${videoId}/0.jpg`
     }
-    const customBtn = {
-      name: "custom-action",
+
+    const youtubeBtn = {
+      name: "add-youtube-video",
       action: (editor) => {
         var cm = editor.codemirror;
         var stat = editor.getState(cm);
         var options = editor.options;
         var url = 'https://';
-        url = prompt("Klistra in Youtube URL", 'https://');
+        url = prompt("Klistra in Youtube URL", '');
         if (!url) {
             return false;
         }
         let videoId = youtubeVideoId(url)
-        let thumb = youtubeThumbnail(videoId)
+        if (!videoId) {
+          return false;
+        }
+        let thumb = youtubeThumbnail(videoId);
         editor.codemirror.replaceSelection(`<youtube url="http://www.youtube.com/embed/${videoId}" thumb="${thumb}"/>`);
       },
-      className: "fa fa-star",
-      title: "Timer"
+      className: "fa fa-youtube",
+      title: "Add Youtube video"
     }
 
-    options = { toolbar: [...options.toolbar, customBtn]};
-    console.log("options:", options);
+    options = { toolbar: [...options.toolbar, youtubeBtn]};
 
     const easyMDE = new EasyMDE({
       element: textArea,

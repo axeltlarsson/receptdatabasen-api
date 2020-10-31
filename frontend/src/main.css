@@ -34,7 +34,7 @@
   font-weight: 400 !important;
 }
 
-[> Responsive iframes from https://css-tricks.com/responsive-iframes/ <]
+/* [> Responsive iframes from https://css-tricks.com/responsive-iframes/ <] */
 [style*="--aspect-ratio"] > :first-child {
   width: 100%;
 }
