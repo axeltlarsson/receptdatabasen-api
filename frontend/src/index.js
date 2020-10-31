@@ -21,7 +21,19 @@ class EasyMDEditor extends HTMLElement {
     if (options) {
       options = JSON.parse(options);
     }
-    options = { toolbar: null, ...options };
+
+    const customBtn = {
+      name: "timer",
+      action: EasyMDE.drawImage,
+      // action: (editor) => {
+        // console.log("TIMER");
+      // },
+      className: "fa fa-star",
+      title: "Timer"
+    }
+
+    options = { toolbar: [...options.toolbar, customBtn]};
+    console.log("options:", options);
 
     const easyMDE = new EasyMDE({
       element: textArea,
@@ -29,6 +41,7 @@ class EasyMDEditor extends HTMLElement {
       spellChecker: false,
       placeholder: this.getAttribute('placeholder'),
       initialValue: this.getAttribute('initialValue'),
+      promptURLs: true,
     });
 
     easyMDE.codemirror.on('change', () => {
