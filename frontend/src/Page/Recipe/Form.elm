@@ -552,7 +552,7 @@ viewTagsInput validationActive newTag tags =
                 { onPress = Just NewTagEntered, label = plusIcon }
             ]
         , viewValidationError validationActive newTag tagValidator
-        , row [ width fill, spacing 10 ]
+        , wrappedRow [ width fill, spacing 10 ]
             (List.map viewTag tags)
         ]
 
