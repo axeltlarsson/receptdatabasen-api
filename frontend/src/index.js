@@ -22,12 +22,41 @@ class EasyMDEditor extends HTMLElement {
       options = JSON.parse(options);
     }
 
+    const youtubeVideoId = (url) => {
+      let re = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/gi;
+      return re.exec(url)[1]
+    }
+    const youtubeThumbnail = (videoId) => {
+      // http://img.youtube.com/vi/[video-id]/[thumbnail-number].jpg
+      let t = `http://img.youtube.com/vi/${videoId}/0.jpg`
+      console.log(t)
+      return t
+    }
     const customBtn = {
-      name: "timer",
-      action: EasyMDE.drawImage,
-      // action: (editor) => {
-        // console.log("TIMER");
-      // },
+      name: "custom-action",
+      action: (editor) => {
+        console.log("custom action");
+        var cm = editor.codemirror;
+        var stat = editor.getState(cm);
+        var options = editor.options;
+        var url = 'https://';
+        if (true) {
+            url = prompt(options.promptTexts.image, 'https://');
+            if (!url) {
+                return false;
+            }
+        }
+        console.log(url);
+        let videoId = youtubeVideoId(url)
+        console.log("video id: " + videoId)
+        let thumb = youtubeThumbnail(videoId)
+        console.log(`thumbnail url: ${thumb}`)
+        editor.codemirror.replaceSelection(`![](${thumb})\n<youtube url="${url}" thumb="${thumb}"/>`);
+
+        // editor._replaceSelection(cm, stat.image, options.insertTexts.image, url);
+
+        // EasyMDE.drawImage(editor);
+      },
       className: "fa fa-star",
       title: "Timer"
     }
@@ -42,6 +71,7 @@ class EasyMDEditor extends HTMLElement {
       placeholder: this.getAttribute('placeholder'),
       initialValue: this.getAttribute('initialValue'),
       promptURLs: true,
+      promptTexts: { image: "URL of the video"},
     });
 
     easyMDE.codemirror.on('change', () => {

@@ -135,7 +135,7 @@ renderer checkboxStatus clickedCheckbox =
     , codeBlock = \s -> Element.none
     , html =
         Markdown.Html.oneOf
-            [ iframe
+            [ youtube
 
             -- Markdown.Html.tag "iframe" iframe |> Markdown.Html.withAttribute "src"
             ]
@@ -148,13 +148,17 @@ renderer checkboxStatus clickedCheckbox =
     }
 
 
-iframe : Markdown.Html.Renderer (a -> Element msg)
-iframe =
-    Markdown.Html.tag "iframe"
-        (\src children ->
-            text ("iframe: " ++ src)
+youtube : Markdown.Html.Renderer (a -> Element msg)
+youtube =
+    Markdown.Html.tag "youtube"
+        (\url thumb children ->
+            column []
+                [ text ("youtube: " ++ url)
+                , text ("thumb: " ++ thumb)
+                ]
         )
-        |> Markdown.Html.withAttribute "src"
+        |> Markdown.Html.withAttribute "url"
+        |> Markdown.Html.withAttribute "thumb"
 
 
 heading : { level : Block.HeadingLevel, rawText : String, children : List (Element msg) } -> Element msg
