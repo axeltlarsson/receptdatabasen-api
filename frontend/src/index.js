@@ -23,42 +23,37 @@ class EasyMDEditor extends HTMLElement {
     }
 
     const youtubeVideoId = (url) => {
-      let re = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/gi;
-      let res = re.exec(url)
+      const re = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/gi;
+      const res = re.exec(url);
       if (!res) {
-        return
+        return null;
       }
-      return res[1]
-    }
+      return res[1];
+    };
 
-    const youtubeThumbnail = (videoId) => {
-      // http://img.youtube.com/vi/[video-id]/[thumbnail-number].jpg
-      return `http://img.youtube.com/vi/${videoId}/0.jpg`
-    }
+    // http://img.youtube.com/vi/[video-id]/[thumbnail-number].jpg
+    const youtubeThumbnail = (videoId) => `http://img.youtube.com/vi/${videoId}/0.jpg`;
 
     const youtubeBtn = {
-      name: "add-youtube-video",
+      name: 'add-youtube-video',
       action: (editor) => {
-        var cm = editor.codemirror;
-        var stat = editor.getState(cm);
-        var options = editor.options;
-        var url = 'https://';
-        url = prompt("Klistra in Youtube URL", '');
+        const url = prompt('Klistra in Youtube URL', '');
         if (!url) {
-            return false;
+          return false;
         }
-        let videoId = youtubeVideoId(url)
+        const videoId = youtubeVideoId(url);
         if (!videoId) {
           return false;
         }
-        let thumb = youtubeThumbnail(videoId);
+        const thumb = youtubeThumbnail(videoId);
         editor.codemirror.replaceSelection(`<youtube url="http://www.youtube.com/embed/${videoId}" thumb="${thumb}"/>`);
+        return true;
       },
-      className: "fa fa-youtube",
-      title: "Add Youtube video"
-    }
+      className: 'fa fa-youtube',
+      title: 'Add Youtube video',
+    };
 
-    options = { toolbar: [...options.toolbar, youtubeBtn]};
+    options = { toolbar: [...options.toolbar, youtubeBtn] };
 
     const easyMDE = new EasyMDE({
       element: textArea,
