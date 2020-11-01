@@ -16,6 +16,7 @@ class EasyMDEditor extends HTMLElement {
     const textArea = document.createElement('textarea');
     this.appendChild(textArea);
     const id = this.getAttribute('id');
+    const enableYoutube = this.getAttribute('youtube');
 
     let options = this.getAttribute('options');
     if (options) {
@@ -53,7 +54,11 @@ class EasyMDEditor extends HTMLElement {
       title: 'Add Youtube video',
     };
 
-    options = { toolbar: [...options.toolbar, youtubeBtn] };
+    if (enableYoutube) {
+      options = { toolbar: [...options.toolbar, youtubeBtn] };
+    } else {
+      options = { toolbar: [...options.toolbar] };
+    }
 
     const easyMDE = new EasyMDE({
       element: textArea,

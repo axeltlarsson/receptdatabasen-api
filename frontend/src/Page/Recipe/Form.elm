@@ -499,6 +499,7 @@ viewInstructionsEditor validationActive instructions =
                 , Html.Attributes.attribute "placeholder" "Fyll i instruktioner..."
                 , Html.Attributes.attribute "options" options
                 , Html.Attributes.attribute "initialValue" instructions
+                , Html.Attributes.attribute "youtube" "true"
                 ]
                 []
             )
