@@ -280,8 +280,21 @@ viewTags tags =
 
 viewDescription : Maybe String -> Element Msg
 viewDescription description =
+    let
+        overflowWrap =
+            Element.htmlAttribute <| Html.Attributes.style "overflow-wrap" "anywhere"
+    in
     description
-        |> Maybe.map (String.split "\n" >> List.map text >> List.map List.singleton >> List.map (paragraph [ Font.light, width fill ]) >> column [ spacing 10 ])
+        |> Maybe.map
+            (String.split "\n"
+                >> List.map text
+                >> List.map List.singleton
+                >> List.map
+                    (paragraph
+                        [ Font.light, width fill, overflowWrap ]
+                    )
+                >> column [ spacing 10 ]
+            )
         |> Maybe.withDefault Element.none
 
 

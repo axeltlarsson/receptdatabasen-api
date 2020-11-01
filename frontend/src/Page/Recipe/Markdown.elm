@@ -100,12 +100,17 @@ onlyListAndHeading input =
         input
 
 
+overflowWrap : Element.Attribute msg
+overflowWrap =
+    Element.htmlAttribute <| Html.Attributes.style "overflow-wrap" "anywhere"
+
+
 renderer : Dict Int Bool -> (Int -> Bool -> msg) -> Markdown.Renderer.Renderer (Element msg)
 renderer checkboxStatus clickedCheckbox =
     { heading = heading
-    , paragraph = paragraph [ spacing 10 ]
+    , paragraph = paragraph [ overflowWrap, spacing 10 ]
     , thematicBreak = Element.none
-    , text = \t -> paragraph [ width fill ] [ text t ]
+    , text = \t -> paragraph [ width fill, overflowWrap ] [ text t ]
     , strong = row [ Font.bold ]
     , emphasis = row [ Font.italic ]
     , codeSpan = text
@@ -198,6 +203,11 @@ edges =
     , bottom = 0
     , left = 0
     }
+
+
+
+-- TODO: support multiple lists of independent checkboxes (if you have more than one list currently,
+-- every i:th item will be clicked because index is not globally unique)
 
 
 unorderedList : Dict Int Bool -> (Int -> Bool -> msg) -> List (ListItem (Element msg)) -> Element msg

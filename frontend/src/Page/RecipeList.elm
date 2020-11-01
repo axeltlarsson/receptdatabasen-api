@@ -30,6 +30,7 @@ import Html.Attributes
 import Http
 import Json.Decode as Decoder exposing (Decoder, list)
 import Loading
+import Page.Recipe.Markdown as Markdown
 import Palette
 import Recipe exposing (Preview, Recipe, previewDecoder)
 import Recipe.Slug as Slug exposing (Slug)
