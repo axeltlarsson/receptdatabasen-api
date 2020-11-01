@@ -32,7 +32,7 @@ class EasyMDEditor extends HTMLElement {
     };
 
     // http://img.youtube.com/vi/[video-id]/[thumbnail-number].jpg
-    const youtubeThumbnail = (videoId) => `http://img.youtube.com/vi/${videoId}/0.jpg`;
+    const youtubeThumbnail = (videoId) => `https://img.youtube.com/vi/${videoId}/0.jpg`;
 
     const youtubeBtn = {
       name: 'add-youtube-video',
@@ -46,7 +46,7 @@ class EasyMDEditor extends HTMLElement {
           return false;
         }
         const thumb = youtubeThumbnail(videoId);
-        editor.codemirror.replaceSelection(`<youtube url="http://www.youtube.com/embed/${videoId}" thumb="${thumb}"/>`);
+        editor.codemirror.replaceSelection(`<youtube url="https://www.youtube.com/embed/${videoId}" thumb="${thumb}"/>`);
         return true;
       },
       className: 'fa fa-youtube',
