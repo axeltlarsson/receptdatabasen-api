@@ -34,27 +34,19 @@
   font-weight: 400 !important;
 }
 
-/* [> Responsive iframes from https://css-tricks.com/responsive-iframes/ <] */
-[style*="--aspect-ratio"] > :first-child {
-  width: 100%;
-}
-[style*="--aspect-ratio"] > img {  
-  height: auto;
-} 
-@supports (--custom:property) {
-  [style*="--aspect-ratio"] {
-    position: relative;
-  }
-  [style*="--aspect-ratio"]::before {
-    content: "";
-    display: block;
-    padding-bottom: calc(100% / (var(--aspect-ratio)));
-  }  
-  [style*="--aspect-ratio"] > :first-child {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-  }  
+/* Responsive iframes, from https://www.benmarshall.me/responsive-iframes/ */
+.iframe-container {
+  overflow: hidden !important;
+  /* 16:9 aspect ratio */
+  padding-top: 56.25% !important;
+  position: relative !important;
 }
 
+.iframe-container iframe {
+  border: 0 !important;
+  height: 100% !important;
+  left: 0 !important;
+  position: absolute !important;
+  top: 0 !important;
+  width: 100% !important;
+}

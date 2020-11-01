@@ -150,7 +150,7 @@ youtube =
     Markdown.Html.tag "youtube"
         (\url thumb children ->
             el
-                [ htmlAttribute (Html.Attributes.attribute "style" "--aspect-ratio: 16/9;")
+                [ htmlAttribute (Html.Attributes.class "iframe-container")
                 , width fill
                 , height fill
                 ]
