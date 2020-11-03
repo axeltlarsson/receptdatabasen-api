@@ -1,5 +1,6 @@
 module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, view)
 
+import BlurHash
 import Browser.Dom as Dom
 import Element
     exposing
@@ -10,6 +11,7 @@ import Element
         , el
         , fill
         , height
+        , image
         , link
         , padding
         , paragraph
@@ -150,6 +152,12 @@ viewPreview recipe =
         titleStr =
             Slug.toString title
 
+        hash =
+            "LKLWb2_M9}f8AgIVt7t7PqRoaiR-"
+
+        blurredUri =
+            Just (BlurHash.toUri { width = 4, height = 3 } 0.9 hash)
+
         imageUrl =
             let
                 width =
@@ -169,53 +177,73 @@ viewPreview recipe =
         [ Element.link [ height fill, width fill ]
             { url = Route.toString (Route.Recipe title)
             , label =
-                column [ height fill, width fill ]
-                    [ viewHeader id titleStr imageUrl
-                    , viewDescription description
-                    ]
+                el [ height fill, width fill ]
+                    (viewHeader id titleStr imageUrl blurredUri description)
             }
         ]
 
 
-viewHeader : Int -> String -> Maybe String -> Element Msg
-viewHeader id title imageUrl =
+viewHeader : Int -> String -> Maybe String -> Maybe String -> Maybe String -> Element Msg
+viewHeader id title imageUrl blurredUri description =
     let
-        background =
-            imageUrl
-                |> Maybe.map Background.image
-                |> Maybe.withDefault (Background.color Palette.white)
+        dataAttribute uri =
+            Element.htmlAttribute (Html.Attributes.attribute "data-src" uri)
+
+        imgBlurred =
+            Maybe.withDefault "" blurredUri
+
+        imgAttr =
+            Element.htmlAttribute (Html.Attributes.class "fit-img")
     in
     column [ width fill, height fill, Border.rounded 2 ]
-        [ Element.el
+        [ column
             [ width fill
             , height fill
-            , Border.rounded 2
-            , background
             ]
-            (el
-                [ Element.behindContent <|
-                    el
-                        [ width fill
-                        , height fill
-                        , floorFade
-                        ]
-                        Element.none
+            [ el
+                [ height fill
                 , width fill
-                , height fill
-                ]
-                (column [ Element.alignBottom ]
-                    [ paragraph
-                        [ Font.medium
-                        , Font.color Palette.white
-                        , Palette.textShadow
-                        , Font.size Palette.medium
-                        , padding 20
+                , Element.clip
+                , Element.inFront
+                    (el
+                        [ Element.behindContent <|
+                            el
+                                [ width fill
+                                , height fill
+                                , floorFade
+                                ]
+                                Element.none
+                        , width fill
+                        , height fill
                         ]
-                        [ text title ]
-                    ]
+                        (column [ Element.alignBottom ]
+                            [ paragraph
+                                [ Font.medium
+                                , Font.color Palette.white
+                                , Palette.textShadow
+                                , Font.size Palette.medium
+                                , padding 20
+                                ]
+                                [ text title ]
+                            ]
+                        )
+                    )
+                ]
+                (imageUrl
+                    |> Maybe.map
+                        (\url ->
+                            image [ Border.rounded 2, width fill, height fill, imgAttr, Element.clip ]
+                                { src = url, description = "" }
+                        )
+                    |> Maybe.withDefault Element.none
                 )
-            )
+            , viewDescription description
+            ]
         ]
+
+
+debug =
+    Element.explain Debug.todo
 
 
 floorFade : Element.Attribute msg

@@ -50,3 +50,12 @@
   top: 0 !important;
   width: 100% !important;
 }
+
+.fit-img {
+  height: 100%;
+}
+.fit-img img {
+  object-fit: cover !important;
+  color: salmon;
+  height: 100%;
+}
