@@ -58,9 +58,15 @@ type alias Metadata =
     { id : Int
     , title : Slug
     , description : Maybe String
-    , images : List String
+    , images : List Image
     , createdAt : String
     , updatedAt : String
+    }
+
+
+type alias Image =
+    { url : String
+    , blurHash : Maybe String
     }
 
 
@@ -109,7 +115,12 @@ metadataDecoder =
         (field "id" int)
         (field "title" Slug.decoder)
         (field "description" <| Decode.nullable string)
-        (field "images" <| Decode.list <| Decode.field "url" <| string)
+        (field "images" <|
+            Decode.list <|
+                Decode.map2 Image
+                    (Decode.field "url" <| string)
+                    (Decode.maybe (Decode.field "blur_hash" <| string))
+        )
         (field "created_at" string)
         (field "updated_at" string)
 

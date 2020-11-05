@@ -24,6 +24,7 @@ import Element
         )
 import Element.Background as Background
 import Element.Border as Border
+import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
@@ -48,7 +49,12 @@ import Url.Builder
 
 
 type alias Model =
-    { session : Session, recipes : Status (List (Recipe Preview)), query : String }
+    { session : Session, recipes : Status (List (ImageLoadingStatus (Recipe Preview))), query : String }
+
+
+type ImageLoadingStatus recipe
+    = Blurred recipe
+    | FullyLoaded recipe
 
 
 type Status recipes
@@ -140,32 +146,46 @@ imageWidths =
     }
 
 
-viewPreview : Recipe Preview -> Element Msg
-viewPreview recipe =
+viewPreview : ImageLoadingStatus (Recipe Preview) -> Element Msg
+viewPreview recipeStatus =
     let
+        recipe =
+            case recipeStatus of
+                Blurred r ->
+                    r
+
+                FullyLoaded r ->
+                    r
+
         { title, description, id, createdAt, images } =
             Recipe.metadata recipe
-
-        image =
-            List.head images
-
-        titleStr =
-            Slug.toString title
 
         hash =
             "LKLWb2_M9}f8AgIVt7t7PqRoaiR-"
 
+        imageUrl =
+            case recipeStatus of
+                Blurred r ->
+                    List.head images
+                        |> Maybe.map .blurHash
+                        |> Maybe.map (Maybe.withDefault hash)
+                        |> Maybe.map (BlurHash.toUri { width = 4, height = 3 } 0.9)
+
+                FullyLoaded r ->
+                    let
+                        width =
+                            -- *2 for Retina TODO: optimise with responsive/progressive images
+                            String.fromInt <| imageWidths.max * 2
+                    in
+                    List.head images
+                        |> Maybe.map .url
+                        |> Maybe.map (\i -> "/images/sig/" ++ width ++ "/" ++ i)
+
+        titleStr =
+            Slug.toString title
+
         blurredUri =
             Just (BlurHash.toUri { width = 4, height = 3 } 0.9 hash)
-
-        imageUrl =
-            let
-                width =
-                    -- *2 for Retina TODO: optimise with responsive/progressive images
-                    String.fromInt <| imageWidths.max * 2
-            in
-            image
-                |> Maybe.map (\i -> "/images/sig/" ++ width ++ "/" ++ i)
     in
     column
         [ width (fill |> Element.maximum imageWidths.max |> Element.minimum imageWidths.min)
@@ -174,23 +194,20 @@ viewPreview recipe =
         , Palette.cardShadow2
         , Border.rounded 2
         ]
-        [ Element.link [ height fill, width fill ]
+        [ Element.link [ height fill, width fill, Events.onMouseEnter (UnBlur id) ]
             { url = Route.toString (Route.Recipe title)
             , label =
                 el [ height fill, width fill ]
-                    (viewHeader id titleStr imageUrl blurredUri description)
+                    (viewHeader id titleStr imageUrl description)
             }
         ]
 
 
-viewHeader : Int -> String -> Maybe String -> Maybe String -> Maybe String -> Element Msg
-viewHeader id title imageUrl blurredUri description =
+viewHeader : Int -> String -> Maybe String -> Maybe String -> Element Msg
+viewHeader id title imageUrl description =
     let
         dataAttribute uri =
             Element.htmlAttribute (Html.Attributes.attribute "data-src" uri)
-
-        imgBlurred =
-            Maybe.withDefault "" blurredUri
 
         imgAttr =
             Element.htmlAttribute (Html.Attributes.class "fit-img")
@@ -312,6 +329,7 @@ type Msg
     = LoadedRecipes (Result Recipe.ServerError (List (Recipe Preview)))
     | SearchQueryEntered String
     | SetViewport
+    | UnBlur Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -328,7 +346,7 @@ update msg model =
                         |> Maybe.withDefault []
                         |> Cmd.batch
             in
-            ( { model | recipes = Loaded recipes }, setViewportFromSession model.session )
+            ( { model | recipes = Loaded (List.map Blurred recipes) }, setViewportFromSession model.session )
 
         LoadedRecipes (Err error) ->
             ( { model | recipes = Failed error }, Cmd.none )
@@ -341,6 +359,42 @@ update msg model =
 
         SetViewport ->
             ( model, Cmd.none )
+
+        UnBlur recipeId ->
+            ( { model | recipes = unblur recipeId model.recipes }, Cmd.none )
+
+
+
+{--
+  - map trhough thte list of imageloadingstatus reciopes and switch out the status of the one to unblur...
+  - easy peasy
+  --}
+
+
+unblur : Int -> Status (List (ImageLoadingStatus (Recipe Preview))) -> Status (List (ImageLoadingStatus (Recipe Preview)))
+unblur theId recipeStatuses =
+    case recipeStatuses of
+        Loaded recipes ->
+            recipes
+                |> List.map
+                    (\status ->
+                        case status of
+                            Blurred r ->
+                                case Recipe.metadata r of
+                                    { title, description, id, createdAt, images } ->
+                                        if id == theId then
+                                            FullyLoaded r
+
+                                        else
+                                            Blurred r
+
+                            x ->
+                                x
+                    )
+                |> Loaded
+
+        _ ->
+            recipeStatuses
 
 
 search : Session -> String -> Cmd Msg

@@ -161,7 +161,7 @@ viewRecipe recipe checkboxStatus device =
             Recipe.metadata recipe
 
         image =
-            List.head images
+            List.head images |> Maybe.map .url
 
         { portions, ingredients, instructions, tags } =
             Recipe.contents recipe
