@@ -11,6 +11,54 @@ const app = Elm.Main.init({
   flags,
 });
 
+const loadImage = (image) => {
+  try {
+    const msg = {
+      type: 'imageIntersecting',
+      image: Number(image.id.split('image')[1]),
+    };
+    app.ports.interSectionObserverReceiver.send(msg);
+  } catch (err) {
+    console.error(`Could not load image ${image}`, err);
+  }
+};
+
+/*
+ * On request from Elm, set up an IntersectionObserver
+ * that asks Elm to fully load images when intersecting with viewport
+ */
+app.ports.interSectionObserverSender.subscribe((message) => {
+  if (message.type !== 'observeImages' && message.images.length > 0) {
+    return false;
+  }
+
+  setTimeout(() => {
+    const imgs = message.images.map((i) => `#image${i}`).join(', ');
+    const imagesToLoad = document.querySelectorAll(imgs);
+
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((items, obs) => {
+        items.forEach((item) => {
+          if (item.isIntersecting) {
+            loadImage(item.target);
+            obs.unobserve(item.target);
+          }
+        });
+      });
+      imagesToLoad.forEach((img) => {
+        observer.observe(img);
+      });
+    } else {
+      console.debug('InterSectionObserver is not supported in this browser');
+      imagesToLoad.forEach((img) => {
+        loadImage(img);
+      });
+    }
+  }, 0);
+
+  return true;
+});
+
 class EasyMDEditor extends HTMLElement {
   connectedCallback() {
     const textArea = document.createElement('textarea');

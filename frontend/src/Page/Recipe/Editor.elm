@@ -19,10 +19,10 @@ import Url exposing (Url)
 import Url.Builder
 
 
-port portSender : Encode.Value -> Cmd msg
+port editorPortSender : Encode.Value -> Cmd msg
 
 
-port portReceiver : (Decode.Value -> msg) -> Sub msg
+port editorPortReceiver : (Decode.Value -> msg) -> Sub msg
 
 
 
@@ -186,8 +186,8 @@ update msg ({ status, session } as model) =
                 |> save status
                 |> Tuple.mapFirst (\newStatus -> { model | status = newStatus })
 
-        FormMsg (Form.SendPortMsg quillMsg) ->
-            ( model, portSender quillMsg )
+        FormMsg (Form.SendPortMsg mdeMsg) ->
+            ( model, editorPortSender mdeMsg )
 
         FormMsg subMsg ->
             let
@@ -336,7 +336,7 @@ toSession model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ portReceiver PortMsg
+        [ editorPortReceiver PortMsg
         , Http.track "image0" (GotImageUploadProgress 0)
         , Http.track "image1" (GotImageUploadProgress 1)
         , Http.track "image2" (GotImageUploadProgress 2)

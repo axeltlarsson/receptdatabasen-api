@@ -1,4 +1,4 @@
-module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, view)
+port module Page.RecipeList exposing (Model, Msg, Status, init, subscriptions, toSession, update, view)
 
 import BlurHash
 import Browser.Dom as Dom
@@ -33,7 +33,8 @@ import Element.Region as Region
 import FeatherIcons
 import Html.Attributes
 import Http
-import Json.Decode as Decoder exposing (Decoder, list)
+import Json.Decode as Decode exposing (Decoder, list)
+import Json.Encode as Encode
 import Loading
 import Page.Recipe.Markdown as Markdown
 import Palette
@@ -44,6 +45,12 @@ import Session exposing (Session)
 import Task
 import Url
 import Url.Builder
+
+
+port interSectionObserverSender : Encode.Value -> Cmd msg
+
+
+port interSectionObserverReceiver : (Decode.Value -> msg) -> Sub msg
 
 
 
@@ -188,6 +195,9 @@ viewPreview index recipeStatus =
 
         blurredUri =
             Just (BlurHash.toUri { width = 4, height = 3 } 0.9 hash)
+
+        idAttr =
+            Element.htmlAttribute (Html.Attributes.id ("image" ++ String.fromInt index))
     in
     lazy2 column
         [ width (fill |> Element.maximum imageWidths.max |> Element.minimum imageWidths.min)
@@ -196,7 +206,7 @@ viewPreview index recipeStatus =
         , Palette.cardShadow2
         , Border.rounded 2
         ]
-        [ Element.link [ height fill, width fill, Events.onMouseEnter (UnBlur index) ]
+        [ Element.link [ idAttr, height fill, width fill ]
             { url = Route.toString (Route.Recipe title)
             , label =
                 el [ height fill, width fill ]
@@ -327,7 +337,7 @@ type Msg
     = LoadedRecipes (Result Recipe.ServerError (List (Recipe Preview)))
     | SearchQueryEntered String
     | SetViewport
-    | UnBlur Int
+    | PortMsg Decode.Value
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -343,16 +353,18 @@ update msg model =
                             )
                         |> Maybe.withDefault []
                         |> Cmd.batch
-            in
-            ( { model
-                | recipes =
+
+                recipesDict =
                     recipes
                         |> List.map Blurred
                         |> List.indexedMap Tuple.pair
                         |> Dict.fromList
-                        |> Loaded
-              }
-            , setViewportFromSession model.session
+            in
+            ( { model | recipes = Loaded recipesDict }
+            , Cmd.batch
+                [ setViewportFromSession model.session
+                , observeImages (Dict.keys recipesDict)
+                ]
             )
 
         LoadedRecipes (Err error) ->
@@ -367,8 +379,23 @@ update msg model =
         SetViewport ->
             ( model, Cmd.none )
 
-        UnBlur index ->
-            ( { model | recipes = unBlur index model.recipes }, Cmd.none )
+        PortMsg value ->
+            case Decode.decodeValue portMsgDecoder value of
+                Err err ->
+                    ( model, Cmd.none )
+
+                Ok (ImageIntersecting imageIndex) ->
+                    ( { model | recipes = unBlur imageIndex model.recipes }, Cmd.none )
+
+
+observeImages : List Int -> Cmd Msg
+observeImages images =
+    interSectionObserverSender
+        (Encode.object
+            [ ( "type", Encode.string "observeImages" )
+            , ( "images", images |> List.map Encode.int |> Encode.list identity )
+            ]
+        )
 
 
 unBlur : Int -> Status (Dict Int (ImageLoadingStatus (Recipe Preview))) -> Status (Dict Int (ImageLoadingStatus (Recipe Preview)))
@@ -396,6 +423,26 @@ unBlur index recipeStatuses =
             recipeStatuses
 
 
+type PortMsg
+    = ImageIntersecting Int
+
+
+portMsgDecoder : Decode.Decoder PortMsg
+portMsgDecoder =
+    Decode.field "type" Decode.string |> Decode.andThen typeDecoder
+
+
+typeDecoder : String -> Decode.Decoder PortMsg
+typeDecoder t =
+    case t of
+        "imageIntersecting" ->
+            Decode.map ImageIntersecting
+                (Decode.field "image" Decode.int)
+
+        _ ->
+            Decode.fail ("trying to decode port message, but " ++ t ++ "is not supported")
+
+
 search : Session -> String -> Cmd Msg
 search session query =
     Cmd.batch
@@ -405,10 +452,11 @@ search session query =
         ]
 
 
-
--- EXPORT
-
-
 toSession : Model -> Session
 toSession model =
     model.session
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    interSectionObserverReceiver PortMsg
