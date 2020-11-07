@@ -27,6 +27,8 @@ import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
+import Element.Keyed as Keyed
+import Element.Lazy exposing (lazy, lazy2)
 import Element.Region as Region
 import FeatherIcons
 import Html.Attributes
@@ -101,7 +103,7 @@ view model =
             { title = "Recept"
             , content =
                 column [ Region.mainContent, spacing 20, width fill, padding 10 ]
-                    [ viewSearchBox model
+                    [ lazy viewSearchBox model
                     , wrappedRow [ centerX, spacing 10 ]
                         (List.map viewPreview recipes)
                     ]
@@ -187,7 +189,7 @@ viewPreview recipeStatus =
         blurredUri =
             Just (BlurHash.toUri { width = 4, height = 3 } 0.9 hash)
     in
-    column
+    lazy2 column
         [ width (fill |> Element.maximum imageWidths.max |> Element.minimum imageWidths.min)
         , height <| Element.px 400
         , Palette.cardShadow1

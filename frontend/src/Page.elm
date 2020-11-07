@@ -5,6 +5,7 @@ import Element exposing (Element, alignBottom, alignLeft, alignTop, centerX, col
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
+import Element.Lazy exposing (lazy)
 import Element.Region as Region
 import Palette
 import Route exposing (Route)
@@ -30,7 +31,7 @@ view page { title, content } =
             , Font.color Palette.nearBlack
             , Font.size Palette.normal
             , width fill
-            , Element.inFront (viewHeader page)
+            , Element.inFront (lazy viewHeader page)
             ]
             (column [ Element.paddingXY 0 headerHeight, width (fill |> Element.maximum 1440), Element.centerX ]
                 [ content ]

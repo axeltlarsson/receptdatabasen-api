@@ -32,6 +32,8 @@ import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
+import Element.Keyed as Keyed
+import Element.Lazy exposing (lazy2, lazy5)
 import Element.Region as Region
 import Html
 import Html.Attributes
@@ -174,11 +176,12 @@ viewRecipe recipe checkboxStatus device =
                 row [ width fill, spacing 60 ]
     in
     column [ width fill, spacing 30 ]
-        [ viewHeader (Slug.toString title) tags description image device
-        , column [ width fill, padding <| paddingPx device, spacing 20 ]
+        [ lazy5 viewHeader (Slug.toString title) tags description image device
+        , lazy2 column
+            [ width fill, padding <| paddingPx device, spacing 20 ]
             [ responsiveLayout
-                [ viewInstructions instructions checkboxStatus
-                , viewIngredients ingredients portions
+                [ lazy2 viewInstructions instructions checkboxStatus
+                , lazy2 viewIngredients ingredients portions
                 ]
             , row [ spacing 20 ]
                 [ viewEditButton
