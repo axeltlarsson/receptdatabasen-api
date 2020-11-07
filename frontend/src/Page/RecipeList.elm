@@ -1,5 +1,6 @@
 module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, view)
 
+import Array exposing (Array)
 import BlurHash
 import Browser.Dom as Dom
 import Element
@@ -27,7 +28,6 @@ import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
-import Element.Keyed as Keyed
 import Element.Lazy exposing (lazy, lazy2)
 import Element.Region as Region
 import FeatherIcons
@@ -51,7 +51,7 @@ import Url.Builder
 
 
 type alias Model =
-    { session : Session, recipes : Status (List (ImageLoadingStatus (Recipe Preview))), query : String }
+    { session : Session, recipes : Status (Array (ImageLoadingStatus (Recipe Preview))), query : String }
 
 
 type ImageLoadingStatus recipe
@@ -105,7 +105,7 @@ view model =
                 column [ Region.mainContent, spacing 20, width fill, padding 10 ]
                     [ lazy viewSearchBox model
                     , wrappedRow [ centerX, spacing 10 ]
-                        (List.map viewPreview recipes)
+                        (Array.indexedMap viewPreview recipes |> Array.toList)
                     ]
             }
 
@@ -148,8 +148,8 @@ imageWidths =
     }
 
 
-viewPreview : ImageLoadingStatus (Recipe Preview) -> Element Msg
-viewPreview recipeStatus =
+viewPreview : Int -> ImageLoadingStatus (Recipe Preview) -> Element Msg
+viewPreview index recipeStatus =
     let
         recipe =
             case recipeStatus of
@@ -196,7 +196,7 @@ viewPreview recipeStatus =
         , Palette.cardShadow2
         , Border.rounded 2
         ]
-        [ Element.link [ height fill, width fill, Events.onMouseEnter (UnBlur id) ]
+        [ Element.link [ height fill, width fill, Events.onMouseEnter (UnBlur index) ]
             { url = Route.toString (Route.Recipe title)
             , label =
                 el [ height fill, width fill ]
@@ -348,7 +348,7 @@ update msg model =
                         |> Maybe.withDefault []
                         |> Cmd.batch
             in
-            ( { model | recipes = Loaded (List.map Blurred recipes) }, setViewportFromSession model.session )
+            ( { model | recipes = Loaded (List.map Blurred recipes |> Array.fromList) }, setViewportFromSession model.session )
 
         LoadedRecipes (Err error) ->
             ( { model | recipes = Failed error }, Cmd.none )
@@ -362,38 +362,35 @@ update msg model =
         SetViewport ->
             ( model, Cmd.none )
 
-        UnBlur recipeId ->
-            ( { model | recipes = unblur recipeId model.recipes }, Cmd.none )
+        UnBlur index ->
+            ( { model | recipes = unBlur index model.recipes }, Cmd.none )
 
 
-
-{--
-  - map trhough thte list of imageloadingstatus reciopes and switch out the status of the one to unblur...
-  - easy peasy
-  --}
-
-
-unblur : Int -> Status (List (ImageLoadingStatus (Recipe Preview))) -> Status (List (ImageLoadingStatus (Recipe Preview)))
-unblur theId recipeStatuses =
+unBlur : Int -> Status (Array (ImageLoadingStatus (Recipe Preview))) -> Status (Array (ImageLoadingStatus (Recipe Preview)))
+unBlur index recipeStatuses =
     case recipeStatuses of
         Loaded recipes ->
-            recipes
-                |> List.map
-                    (\status ->
-                        case status of
-                            Blurred r ->
-                                case Recipe.metadata r of
-                                    { title, description, id, createdAt, images } ->
-                                        if id == theId then
-                                            FullyLoaded r
+            let
+                recipe =
+                    Array.get index recipes
 
-                                        else
-                                            Blurred r
+                updated =
+                    recipe
+                        |> Maybe.map
+                            (\status ->
+                                case status of
+                                    Blurred r ->
+                                        FullyLoaded r
 
-                            x ->
-                                x
-                    )
-                |> Loaded
+                                    FullyLoaded r ->
+                                        FullyLoaded r
+                            )
+                        |> Maybe.map
+                            (\x ->
+                                Array.set index x recipes
+                            )
+            in
+            Loaded (Maybe.withDefault recipes updated)
 
         _ ->
             recipeStatuses

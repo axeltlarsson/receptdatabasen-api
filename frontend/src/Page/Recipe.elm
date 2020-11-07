@@ -32,7 +32,6 @@ import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
-import Element.Keyed as Keyed
 import Element.Lazy exposing (lazy2, lazy5)
 import Element.Region as Region
 import Html
