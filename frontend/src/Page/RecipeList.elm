@@ -1,8 +1,8 @@
 module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, view)
 
-import Array exposing (Array)
 import BlurHash
 import Browser.Dom as Dom
+import Dict exposing (Dict)
 import Element
     exposing
         ( Element
@@ -51,7 +51,7 @@ import Url.Builder
 
 
 type alias Model =
-    { session : Session, recipes : Status (Array (ImageLoadingStatus (Recipe Preview))), query : String }
+    { session : Session, recipes : Status (Dict Int (ImageLoadingStatus (Recipe Preview))), query : String }
 
 
 type ImageLoadingStatus recipe
@@ -105,7 +105,7 @@ view model =
                 column [ Region.mainContent, spacing 20, width fill, padding 10 ]
                     [ lazy viewSearchBox model
                     , wrappedRow [ centerX, spacing 10 ]
-                        (Array.indexedMap viewPreview recipes |> Array.toList)
+                        (Dict.map viewPreview recipes |> Dict.values)
                     ]
             }
 
@@ -261,10 +261,6 @@ viewHeader id title imageUrl description =
         ]
 
 
-debug =
-    Element.explain Debug.todo
-
-
 floorFade : Element.Attribute msg
 floorFade =
     Background.gradient
@@ -348,7 +344,16 @@ update msg model =
                         |> Maybe.withDefault []
                         |> Cmd.batch
             in
-            ( { model | recipes = Loaded (List.map Blurred recipes |> Array.fromList) }, setViewportFromSession model.session )
+            ( { model
+                | recipes =
+                    recipes
+                        |> List.map Blurred
+                        |> List.indexedMap Tuple.pair
+                        |> Dict.fromList
+                        |> Loaded
+              }
+            , setViewportFromSession model.session
+            )
 
         LoadedRecipes (Err error) ->
             ( { model | recipes = Failed error }, Cmd.none )
@@ -366,17 +371,14 @@ update msg model =
             ( { model | recipes = unBlur index model.recipes }, Cmd.none )
 
 
-unBlur : Int -> Status (Array (ImageLoadingStatus (Recipe Preview))) -> Status (Array (ImageLoadingStatus (Recipe Preview)))
+unBlur : Int -> Status (Dict Int (ImageLoadingStatus (Recipe Preview))) -> Status (Dict Int (ImageLoadingStatus (Recipe Preview)))
 unBlur index recipeStatuses =
     case recipeStatuses of
         Loaded recipes ->
             let
-                recipe =
-                    Array.get index recipes
-
                 updated =
-                    recipe
-                        |> Maybe.map
+                    Dict.update index
+                        (Maybe.map
                             (\status ->
                                 case status of
                                     Blurred r ->
@@ -385,12 +387,10 @@ unBlur index recipeStatuses =
                                     FullyLoaded r ->
                                         FullyLoaded r
                             )
-                        |> Maybe.map
-                            (\x ->
-                                Array.set index x recipes
-                            )
+                        )
+                        recipes
             in
-            Loaded (Maybe.withDefault recipes updated)
+            Loaded updated
 
         _ ->
             recipeStatuses
