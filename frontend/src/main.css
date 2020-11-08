@@ -56,6 +56,15 @@
 }
 .fit-img img {
   object-fit: cover !important;
-  color: salmon;
   height: 100%;
 }
+
+.blurred img {
+  filter: blur(0.2em);
+}
+
+img {
+ filter: blur(0em);
+ transition: filter 0.5s;
+}
+

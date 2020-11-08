@@ -198,6 +198,14 @@ viewPreview index recipeStatus =
 
         idAttr =
             Element.htmlAttribute (Html.Attributes.id ("image" ++ String.fromInt index))
+
+        blurred =
+            case recipeStatus of
+                Blurred _ ->
+                    True
+
+                FullyLoaded _ ->
+                    False
     in
     lazy2 column
         [ width (fill |> Element.maximum imageWidths.max |> Element.minimum imageWidths.min)
@@ -210,19 +218,26 @@ viewPreview index recipeStatus =
             { url = Route.toString (Route.Recipe title)
             , label =
                 el [ height fill, width fill ]
-                    (viewHeader id titleStr imageUrl description)
+                    (viewHeader id titleStr imageUrl description blurred)
             }
         ]
 
 
-viewHeader : Int -> String -> Maybe String -> Maybe String -> Element Msg
-viewHeader id title imageUrl description =
+viewHeader : Int -> String -> Maybe String -> Maybe String -> Bool -> Element Msg
+viewHeader id title imageUrl description blurred =
     let
         dataAttribute uri =
             Element.htmlAttribute (Html.Attributes.attribute "data-src" uri)
 
         imgAttr =
             Element.htmlAttribute (Html.Attributes.class "fit-img")
+
+        blurredAttr =
+            if blurred then
+                Element.htmlAttribute (Html.Attributes.class "blurred")
+
+            else
+                Element.htmlAttribute (Html.Attributes.class "")
     in
     column [ width fill, height fill, Border.rounded 2 ]
         [ column
@@ -261,7 +276,7 @@ viewHeader id title imageUrl description =
                 (imageUrl
                     |> Maybe.map
                         (\url ->
-                            image [ Border.rounded 2, width fill, height fill, imgAttr, Element.clip ]
+                            image [ Border.rounded 2, width fill, height fill, imgAttr, blurredAttr, Element.clip ]
                                 { src = url, description = "" }
                         )
                     |> Maybe.withDefault Element.none
