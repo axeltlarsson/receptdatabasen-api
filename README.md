@@ -53,6 +53,13 @@ Testing:
 ```shell
 npm run test_image_server
 ```
+
+## Import production database
+
+
+`import_prod.sh`
+
+
 ## PostgREST Starter Kit
 
 Base project and tooling for authoring REST API backends with [PostgREST](https://postgrest.com).
