@@ -31,8 +31,7 @@ create function api.search (search_query text)
   where
     api.recipes.search @@ search.query
   order by
-    ts_rank_cd(api.recipes.search, search.query) desc
-limit 10;
+    ts_rank_cd(api.recipes.search, search.query) desc;
 
 $$
 language sql
