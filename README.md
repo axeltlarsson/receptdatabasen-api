@@ -17,6 +17,8 @@ And then see [frontend](./frontend/) for spinning up the Elm frontend.
 Build a prod version of the frontend with `npm run build` in the `frontend` directory, then simply visit `localhost:8080` instead of `localhost:3000` as for the elm-app _dev_ server.
 The onlye difference between a real prod and this setup is that you likely don't have a reverse proxy for TLS termination in front, and that `openresty/nginx_prod` conf is not used.
 
+Download the production database: `./import_prod_db.sh --download <host>`
+
 ### API
 
 Using [httpie](https://httpie.org/doc) it's very easy to interact with the API:
