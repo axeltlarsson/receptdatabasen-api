@@ -99,8 +99,8 @@ if [ -n "$download" ]; then
   scp "$host":/tmp/uploads-recept/backup.tar .
   ssh "$host" "rm -rf /tmp/uploads-recept"
   docker cp backup.tar receptdatabasen_openresty_1:/uploads
-  docker-compose exec openresty rm -rf /uploads/*
-  docker-compose exec openresty "cd /uploads && tar -xf backup.tar && mv uploads/* . && rmdir uploads && rm backup.tar"
+  docker-compose exec openresty bash -c "rm -rf /uploads/*"
+  docker-compose exec openresty bash -c "cd /uploads && tar -xf backup.tar && mv uploads/* . && rmdir uploads && rm backup.tar"
   docker-compose exec openresty chown -R nobody /uploads/*
   rm backup.tar
 fi
