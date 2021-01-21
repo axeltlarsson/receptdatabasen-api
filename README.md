@@ -25,8 +25,8 @@ Using [httpie](https://httpie.org/doc) it's very easy to interact with the API:
 
 - `http POST :8080/rest/recipes < data/cheese_cake.json` - to create a recipe
 - `http :8080/rest/recipes` - get the list of recipes
-- `http :8080/rest/recipes title=="eq.Cheese Cake"` - get a recipe by title
-- `http PATCH :8080/rest/recipes title=="eq.Cheese Cake" portions:=23 tags:='["efterätt", "dessert"]'` - edit the recipe
+- `http :8080/rest/recipes title="eq.Cheese Cake"` - get a recipe by title
+- `http PATCH :8080/rest/recipes title="eq.Cheese Cake" portions:=23 tags:='["efterätt", "dessert"]'` - edit the recipe
 - `http :8080/rest/rpc/search search_query='fläsk'` - full text search with prefix matching
 
 ## Testing
