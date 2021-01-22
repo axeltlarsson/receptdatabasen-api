@@ -64,6 +64,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
 
 # Install lua-vips
 RUN luarocks install lua-vips
+RUN luarocks install lua-resty-session
 
 RUN mkdir -p /uploads/cache && chown -R nobody /uploads
 VOLUME /uploads

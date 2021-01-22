@@ -7,7 +7,7 @@
 -- notice how this role does not have any privileges attached specifically to it
 -- it can only switch to other roles
 drop role if exists :authenticator;
-create role :"authenticator" with login password :'authenticator_pass';
+create role :"authenticator" with noinherit login password :'authenticator_pass';
 
 -- this is an application level role
 -- requests that are not authenticated will be executed with this role's privileges
