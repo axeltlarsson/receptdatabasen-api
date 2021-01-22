@@ -31,10 +31,13 @@ for key,val in pairs(mime_type_map) do
   table.insert(supported_mime_types, key)
 end
 
-local function file_name(mime_type)
-  -- What about file extensions? Calculate from mime type?
+local function file_ext(mime_type)
+  return mime_type_map[mime_type]
+end
+
+local function file_name()
   local r = ngx.now() + math.random()
-  return ngx.md5(tostring(r)) .. mime_type_map[mime_type]
+  return ngx.md5(tostring(r))
 end
 
 -- Body is read from memory (true if client_max_body_size == client_body_buffer_size)
@@ -52,12 +55,20 @@ if body_data then
     return_error("Content-type does not match sniffed mime type", ngx.HTTP_NOT_ALLOWED)
   end
 
-  local file_name = file_name(mime_type)
+  local file_name = file_name()
+  -- Save original
   local file_path = '/uploads/' .. file_name
-  local file = io.open(file_path, 'w+b')
+  local file = io.open(file_path .. file_ext(mime_type), 'w+b')
   file:write(body_data)
   file:close()
-  local response = { image = { url = file_name } }
+
+  -- Convert to jpeg
+  local vips = require "vips"
+  -- or new_from_buffer?
+  local image = vips.Image.new_from_buffer(body_data)
+  image.jpegsave(image, file_path .. ".jpeg")
+
+  local response = { image = { url = file_name .. ".jpeg", originalUrl = file_name .. file_ext(mime_type) } }
   ngx.say(cjson.encode(response))
 else
   return_error("Could not read the body data")

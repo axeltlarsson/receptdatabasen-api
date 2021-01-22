@@ -23,6 +23,7 @@ describe('image server', function () {
       .expect(res => {
         res.body.should.have.keys('image')
         res.body.image.should.have.keys('url')
+        res.body.image.should.have.keys('originalUrl')
         uploadedFileName = res.body.image.url
         const ext = uploadedFileName.split(".")[1]
         ext.should.equal("jpeg")
@@ -38,10 +39,9 @@ describe('image server', function () {
       .expect('Content-Type', "image/jpeg")
       .expect(res => {
         // test.jpg resized to width 100 should have this length
-        res.body.length.should.equal(4473)
+        res.body.length.should.equal(4475)
       })
       .expect(200, done)
-
   })
 
   it('sniffs mime-type from the contents of the file', function(done) {
@@ -56,7 +56,6 @@ describe('image server', function () {
         res.body.error.should.match(/mime type/)
       })
       .expect(405, done)
-
   })
 
   it('responds with 404 for missing file', function(done) {
@@ -70,5 +69,21 @@ describe('image server', function () {
       .expect(404, done)
   })
 
-
+  it('converts images to .jpeg', function(done) {
+    let testImage = readFile('../data/test.png')
+    image_service()
+      .post('/upload')
+      .set('Content-type', 'image/png')
+      .send(testImage)
+      .expect('Content-type', 'application/json; charset=utf-8')
+      .expect(res => {
+        res.body.should.have.keys('image')
+        res.body.image.should.have.keys('url')
+        res.body.image.should.have.keys('originalUrl')
+        uploadedFileName = res.body.image.url
+        const ext = uploadedFileName.split(".")[1]
+        ext.should.equal("jpeg")
+      })
+      .expect(200, done)
+  })
 })

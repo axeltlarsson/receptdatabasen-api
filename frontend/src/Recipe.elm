@@ -409,7 +409,7 @@ decodeServerError : String -> PGError
 decodeServerError str =
     case Decode.decodeString pgErrorDecoder str of
         Err err ->
-            { message = "Error! I ouldn't decode the PostgREST error response "
+            { message = "Error! I couldn't decode the PostgREST error response "
             , code = Nothing
             , details = Just <| Decode.errorToString err
             , hint = Nothing
