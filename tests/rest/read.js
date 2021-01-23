@@ -11,7 +11,7 @@ describe('read', function () {
 
   it('basic', function (done) {
     rest_service()
-      .get('/recipes?select=id,title')
+      .get('/rest/recipes?select=id,title')
       .expect('Content-Type', /json/)
       .expect(r => {
         r.body.length.should.equal(7)
@@ -22,7 +22,7 @@ describe('read', function () {
 
   it('by primary key', function (done) {
     rest_service()
-      .get('/recipes/1?select=id,title')
+      .get('/rest/recipes/1?select=id,title')
       .expect(r => {
         r.body.id.should.equal(1)
         r.body.title.should.equal('Cheese Cake')

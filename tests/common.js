@@ -20,7 +20,6 @@ const psql_version = spawnSync('psql', ['--version'])
 const have_psql = (psql_version.stdout && psql_version.stdout.toString('utf8').trim().length > 0)
 
 const agent = request.agent(process.env.SERVER_PROXY_URI)
-const imageAgent = request.agent(process.env.IMAGE_SERVER_PROXY_URI)
 
 export function rest_service (useAgent=true) {
   if (useAgent) {
@@ -34,13 +33,13 @@ export function image_service (useAgent=true) {
   if (useAgent) {
     return agent
   } else {
-    return request(process.env.IMAGE_SERVER_PROXY_URI)
+    return request(process.env.SERVER_PROXY_URI)
   }
 }
 
 export function login(done) {
   rest_service()
-    .post('/login')
+    .post('/rest/login')
     .set('Accept', 'application/vnd.pgrst.object+json')
     .send({
       email: 'alice@email.com',

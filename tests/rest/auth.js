@@ -7,7 +7,7 @@ describe('auth', function () {
 
   it('login', function (done) {
     rest_service()
-      .post('/login')
+      .post('/rest/login')
       .set('Accept', 'application/vnd.pgrst.object+json')
       .send({
         email: 'alice@email.com',
@@ -23,7 +23,7 @@ describe('auth', function () {
 
   it('me', function (done) {
     rest_service()
-      .post('/rpc/me')
+      .post('/rest/rpc/me')
       .set('Accept', 'application/vnd.pgrst.object+json')
       .withRole('webuser')
       .send({})
@@ -33,7 +33,7 @@ describe('auth', function () {
 
   it('refresh_token', function (done) {
     rest_service()
-      .post('/rpc/refresh_token')
+      .post('/rest/rpc/refresh_token')
       .set('Accept', 'application/vnd.pgrst.object+json')
       .withRole('webuser')
       .send({})
@@ -43,7 +43,7 @@ describe('auth', function () {
 
   it('signup', function (done) {
     rest_service()
-      .post('/rpc/signup')
+      .post('/rest/rpc/signup')
       .set('Accept', 'application/vnd.pgrst.object+json')
       .send({
         name: 'John Doe',
@@ -62,7 +62,7 @@ describe('unauthenticated', function () {
 
   it('/login', function (done) {
     rest_service(false)
-      .post('/login')
+      .post('/rest/login')
       .set('Accept', 'application/vnd.pgrst.object+json')
       .send({
         email: 'alice@email.com',
@@ -78,7 +78,7 @@ describe('unauthenticated', function () {
 
   it('/recipes', function (done) {
     rest_service(false)
-      .get('/recipes?select=id,title')
+      .get('/rest/recipes?select=id,title')
       .expect('Content-Type', /json/)
       .expect((r) => {
         r.body.error.should.equal("You need a valid session to access this endpoint")

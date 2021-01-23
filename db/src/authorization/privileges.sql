@@ -9,13 +9,10 @@ grant usage on schema api to anonymous, webuser;
 
 -- set privileges to all the auth flow functions
 grant execute on function api.login(text,text) to anonymous;
-grant execute on function api.signup(text,text,text) to anonymous;
 grant execute on function api.me() to webuser;
 grant execute on function api.login(text,text) to webuser;
-grant execute on function api.refresh_token() to webuser;
 
 -- define the who can access recipe model data
-
 -- give access to the view owner to this table
 grant select, insert, update, delete on data.recipe to api;
 grant usage on data.recipe_id_seq to webuser;
@@ -28,9 +25,6 @@ grant usage on data.recipe_id_seq to webuser;
 -- authenticated users can request/change all the columns for this view
 grant select, insert, update, delete on api.recipes to webuser;
 
--- TODO: perhaps limit acess to authenticated users?
-grant select, insert, update, delete on api.recipes to anonymous;
 -------------------------------------------------------------------------------
 
 grant execute on function api.search(text) to webuser;
-grant execute on function api.search(text) to anonymous;
