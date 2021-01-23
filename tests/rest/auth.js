@@ -53,6 +53,17 @@ describe('auth', function () {
       .expect('Content-Type', /json/)
       .expect(404, done)
   })
+
+  it('POST logout', function(done) {
+    rest_service()
+      .post("/rest/logout")
+      .expect('Content-Type', /json/)
+      .expect('Set-cookie', /Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0;/)
+      .expect((r) => {
+        r.body.message.should.equal("Session was succesfully destroyed")
+      })
+      .expect(200, done)
+  })
 })
 
 
