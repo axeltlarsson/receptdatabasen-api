@@ -4,13 +4,7 @@ local sig, size, path, ext =
 local secret = "hello_world" -- signature secret key
 local images_dir = "/uploads/" -- where images come from
 local cache_dir = "/uploads/cache/" -- where images are cached
-
-local function return_error(msg, error_code)
-  ngx.status = error_code or ngx.HTTP_BAD_REQUEST
-  ngx.log(ngx.WARN, msg)
-  ngx.say(cjson.encode({error = msg}))
-  ngx.exit(ngx.OK)
-end
+local utils = require "utils"
 
 local function calculate_signature(str)
   return ngx.encode_base64(ngx.hmac_sha1(secret, str))
