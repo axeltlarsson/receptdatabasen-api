@@ -11,7 +11,8 @@ set client_min_messages to warning;
 \set authenticator_pass `echo $DB_PASS`
 \set jwt_secret `echo $JWT_SECRET`
 \set quoted_jwt_secret '\'' :jwt_secret '\''
-
+\set jwt_lifetime `echo $JWT_LIFETIME`
+\set quoted_jwt_lifetime '\'' :jwt_lifetime '\''
 
 \echo # Loading database definition
 begin;
@@ -33,7 +34,7 @@ create extension if not exists pgcrypto;
 
 -- save app settings (they are stored in the settings.secrets table)
 select settings.set('jwt_secret', :quoted_jwt_secret);
-select settings.set('jwt_lifetime', '3600');
+select settings.set('jwt_lifetime', :quoted_jwt_lifetime);
 
 
 \echo # Loading application definitions
