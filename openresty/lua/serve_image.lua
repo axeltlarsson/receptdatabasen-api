@@ -23,7 +23,7 @@ local source_fname = images_dir .. path
 local file = io.open(source_fname)
 
 if not file then
-  return_error("File not found", ngx.HTTP_NOT_FOUND)
+  utils.return_error("File not found", ngx.HTTP_NOT_FOUND)
 end
 
 file:close()

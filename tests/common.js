@@ -19,13 +19,41 @@ const PG = `${COMPOSE_PROJECT_NAME}_db_1`
 const psql_version = spawnSync('psql', ['--version'])
 const have_psql = (psql_version.stdout && psql_version.stdout.toString('utf8').trim().length > 0)
 
-export function rest_service () {
-  return request(process.env.SERVER_PROXY_URI)
+const agent = request.agent(process.env.SERVER_PROXY_URI)
+const imageAgent = request.agent(process.env.IMAGE_SERVER_PROXY_URI)
+
+export function rest_service (useAgent=true) {
+  if (useAgent) {
+    return agent
+  } else {
+    return request(process.env.SERVER_PROXY_URI)
+  }
 }
 
-export function image_service () {
-  return request(process.env.IMAGE_SERVER_PROXY_URI)
+export function image_service (useAgent=true) {
+  if (useAgent) {
+    return agent
+  } else {
+    return request(process.env.IMAGE_SERVER_PROXY_URI)
+  }
 }
+
+export function login(done) {
+  rest_service()
+    .post('/login')
+    .set('Accept', 'application/vnd.pgrst.object+json')
+    .send({
+      email: 'alice@email.com',
+      password: 'pass'
+    })
+    .expect('Content-Type', /json/)
+    .expect('Set-Cookie', /session/)
+    .expect(r => {
+      r.body.me.email.should.equal('alice@email.com')
+      r.body.should.not.have.ownProperty('token')
+    }).expect(200, done)
+}
+
 
 export function resetdb () {
   let pg

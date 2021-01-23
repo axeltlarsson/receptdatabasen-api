@@ -14,7 +14,7 @@ request_options["always_forward_body"] = true
 -- "Issues a synchronous but still non-blocking Nginx Subrequest using uri"
 -- https://openresty-reference.readthedocs.io/en/latest/Lua_Nginx_API/#ngxlocationcapture
 local res = ngx.location.capture(
-  "/rest/rpc/login",
+  "/internal/rest/rpc/login",
   request_options
   )
 

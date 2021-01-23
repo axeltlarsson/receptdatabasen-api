@@ -7,16 +7,17 @@ describe('auth', function () {
 
   it('login', function (done) {
     rest_service()
-      .post('/rpc/login')
+      .post('/login')
       .set('Accept', 'application/vnd.pgrst.object+json')
       .send({
         email: 'alice@email.com',
         password: 'pass'
       })
       .expect('Content-Type', /json/)
+      .expect('Set-Cookie', /session/)
       .expect(r => {
-        //console.log(r.body)
         r.body.me.email.should.equal('alice@email.com')
+        r.body.should.not.have.ownProperty('token')
       }).expect(200, done)
   })
 
@@ -27,10 +28,7 @@ describe('auth', function () {
       .withRole('webuser')
       .send({})
       .expect('Content-Type', /json/)
-      .expect(r => {
-        //console.log(r.body)
-        r.body.email.should.equal('alice@email.com')
-      }).expect(200, done)
+      .expect(200, done)
   })
 
   it('refresh_token', function (done) {
@@ -40,10 +38,7 @@ describe('auth', function () {
       .withRole('webuser')
       .send({})
       .expect('Content-Type', /json/)
-      .expect(r => {
-        //console.log(r.body)
-        r.body.length.should.above(0)
-      }).expect(200, done)
+      .expect(404, done)
   })
 
   it('signup', function (done) {
@@ -56,10 +51,38 @@ describe('auth', function () {
         password: 'pass'
       })
       .expect('Content-Type', /json/)
+      .expect(404, done)
+  })
+})
 
+
+describe('unauthenticated', function () {
+  before(function (done) { resetdb(); done() })
+  after(function (done) { resetdb(); done() })
+
+  it('/login', function (done) {
+    rest_service(false)
+      .post('/login')
+      .set('Accept', 'application/vnd.pgrst.object+json')
+      .send({
+        email: 'alice@email.com',
+        password: 'pass'
+      })
+      .expect('Content-Type', /json/)
+      .expect('Set-Cookie', /session/)
       .expect(r => {
-        //console.log(r.body)
-        r.body.me.email.should.equal('john@email.com')
+        r.body.me.email.should.equal('alice@email.com')
+        r.body.should.not.have.ownProperty('token')
       }).expect(200, done)
+  })
+
+  it('/recipes', function (done) {
+    rest_service(false)
+      .get('/recipes?select=id,title')
+      .expect('Content-Type', /json/)
+      .expect((r) => {
+        r.body.error.should.equal("You need a valid session to access this endpoint")
+      })
+      .expect(403, done)
   })
 })
