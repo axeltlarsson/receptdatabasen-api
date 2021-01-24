@@ -210,7 +210,7 @@ search toMsg query =
         }
 
 
-delete : Slug -> (Result Http.Error () -> msg) -> Cmd msg
+delete : Slug -> (Result ServerError () -> msg) -> Cmd msg
 delete recipeSlug toMsg =
     Http.request
         { url = url [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
@@ -219,7 +219,7 @@ delete recipeSlug toMsg =
         , tracker = Nothing
         , headers = []
         , body = Http.emptyBody
-        , expect = Http.expectWhatever toMsg
+        , expect = expectJsonWithBody toMsg (Decode.succeed ())
         }
 
 
@@ -292,7 +292,9 @@ expectJsonWithBody toMsg decoder =
                     Err (ServerError Http.NetworkError)
 
                 Http.BadStatus_ md body ->
-                    Err (ServerErrorWithBody (Http.BadStatus md.statusCode) (decodeServerError body))
+                    Debug.log body
+                        Err
+                        (ServerErrorWithBody (Http.BadStatus md.statusCode) body)
 
                 Http.GoodStatus_ md body ->
                     case Decode.decodeString decoder body of
@@ -311,16 +313,7 @@ expectJsonWithBody toMsg decoder =
 
 type ServerError
     = ServerError Http.Error
-    | ServerErrorWithBody Http.Error PGError
-
-
-type alias PGError =
-    { message : Maybe String
-    , details : Maybe String
-    , code : Maybe String
-    , hint : Maybe String
-    , error : Maybe String
-    }
+    | ServerErrorWithBody Http.Error String
 
 
 serverErrorFromHttp : Http.Error -> ServerError
@@ -354,7 +347,7 @@ serverErrorToString error =
             httpErrorToString httpErr
 
         ServerErrorWithBody httpErr pgError ->
-            httpErrorToString httpErr ++ "\n" ++ pgErrorToString pgError
+            httpErrorToString httpErr ++ "\n" ++ pgError
 
 
 viewServerError : String -> ServerError -> Element msg
@@ -370,53 +363,5 @@ viewServerError prefix serverError =
             column []
                 [ el [ Font.heavy ] (text prefix)
                 , text <| httpErrorToString httpError
-                , viewPgError pgError
+                , text pgError
                 ]
-
-
-viewPgError : PGError -> Element msg
-viewPgError error =
-    column [ Font.color Palette.red ]
-        [ text <| Maybe.withDefault "" error.message
-        , text <| Maybe.withDefault "" error.details
-        ]
-
-
-pgErrorDecoder : Decode.Decoder PGError
-pgErrorDecoder =
-    Decode.map5 PGError
-        (Decode.maybe <| Decode.field "message" Decode.string)
-        (Decode.maybe <| Decode.field "details" Decode.string)
-        (Decode.maybe <| Decode.field "code" Decode.string)
-        (Decode.maybe <| Decode.field "hint" Decode.string)
-        (Decode.maybe <| Decode.field "error" Decode.string)
-
-
-pgErrorToString : PGError -> String
-pgErrorToString { message, details, code, hint, error } =
-    let
-        toString fieldName fieldValue =
-            fieldValue
-                |> Maybe.map (\v -> fieldName ++ ": " ++ v ++ "\n")
-                |> Maybe.withDefault ""
-    in
-    toString "message" message
-        ++ toString "details" details
-        ++ toString "hint" hint
-        ++ toString "code" code
-        ++ toString "error" error
-
-
-decodeServerError : String -> PGError
-decodeServerError str =
-    case Decode.decodeString pgErrorDecoder str of
-        Err err ->
-            { message = Just "Error! I couldn't decode the PostgREST error response "
-            , code = Nothing
-            , details = Just <| Decode.errorToString err
-            , hint = Nothing
-            , error = Nothing
-            }
-
-        Ok pgError ->
-            pgError

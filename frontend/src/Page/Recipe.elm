@@ -61,7 +61,7 @@ type alias Model =
 type Status recipe
     = Loading
     | Loaded recipe
-    | Failed Recipe.ServerError
+    | Failed String
 
 
 init : Session -> Slug -> ( Model, Cmd Msg )
@@ -105,7 +105,7 @@ view model =
 
                 Failed err ->
                     { title = "Kunde ej hämta recept"
-                    , content = Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err)
+                    , content = Loading.error "Kunde ej ladda in recept" err
                     }
 
                 Loaded recipe ->
@@ -366,7 +366,7 @@ type Msg
     | ClickedCheckbox Int Bool
     | ClickedDelete
     | ClickedEdit
-    | Deleted (Result Http.Error ())
+    | Deleted (Result Recipe.ServerError ())
     | SetViewport
 
 
@@ -377,7 +377,7 @@ update msg model =
             ( { model | recipe = Loaded recipe, session = Session.addRecipe recipe model.session }, Cmd.none )
 
         LoadedRecipe (Err error) ->
-            ( { model | recipe = Failed error }, Cmd.none )
+            ( { model | recipe = Failed (Recipe.serverErrorToString error) }, Cmd.none )
 
         ClickedCheckbox idx checked ->
             ( { model | checkboxStatus = Dict.update idx (\x -> Just checked) model.checkboxStatus }, Cmd.none )
@@ -409,7 +409,7 @@ update msg model =
             )
 
         Deleted (Err error) ->
-            ( { model | recipe = Failed (Recipe.serverErrorFromHttp error) }, Cmd.none )
+            ( { model | recipe = Failed (Recipe.serverErrorToString error) }, Cmd.none )
 
         SetViewport ->
             ( model, Cmd.none )
