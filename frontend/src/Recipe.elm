@@ -9,6 +9,7 @@ module Recipe exposing
     , create
     , delete
     , edit
+    , expectJsonWithBody
     , fetch
     , fetchMany
     , fullDecoder

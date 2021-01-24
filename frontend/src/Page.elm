@@ -17,6 +17,7 @@ type Page
     = Recipe
     | RecipeList
     | Editor
+    | Login
     | Other
 
 
