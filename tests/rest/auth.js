@@ -10,7 +10,7 @@ describe('auth', function () {
       .post('/rest/login')
       .set('Accept', 'application/vnd.pgrst.object+json')
       .send({
-        email: 'alice@email.com',
+        user_name: 'alice',
         password: 'pass'
       })
       .expect('Content-Type', /json/)
@@ -76,7 +76,7 @@ describe('unauthenticated', function () {
       .post('/rest/login')
       .set('Accept', 'application/vnd.pgrst.object+json')
       .send({
-        email: 'alice@email.com',
+        user_name: 'alice',
         password: 'pass'
       })
       .expect('Content-Type', /json/)

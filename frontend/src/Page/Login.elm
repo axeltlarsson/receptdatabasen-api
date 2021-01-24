@@ -166,7 +166,7 @@ update msg ({ session, status } as model) =
 toJson : VerifiedForm -> Encode.Value
 toJson form =
     Encode.object
-        [ ( "email", Encode.string form.userName )
+        [ ( "user_name", Encode.string form.userName )
         , ( "password", Encode.string form.password )
         ]
 
@@ -187,12 +187,12 @@ submitForm form =
 meDecoder : Decode.Decoder Me
 meDecoder =
     Decode.map2 Me
-        (field "me" (field "name" string))
+        (field "me" (field "user_name" string))
         (field "me" (field "role" string))
 
 
 type alias Me =
-    { name : String, role : String }
+    { userName : String, role : String }
 
 
 
