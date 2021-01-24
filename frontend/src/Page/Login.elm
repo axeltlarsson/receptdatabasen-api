@@ -196,14 +196,6 @@ type alias Me =
 
 
 
--- {
--- "me": {
--- "email": "alice@email.com",
--- "id": 1,
--- "name": "alice",
--- "role": "customer"
--- }
--- }
 {--
   - Validation
   --}

@@ -2,6 +2,7 @@ port module Page.RecipeList exposing (Model, Msg, Status, init, subscriptions, t
 
 import BlurHash
 import Browser.Dom as Dom
+import Browser.Navigation as Nav
 import Dict exposing (Dict)
 import Element
     exposing
@@ -383,7 +384,12 @@ update msg model =
             )
 
         LoadedRecipes (Err error) ->
-            ( { model | recipes = Failed error }, Cmd.none )
+            case error of
+                Recipe.ServerErrorWithBody (Http.BadStatus 403) _ ->
+                    ( model, Nav.pushUrl (Session.navKey (toSession model)) (Route.toString Route.Login) )
+
+                _ ->
+                    ( { model | recipes = Failed error }, Cmd.none )
 
         SearchQueryEntered "" ->
             ( { model | query = "" }, Recipe.fetchMany LoadedRecipes )

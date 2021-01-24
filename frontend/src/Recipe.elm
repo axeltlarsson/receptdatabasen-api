@@ -4,7 +4,7 @@ module Recipe exposing
     , Metadata
     , Preview
     , Recipe(..)
-    , ServerError
+    , ServerError(..)
     , contents
     , create
     , delete
@@ -315,10 +315,11 @@ type ServerError
 
 
 type alias PGError =
-    { message : String
+    { message : Maybe String
     , details : Maybe String
     , code : Maybe String
     , hint : Maybe String
+    , error : Maybe String
     }
 
 
@@ -353,7 +354,7 @@ serverErrorToString error =
             httpErrorToString httpErr
 
         ServerErrorWithBody httpErr pgError ->
-            httpErrorToString httpErr ++ " " ++ pgErrorToString pgError
+            httpErrorToString httpErr ++ "\n" ++ pgErrorToString pgError
 
 
 viewServerError : String -> ServerError -> Element msg
@@ -376,44 +377,45 @@ viewServerError prefix serverError =
 viewPgError : PGError -> Element msg
 viewPgError error =
     column [ Font.color Palette.red ]
-        [ text error.message
+        [ text <| Maybe.withDefault "" error.message
         , text <| Maybe.withDefault "" error.details
         ]
 
 
 pgErrorDecoder : Decode.Decoder PGError
 pgErrorDecoder =
-    Decode.map4 PGError
-        (Decode.field "message" Decode.string)
-        (Decode.field "details" <| Decode.nullable Decode.string)
-        (Decode.field "code" <| Decode.nullable Decode.string)
-        (Decode.field "hint" <| Decode.nullable Decode.string)
+    Decode.map5 PGError
+        (Decode.maybe <| Decode.field "message" Decode.string)
+        (Decode.maybe <| Decode.field "details" Decode.string)
+        (Decode.maybe <| Decode.field "code" Decode.string)
+        (Decode.maybe <| Decode.field "hint" Decode.string)
+        (Decode.maybe <| Decode.field "error" Decode.string)
 
 
 pgErrorToString : PGError -> String
-pgErrorToString err =
-    "message: "
-        ++ err.message
-        ++ "\n"
-        ++ "details: "
-        ++ Maybe.withDefault "" err.details
-        ++ "\n"
-        ++ "code: "
-        ++ Maybe.withDefault "" err.code
-        ++ "\n"
-        ++ "hint: "
-        ++ Maybe.withDefault "" err.hint
-        ++ "\n"
+pgErrorToString { message, details, code, hint, error } =
+    let
+        toString fieldName fieldValue =
+            fieldValue
+                |> Maybe.map (\v -> fieldName ++ ": " ++ v ++ "\n")
+                |> Maybe.withDefault ""
+    in
+    toString "message" message
+        ++ toString "details" details
+        ++ toString "hint" hint
+        ++ toString "code" code
+        ++ toString "error" error
 
 
 decodeServerError : String -> PGError
 decodeServerError str =
     case Decode.decodeString pgErrorDecoder str of
         Err err ->
-            { message = "Error! I couldn't decode the PostgREST error response "
+            { message = Just "Error! I couldn't decode the PostgREST error response "
             , code = Nothing
             , details = Just <| Decode.errorToString err
             , hint = Nothing
+            , error = Nothing
             }
 
         Ok pgError ->
