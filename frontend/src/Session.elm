@@ -22,7 +22,7 @@ import Url
 
 type Session
     = Session Nav.Key Element.Device (Maybe Dom.Viewport)
-    | SessionWithRecipe (Recipe Full) Nav.Key Element.Device (Maybe Dom.Viewport)
+    | SessionWithRecipe Nav.Key Element.Device (Maybe Dom.Viewport) (Recipe Full)
 
 
 type alias Window =
@@ -36,17 +36,17 @@ build key window =
 
 buildWithRecipe : Nav.Key -> Window -> Recipe Full -> Session
 buildWithRecipe key window fullRecipe =
-    SessionWithRecipe fullRecipe key (classifyDevice window) Nothing
+    SessionWithRecipe key (classifyDevice window) Nothing fullRecipe
 
 
 addRecipe : Recipe Full -> Session -> Session
 addRecipe fullRecipe session =
     case session of
         Session key dev theViewport ->
-            SessionWithRecipe fullRecipe key dev theViewport
+            SessionWithRecipe key dev theViewport fullRecipe
 
-        SessionWithRecipe oldRecipe key dev theViewport ->
-            SessionWithRecipe fullRecipe key dev theViewport
+        SessionWithRecipe key dev theViewport oldRecipe ->
+            SessionWithRecipe key dev theViewport fullRecipe
 
 
 updateWindowSize : Session -> Window -> Session
@@ -55,8 +55,8 @@ updateWindowSize session window =
         Session key dev theViewport ->
             Session key (classifyDevice window) theViewport
 
-        SessionWithRecipe fullRecipe key dev theViewport ->
-            SessionWithRecipe fullRecipe key (classifyDevice window) theViewport
+        SessionWithRecipe key dev theViewport fullRecipe ->
+            SessionWithRecipe key (classifyDevice window) theViewport fullRecipe
 
 
 updateViewport : Session -> Dom.Viewport -> Session
@@ -65,8 +65,8 @@ updateViewport session theViewport =
         Session key dev oldViewport ->
             Session key dev (Just theViewport)
 
-        SessionWithRecipe fullRecipe key dev oldViewport ->
-            SessionWithRecipe fullRecipe key dev (Just theViewport)
+        SessionWithRecipe key dev oldViewport fullRecipe ->
+            SessionWithRecipe key dev (Just theViewport) fullRecipe
 
 
 navKey : Session -> Nav.Key
@@ -75,7 +75,7 @@ navKey session =
         Session key _ _ ->
             key
 
-        SessionWithRecipe _ key _ _ ->
+        SessionWithRecipe key _ _ _ ->
             key
 
 
@@ -85,7 +85,7 @@ recipe session slug =
         Session _ _ _ ->
             Nothing
 
-        SessionWithRecipe recipeFull _ _ _ ->
+        SessionWithRecipe _ _ _ recipeFull ->
             matchingSlug slug recipeFull
 
 
@@ -95,7 +95,7 @@ device session =
         Session _ dev _ ->
             dev
 
-        SessionWithRecipe _ _ dev _ ->
+        SessionWithRecipe _ dev _ _ ->
             dev
 
 
@@ -105,7 +105,7 @@ viewport session =
         Session _ _ theViewport ->
             theViewport
 
-        SessionWithRecipe _ _ _ theViewport ->
+        SessionWithRecipe _ _ theViewport _ ->
             theViewport
 
 
