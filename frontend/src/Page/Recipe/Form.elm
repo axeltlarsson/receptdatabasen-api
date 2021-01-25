@@ -1,4 +1,4 @@
-module Page.Recipe.Form exposing (Model, Msg(..), fromRecipe, init, portMsg, toJson, update, uploadProgressMsg, view)
+module Page.Recipe.Form exposing (Model, Msg(..), errorBorder, fromRecipe, init, portMsg, toJson, update, uploadProgressMsg, view, viewValidationError)
 
 import Dict exposing (Dict)
 import Element
@@ -204,7 +204,7 @@ edges =
     }
 
 
-errorBorder : Bool -> a -> Verify.Validator String a String -> List (Element.Attribute Msg)
+errorBorder : Bool -> a -> Verify.Validator String a String -> List (Element.Attribute msg)
 errorBorder active input theValidator =
     let
         fieldIsInvalid =
@@ -225,7 +225,7 @@ errorBorder active input theValidator =
         []
 
 
-viewValidationError : Bool -> a -> Verify.Validator String a b -> Element Msg
+viewValidationError : Bool -> a -> Verify.Validator String a b -> Element msg
 viewValidationError active input theValidator =
     if active then
         case validateSingle input theValidator of
