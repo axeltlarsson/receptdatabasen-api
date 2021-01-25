@@ -163,15 +163,15 @@ previewsDecoder =
 -- HTTP
 
 
-url : List QueryParameter -> String
-url queryParams =
+restUrl : List QueryParameter -> String
+restUrl queryParams =
     Url.Builder.crossOrigin "/rest" [ "recipes" ] queryParams
 
 
 fetch : Slug -> (Result ServerError (Recipe Full) -> msg) -> Cmd msg
 fetch recipeSlug toMsg =
     Http.request
-        { url = url [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
+        { url = restUrl [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
         , method = "GET"
         , timeout = Nothing
         , tracker = Nothing
@@ -190,7 +190,7 @@ fetchMany toMsg =
             ]
     in
     Http.get
-        { url = url params
+        { url = restUrl params
         , expect = expectJsonWithBody toMsg previewsDecoder
         }
 
@@ -213,7 +213,7 @@ search toMsg query =
 delete : Slug -> (Result ServerError () -> msg) -> Cmd msg
 delete recipeSlug toMsg =
     Http.request
-        { url = url [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
+        { url = restUrl [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
         , method = "DELETE"
         , timeout = Nothing
         , tracker = Nothing
@@ -226,7 +226,7 @@ delete recipeSlug toMsg =
 create : Encode.Value -> (Result ServerError (Recipe Full) -> msg) -> Cmd msg
 create jsonForm toMsg =
     Http.request
-        { url = url []
+        { url = restUrl []
         , method = "POST"
         , timeout = Nothing
         , tracker = Nothing
@@ -242,7 +242,7 @@ create jsonForm toMsg =
 edit : Slug -> Encode.Value -> (Result ServerError (Recipe Full) -> msg) -> Cmd msg
 edit recipeSlug jsonForm toMsg =
     Http.request
-        { url = url [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
+        { url = restUrl [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
         , method = "PATCH"
         , timeout = Nothing
         , tracker = Nothing
@@ -291,10 +291,13 @@ expectJsonWithBody toMsg decoder =
                 Http.NetworkError_ ->
                     Err (ServerError Http.NetworkError)
 
-                Http.BadStatus_ md body ->
-                    Debug.log body
-                        Err
-                        (ServerErrorWithBody (Http.BadStatus md.statusCode) body)
+                Http.BadStatus_ { url, statusCode, statusText, headers } body ->
+                    case statusCode of
+                        403 ->
+                            Err Forbidden
+
+                        _ ->
+                            Err (ServerErrorWithBody (Http.BadStatus statusCode) body)
 
                 Http.GoodStatus_ md body ->
                     case Decode.decodeString decoder body of
@@ -314,6 +317,7 @@ expectJsonWithBody toMsg decoder =
 type ServerError
     = ServerError Http.Error
     | ServerErrorWithBody Http.Error String
+    | Forbidden
 
 
 serverErrorFromHttp : Http.Error -> ServerError
@@ -349,6 +353,9 @@ serverErrorToString error =
         ServerErrorWithBody httpErr pgError ->
             httpErrorToString httpErr ++ "\n" ++ pgError
 
+        Forbidden ->
+            "403 Forbidden"
+
 
 viewServerError : String -> ServerError -> Element msg
 viewServerError prefix serverError =
@@ -364,4 +371,10 @@ viewServerError prefix serverError =
                 [ el [ Font.heavy ] (text prefix)
                 , text <| httpErrorToString httpError
                 , text pgError
+                ]
+
+        Forbidden ->
+            column []
+                [ el [ Font.heavy ] (text prefix)
+                , text "403 Forbidden"
                 ]

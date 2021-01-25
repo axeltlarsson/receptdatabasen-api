@@ -385,8 +385,8 @@ update msg model =
 
         LoadedRecipes (Err error) ->
             case error of
-                Recipe.ServerErrorWithBody (Http.BadStatus 403) _ ->
-                    ( model, Nav.pushUrl (Session.navKey (toSession model)) (Route.toString Route.Login) )
+                Recipe.Forbidden ->
+                    ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
 
                 _ ->
                     ( { model | recipes = Failed error }, Cmd.none )

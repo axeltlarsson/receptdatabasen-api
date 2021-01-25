@@ -282,6 +282,9 @@ update msg ({ status, session } as model) =
                 |> Route.replaceUrl (Session.navKey model.session)
             )
 
+        CompletedCreate (Err Recipe.Forbidden) ->
+            ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+
         CompletedCreate (Err error) ->
             ( { model | status = savingError error model.status }
             , Cmd.none

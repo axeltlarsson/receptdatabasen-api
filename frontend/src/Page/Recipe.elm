@@ -377,7 +377,12 @@ update msg model =
             ( { model | recipe = Loaded recipe, session = Session.addRecipe recipe model.session }, Cmd.none )
 
         LoadedRecipe (Err error) ->
-            ( { model | recipe = Failed (Recipe.serverErrorToString error) }, Cmd.none )
+            case error of
+                Recipe.Forbidden ->
+                    ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+
+                _ ->
+                    ( { model | recipe = Failed (Recipe.serverErrorToString error) }, Cmd.none )
 
         ClickedCheckbox idx checked ->
             ( { model | checkboxStatus = Dict.update idx (\x -> Just checked) model.checkboxStatus }, Cmd.none )
