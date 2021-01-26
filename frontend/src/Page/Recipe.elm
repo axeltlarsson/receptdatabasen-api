@@ -61,7 +61,7 @@ type alias Model =
 type Status recipe
     = Loading
     | Loaded recipe
-    | Failed String
+    | Failed Recipe.ServerError
 
 
 init : Session -> Slug -> ( Model, Cmd Msg )
@@ -105,7 +105,7 @@ view model =
 
                 Failed err ->
                     { title = "Kunde ej hämta recept"
-                    , content = Loading.error "Kunde ej ladda in recept" err
+                    , content = Recipe.viewServerError "" err
                     }
 
                 Loaded recipe ->
@@ -378,11 +378,11 @@ update msg model =
 
         LoadedRecipe (Err error) ->
             case error of
-                Recipe.Forbidden ->
+                Recipe.Unauthorized ->
                     ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
 
                 _ ->
-                    ( { model | recipe = Failed (Recipe.serverErrorToString error) }, Cmd.none )
+                    ( { model | recipe = Failed error }, Cmd.none )
 
         ClickedCheckbox idx checked ->
             ( { model | checkboxStatus = Dict.update idx (\x -> Just checked) model.checkboxStatus }, Cmd.none )
@@ -414,7 +414,7 @@ update msg model =
             )
 
         Deleted (Err error) ->
-            ( { model | recipe = Failed (Recipe.serverErrorToString error) }, Cmd.none )
+            ( { model | recipe = Failed error }, Cmd.none )
 
         SetViewport ->
             ( model, Cmd.none )

@@ -17,8 +17,6 @@ module Recipe exposing
     , metadata
     , previewDecoder
     , search
-    , serverErrorFromHttp
-    , serverErrorToString
     , slug
     , uploadImage
     , viewServerError
@@ -283,21 +281,21 @@ expectJsonWithBody toMsg decoder =
         \response ->
             case response of
                 Http.BadUrl_ urll ->
-                    Err (ServerError (Http.BadUrl urll))
+                    Err (otherError (Http.BadUrl urll) Nothing)
 
                 Http.Timeout_ ->
-                    Err (ServerError Http.Timeout)
+                    Err (otherError Http.Timeout Nothing)
 
                 Http.NetworkError_ ->
-                    Err (ServerError Http.NetworkError)
+                    Err (otherError Http.NetworkError Nothing)
 
                 Http.BadStatus_ { url, statusCode, statusText, headers } body ->
                     case statusCode of
-                        403 ->
-                            Err Forbidden
+                        401 ->
+                            Err Unauthorized
 
                         _ ->
-                            Err (ServerErrorWithBody (Http.BadStatus statusCode) body)
+                            Err (otherError (Http.BadStatus statusCode) (Just body))
 
                 Http.GoodStatus_ md body ->
                     case Decode.decodeString decoder body of
@@ -305,24 +303,34 @@ expectJsonWithBody toMsg decoder =
                             Ok value
 
                         Err err ->
-                            Err (ServerError (Http.BadBody (Decode.errorToString err)))
+                            Err (otherError (Http.BadBody (Decode.errorToString err)) (Just body))
 
 
 
 {--
   - ServerError
+  - I specifically care about Unauthorized case - then we want to redirect to /login
+  - otherwise, I keep the type opaque, modules are expected to basically just pass it to
+  - viewServerError, if they wish to display the error to user
   --}
 
 
 type ServerError
-    = ServerError Http.Error
-    | ServerErrorWithBody Http.Error String
-    | Forbidden
+    = Unauthorized
+    | Error OtherError
 
 
-serverErrorFromHttp : Http.Error -> ServerError
-serverErrorFromHttp =
-    ServerError
+type OtherError
+    = OtherError Http.Error (Maybe Body)
+
+
+otherError : Http.Error -> Maybe Body -> ServerError
+otherError httpError body =
+    Error (OtherError httpError body)
+
+
+type alias Body =
+    String
 
 
 httpErrorToString : Http.Error -> String
@@ -344,37 +352,24 @@ httpErrorToString err =
             "BadBody " ++ str
 
 
-serverErrorToString : ServerError -> String
-serverErrorToString error =
-    case error of
-        ServerError httpErr ->
-            httpErrorToString httpErr
-
-        ServerErrorWithBody httpErr pgError ->
-            httpErrorToString httpErr ++ "\n" ++ pgError
-
-        Forbidden ->
-            "403 Forbidden"
-
-
 viewServerError : String -> ServerError -> Element msg
 viewServerError prefix serverError =
     case serverError of
-        ServerError httpError ->
+        Error (OtherError httpError Nothing) ->
             column []
                 [ el [ Font.heavy ] (text prefix)
                 , text <| httpErrorToString httpError
                 ]
 
-        ServerErrorWithBody httpError pgError ->
+        Error (OtherError httpError (Just body)) ->
             column []
                 [ el [ Font.heavy ] (text prefix)
                 , text <| httpErrorToString httpError
-                , text pgError
+                , text body
                 ]
 
-        Forbidden ->
+        Unauthorized ->
             column []
                 [ el [ Font.heavy ] (text prefix)
-                , text "403 Forbidden"
+                , text "401 Unauthorized"
                 ]

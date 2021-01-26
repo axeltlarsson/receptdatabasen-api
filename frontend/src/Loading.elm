@@ -1,4 +1,4 @@
-module Loading exposing (animation, error)
+module Loading exposing (animation)
 
 import Element exposing (Element, row, text)
 import Element.Background as Background
@@ -13,12 +13,4 @@ animation =
         [ div [ id "hourglass-top" ] []
         , div [ id "hourglass-bottom" ] []
         , div [ id "hourglass-line" ] []
-        ]
-
-
-error : String -> String -> Element msg
-error title message =
-    row [ Background.color Palette.red ]
-        [ text title
-        , text message
         ]

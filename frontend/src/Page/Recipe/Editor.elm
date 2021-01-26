@@ -136,7 +136,7 @@ view model =
                     title =
                         Maybe.withDefault "" (Url.percentDecode (Slug.toString slug))
                 in
-                skeleton Nothing <| Loading.error title "Kunde ej ladda in receptet"
+                skeleton Nothing <| text (title ++ "Kunde ej ladda in receptet")
 
             Editing slug serverError form ->
                 skeleton serverError <| Form.view form
@@ -282,7 +282,7 @@ update msg ({ status, session } as model) =
                 |> Route.replaceUrl (Session.navKey model.session)
             )
 
-        CompletedCreate (Err Recipe.Forbidden) ->
+        CompletedCreate (Err Recipe.Unauthorized) ->
             ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
 
         CompletedCreate (Err error) ->

@@ -94,6 +94,6 @@ describe('unauthenticated', function () {
       .expect((r) => {
         r.body.error.should.equal("You need a valid session to access this endpoint")
       })
-      .expect(403, done)
+      .expect(401, done)
   })
 })

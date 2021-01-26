@@ -25,7 +25,7 @@ import Verify
 
 
 type alias Model =
-    { session : Session, status : Status, problem : Maybe String }
+    { session : Session, status : Status, problem : Maybe Recipe.ServerError }
 
 
 type Status
@@ -39,6 +39,7 @@ type alias LoginForm =
     , password : String
     , passwordValidationActive : Bool
     , validationStatus : ValidationStatus
+    , invalidCredentials : Bool
     }
 
 
@@ -60,6 +61,7 @@ initialForm =
     , password = ""
     , passwordValidationActive = False
     , validationStatus = NotActivated
+    , invalidCredentials = False
     }
 
 
@@ -67,50 +69,76 @@ view : Model -> { title : String, content : Element Msg }
 view model =
     { title = "Logga in"
     , content =
-        column [ Region.mainContent, width fill ]
-            [ case model.status of
+        column
+            [ Region.mainContent
+            , width (fill |> Element.maximum 700)
+            , centerX
+            , spacing 20
+            , padding 10
+            ]
+            [ row [ Font.heavy, Font.size Palette.xxLarge ] [ text "Logga in" ]
+            , case model.status of
                 FillingForm form ->
                     viewForm form
 
                 SubmittingForm form ->
                     viewForm form
-            , viewProblem model.problem
+            , model.problem
+                |> Maybe.map (Recipe.viewServerError "Kunde ej logga in")
+                |> Maybe.withDefault Element.none
             ]
     }
 
 
 viewForm : LoginForm -> Element Msg
 viewForm form =
-    column [ width (fill |> Element.maximum 700), centerX, spacing 20, padding 10, Font.extraLight ]
-        [ viewUserNameInput form.userNameValidationActive form.userName
-        , viewPasswordInput form.passwordValidationActive form.password
+    column [ width fill, Font.extraLight, spacing 20 ]
+        [ viewUserNameInput form.invalidCredentials form.userNameValidationActive form.userName
+        , viewPasswordInput form.invalidCredentials form.passwordValidationActive form.password
         , viewSubmitButton
         ]
 
 
-viewUserNameInput : Bool -> String -> Element Msg
-viewUserNameInput active name =
+viewUserNameInput : Bool -> Bool -> String -> Element Msg
+viewUserNameInput invalidCredentials active name =
+    let
+        theValidator =
+            if invalidCredentials then
+                Verify.fail "Fel användarnamn och/eller lösenord"
+
+            else
+                userNameValidator
+    in
     column [ spacing 10, width fill ]
-        [ Input.username ([ Events.onLoseFocus BlurredUserName ] ++ errorBorder active name userNameValidator)
+        [ Input.username ([ Events.onLoseFocus BlurredUserName ] ++ errorBorder active name theValidator)
             { onChange = UserNameChanged
             , text = name
             , placeholder = Just (Input.placeholder [] (el [] (text "Användarnamn")))
             , label = Input.labelHidden "Användarnamn"
             }
-        , viewValidationError active name userNameValidator
+        , viewValidationError active name theValidator
         ]
 
 
-viewPasswordInput : Bool -> String -> Element Msg
-viewPasswordInput active password =
+viewPasswordInput : Bool -> Bool -> String -> Element Msg
+viewPasswordInput invalidCredentials active password =
+    let
+        theValidator =
+            if invalidCredentials then
+                Verify.fail "Fel användarnamn och/eller lösenord"
+
+            else
+                userNameValidator
+    in
     column [ spacing 10, width fill ]
-        [ Input.currentPassword []
+        [ Input.currentPassword ([ Events.onLoseFocus BlurredPassword ] ++ errorBorder active password theValidator)
             { onChange = PasswordChanged
             , text = password
             , placeholder = Just (Input.placeholder [] (el [] (text "Lösenord")))
             , label = Input.labelHidden "Lösenord"
             , show = False
             }
+        , viewValidationError active password theValidator
         ]
 
 
@@ -121,11 +149,6 @@ viewSubmitButton =
         { onPress = Just SubmitForm
         , label = text "Logga in"
         }
-
-
-viewProblem : Maybe String -> Element Msg
-viewProblem problem =
-    problem |> Maybe.map (\prob -> text prob) |> Maybe.withDefault Element.none
 
 
 type Msg
@@ -143,13 +166,13 @@ update msg ({ session, status } as model) =
         FillingForm form ->
             case msg of
                 UserNameChanged userName ->
-                    ( { model | status = FillingForm { form | userName = userName } }, Cmd.none )
+                    ( { model | status = FillingForm { form | userName = userName, invalidCredentials = False } }, Cmd.none )
 
                 BlurredUserName ->
-                    ( { model | status = FillingForm { form | userNameValidationActive = True } }, Cmd.none )
+                    ( { model | status = FillingForm { form | userNameValidationActive = True, invalidCredentials = False } }, Cmd.none )
 
                 PasswordChanged password ->
-                    ( { model | status = FillingForm { form | password = password } }, Cmd.none )
+                    ( { model | status = FillingForm { form | password = password, invalidCredentials = False } }, Cmd.none )
 
                 BlurredPassword ->
                     ( { model | status = FillingForm { form | passwordValidationActive = True } }, Cmd.none )
@@ -161,6 +184,7 @@ update msg ({ session, status } as model) =
                                 | userNameValidationActive = True
                                 , passwordValidationActive = True
                                 , validationStatus = valid
+                                , invalidCredentials = False
                             }
                     in
                     case validator form of
@@ -183,15 +207,19 @@ update msg ({ session, status } as model) =
         SubmittingForm form ->
             case msg of
                 CompletedLogin (Ok me) ->
-                    ( { model | status = FillingForm form }, Nav.back (Session.navKey session) 1 )
+                    ( { model | status = FillingForm { form | invalidCredentials = False }, problem = Nothing }, Nav.back (Session.navKey session) 1 )
 
                 CompletedLogin (Err err) ->
                     case err of
-                        Recipe.ServerErrorWithBody (Http.BadStatus 400) body ->
-                            ( { model | problem = Just body, status = FillingForm form }, Cmd.none )
+                        Recipe.Unauthorized ->
+                            ( { model
+                                | status = FillingForm { form | invalidCredentials = True }
+                              }
+                            , Cmd.none
+                            )
 
                         _ ->
-                            ( { model | status = FillingForm form }, Cmd.none )
+                            ( { model | status = FillingForm form, problem = Just err }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )

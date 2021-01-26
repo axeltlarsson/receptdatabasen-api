@@ -9,7 +9,7 @@ begin
   INTO usr;
 
   if usr is NULL then
-    raise exception 'invalid user_name/password';
+    raise "insufficient_privilege";
   else
 
     return json_build_object(

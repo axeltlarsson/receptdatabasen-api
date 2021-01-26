@@ -1,4 +1,4 @@
-module Page exposing (Page(..), view)
+module Page exposing (Page(..), view, viewWithoutHeader)
 
 import Browser exposing (Document)
 import Element exposing (Element, alignBottom, alignLeft, alignTop, centerX, column, el, fill, height, link, padding, row, spacing, spacingXY, text, width)
@@ -33,6 +33,23 @@ view page { title, content } =
             , Font.size Palette.normal
             , width fill
             , Element.inFront (lazy viewHeader page)
+            ]
+            (column [ Element.paddingXY 0 headerHeight, width (fill |> Element.maximum 1440), Element.centerX ]
+                [ content ]
+            )
+        ]
+    }
+
+
+viewWithoutHeader : Page -> { title : String, content : Element msg } -> Document msg
+viewWithoutHeader page { title, content } =
+    { title = title ++ " | Receptdatabasen"
+    , body =
+        [ Element.layout
+            [ Font.family [ Font.typeface "Metropolis" ]
+            , Font.color Palette.nearBlack
+            , Font.size Palette.normal
+            , width fill
             ]
             (column [ Element.paddingXY 0 headerHeight, width (fill |> Element.maximum 1440), Element.centerX ]
                 [ content ]

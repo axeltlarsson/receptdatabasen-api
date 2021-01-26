@@ -76,6 +76,13 @@ view model =
                     Page.view page config
             in
             { title = title, body = List.map (Html.map toMsg) body }
+
+        viewPageWithoutHeader page toMsg config =
+            let
+                { title, body } =
+                    Page.viewWithoutHeader page config
+            in
+            { title = title, body = List.map (Html.map toMsg) body }
     in
     case model of
         Redirect _ ->
@@ -94,7 +101,7 @@ view model =
             viewPage Page.Editor GotEditorMsg (Editor.view editor)
 
         Login login ->
-            viewPage Page.Login GotLoginMsg (Login.view login)
+            viewPageWithoutHeader Page.Login GotLoginMsg (Login.view login)
 
 
 

@@ -104,7 +104,7 @@ view model =
             { title = "Kunde ej ladda in recept"
             , content =
                 column [ Region.mainContent ]
-                    [ Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err) ]
+                    [ Recipe.viewServerError "Kunde ej ladda in recept" err ]
             }
 
         Loaded recipes ->
@@ -385,7 +385,7 @@ update msg model =
 
         LoadedRecipes (Err error) ->
             case error of
-                Recipe.Forbidden ->
+                Recipe.Unauthorized ->
                     ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
 
                 _ ->

@@ -104,7 +104,7 @@ describe('image server', function () {
         .expect(res => {
           res.body.error.should.equal("You need a valid session to access this endpoint")
         })
-        .expect(403, done)
+        .expect(401, done)
     })
 
     it('GET /images/sig/100 is denied', function (done) {
@@ -117,7 +117,7 @@ describe('image server', function () {
           let body =  JSON.parse(String(res.body))
           body.error.should.equal("You need a valid session to access this endpoint")
         })
-        .expect(403, done)
+        .expect(401, done)
     })
   })
 })
