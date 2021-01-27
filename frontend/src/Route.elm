@@ -5,6 +5,7 @@ import Html exposing (Attribute)
 import Html.Attributes as Attr
 import Recipe.Slug as Slug exposing (Slug)
 import Url exposing (Url)
+import Url.Builder
 import Url.Parser as Parser exposing ((</>), (<?>), Parser, int, map, oneOf, s, string)
 import Url.Parser.Query as Query
 
@@ -60,15 +61,19 @@ toString page =
                 Recipe slug ->
                     [ "recipe", Url.percentEncode <| Slug.toString slug ]
 
-                RecipeList maybeQuery ->
-                    [] ++ [ maybeQuery |> Maybe.map ((++) "?search=") |> Maybe.withDefault "" ]
+                RecipeList (Just query) ->
+                    [ Url.Builder.toQuery [ Url.Builder.string "search" query ] ]
+
+                RecipeList Nothing ->
+                    []
 
                 NewRecipe ->
                     [ "editor" ]
 
                 EditRecipe slug ->
                     [ "editor", Url.percentEncode <| Slug.toString slug ]
+
                 Login ->
-                    [ "login"]
+                    [ "login" ]
     in
     "/" ++ String.join "/" pieces

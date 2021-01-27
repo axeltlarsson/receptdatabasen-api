@@ -1,4 +1,4 @@
-module Page.Recipe.Form exposing (Model, Msg(..), errorBorder, fromRecipe, init, portMsg, toJson, update, uploadProgressMsg, view, viewValidationError)
+module Page.Recipe.Form exposing (Model, Msg(..), fromRecipe, init, portMsg, toJson, update, uploadProgressMsg, view)
 
 import Dict exposing (Dict)
 import Element
@@ -35,6 +35,7 @@ import Element.Region as Region
 import FeatherIcons
 import File exposing (File)
 import File.Select as Select
+import Form exposing (errorBorder, onEnter, validateSingle, viewValidationError)
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
@@ -202,43 +203,6 @@ edges =
     , bottom = 0
     , left = 0
     }
-
-
-errorBorder : Bool -> a -> Verify.Validator String a String -> List (Element.Attribute msg)
-errorBorder active input theValidator =
-    let
-        fieldIsInvalid =
-            case validateSingle input theValidator of
-                Ok _ ->
-                    False
-
-                Err _ ->
-                    True
-    in
-    if active && fieldIsInvalid then
-        [ Border.width 1
-        , Border.rounded 2
-        , Border.color Palette.red
-        ]
-
-    else
-        []
-
-
-viewValidationError : Bool -> a -> Verify.Validator String a b -> Element msg
-viewValidationError active input theValidator =
-    if active then
-        case validateSingle input theValidator of
-            Ok _ ->
-                Element.none
-
-            Err ( err, errs ) ->
-                el
-                    [ Font.color Palette.red ]
-                    (text err)
-
-    else
-        Element.none
 
 
 viewTitleInput : Bool -> String -> Element Msg
@@ -597,19 +561,6 @@ viewSaveButton status =
             { onPress = Nothing
             , label = text "Fyll i formuläret korrekt ⛔️"
             }
-
-
-onEnter : msg -> Html.Attribute msg
-onEnter msg =
-    let
-        isEnter code =
-            if code == 13 then
-                Decode.succeed ( msg, True )
-
-            else
-                Decode.fail "not ENTER"
-    in
-    Html.Events.preventDefaultOn "keydown" (Decode.andThen isEnter Html.Events.keyCode)
 
 
 
@@ -1117,14 +1068,6 @@ tagValidator =
             (String.Verify.notBlank "Taggen får inte vara tom! ⚠️")
         |> Verify.compose
             (String.Verify.maxLength 32 "Taggar bör vara korta och koncisa! ⚡️")
-
-
-validateSingle : a -> Verify.Validator String a b -> Result ( String, List String ) b
-validateSingle value theValidator =
-    (Verify.validate identity
-        |> Verify.verify (\_ -> value) theValidator
-    )
-        value
 
 
 toJson : VerifiedForm -> Maybe Encode.Value

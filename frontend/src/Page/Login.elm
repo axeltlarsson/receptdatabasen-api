@@ -8,12 +8,13 @@ import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
+import Form exposing (errorBorder, onEnter, viewValidationError)
 import Http
 import Json.Decode as Decode exposing (field, map2, string)
 import Json.Encode as Encode
-import Page.Recipe.Form exposing (errorBorder, viewValidationError)
 import Palette
 import Recipe exposing (ServerError, expectJsonWithBody)
+import Route
 import Session exposing (Session)
 import String.Verify
 import Url.Builder
@@ -110,7 +111,12 @@ viewUserNameInput invalidCredentials active name =
                 userNameValidator
     in
     column [ spacing 10, width fill ]
-        [ Input.username ([ Events.onLoseFocus BlurredUserName ] ++ errorBorder active name theValidator)
+        [ Input.username
+            ([ Events.onLoseFocus BlurredUserName
+             , Border.rounded 2
+             ]
+                ++ errorBorder active name theValidator
+            )
             { onChange = UserNameChanged
             , text = name
             , placeholder = Just (Input.placeholder [] (el [] (text "Användarnamn")))
@@ -131,7 +137,13 @@ viewPasswordInput invalidCredentials active password =
                 userNameValidator
     in
     column [ spacing 10, width fill ]
-        [ Input.currentPassword ([ Events.onLoseFocus BlurredPassword ] ++ errorBorder active password theValidator)
+        [ Input.currentPassword
+            ([ Events.onLoseFocus BlurredPassword
+             , Element.htmlAttribute (onEnter SubmitForm)
+             , Border.rounded 2
+             ]
+                ++ errorBorder active password theValidator
+            )
             { onChange = PasswordChanged
             , text = password
             , placeholder = Just (Input.placeholder [] (el [] (text "Lösenord")))
@@ -207,7 +219,12 @@ update msg ({ session, status } as model) =
         SubmittingForm form ->
             case msg of
                 CompletedLogin (Ok me) ->
-                    ( { model | status = FillingForm { form | invalidCredentials = False }, problem = Nothing }, Nav.back (Session.navKey session) 1 )
+                    ( { model
+                        | status = FillingForm { form | invalidCredentials = False }
+                        , problem = Nothing
+                      }
+                    , Route.replaceUrl (Session.navKey session) (Route.RecipeList Nothing)
+                    )
 
                 CompletedLogin (Err err) ->
                     case err of
