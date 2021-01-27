@@ -75,7 +75,7 @@ view model =
             [ Region.mainContent
             , width (fill |> Element.maximum 400)
             , centerX
-            , spacing 20
+            , spacing 40
             , padding 10
             ]
             [ row [ Font.heavy, Font.size Palette.xxLarge ] [ text "Logga in" ]
