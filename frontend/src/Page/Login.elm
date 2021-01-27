@@ -1,13 +1,14 @@
 module Page.Login exposing (Model, Msg, init, toSession, update, view)
 
 import Browser.Navigation as Nav
-import Element exposing (Element, centerX, column, el, fill, padding, row, spacing, text, width)
+import Element exposing (Element, centerX, column, el, fill, padding, paddingEach, paddingXY, row, spacing, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
+import FeatherIcons
 import Form exposing (errorBorder, onEnter, viewValidationError)
 import Http
 import Json.Decode as Decode exposing (field, map2, string)
@@ -72,7 +73,7 @@ view model =
     , content =
         column
             [ Region.mainContent
-            , width (fill |> Element.maximum 700)
+            , width (fill |> Element.maximum 400)
             , centerX
             , spacing 20
             , padding 10
@@ -109,19 +110,26 @@ viewUserNameInput invalidCredentials active name =
 
             else
                 userNameValidator
+
+        userIcon =
+            el [ paddingEach { left = 0, right = 10, top = 0, bottom = 0 } ]
+                (FeatherIcons.user |> FeatherIcons.toHtml [] |> Element.html)
     in
     column [ spacing 10, width fill ]
-        [ Input.username
-            ([ Events.onLoseFocus BlurredUserName
-             , Border.rounded 2
-             ]
-                ++ errorBorder active name theValidator
-            )
-            { onChange = UserNameChanged
-            , text = name
-            , placeholder = Just (Input.placeholder [] (el [] (text "Användarnamn")))
-            , label = Input.labelHidden "Användarnamn"
-            }
+        [ row [ width fill ]
+            [ userIcon
+            , Input.username
+                ([ Events.onLoseFocus BlurredUserName
+                 , Border.rounded 2
+                 ]
+                    ++ errorBorder active name theValidator
+                )
+                { onChange = UserNameChanged
+                , text = name
+                , placeholder = Just (Input.placeholder [] (el [] (text "Användarnamn")))
+                , label = Input.labelHidden "Användarnamn"
+                }
+            ]
         , viewValidationError active name theValidator
         ]
 
@@ -135,21 +143,28 @@ viewPasswordInput invalidCredentials active password =
 
             else
                 userNameValidator
+
+        lockIcon =
+            el [ paddingEach { left = 0, right = 10, top = 0, bottom = 0 } ]
+                (FeatherIcons.lock |> FeatherIcons.toHtml [] |> Element.html)
     in
     column [ spacing 10, width fill ]
-        [ Input.currentPassword
-            ([ Events.onLoseFocus BlurredPassword
-             , Element.htmlAttribute (onEnter SubmitForm)
-             , Border.rounded 2
-             ]
-                ++ errorBorder active password theValidator
-            )
-            { onChange = PasswordChanged
-            , text = password
-            , placeholder = Just (Input.placeholder [] (el [] (text "Lösenord")))
-            , label = Input.labelHidden "Lösenord"
-            , show = False
-            }
+        [ row [ width fill ]
+            [ lockIcon
+            , Input.currentPassword
+                ([ Events.onLoseFocus BlurredPassword
+                 , Element.htmlAttribute (onEnter SubmitForm)
+                 , Border.rounded 2
+                 ]
+                    ++ errorBorder active password theValidator
+                )
+                { onChange = PasswordChanged
+                , text = password
+                , placeholder = Just (Input.placeholder [] (el [] (text "Lösenord")))
+                , label = Input.labelHidden "Lösenord"
+                , show = False
+                }
+            ]
         , viewValidationError active password theValidator
         ]
 
@@ -157,9 +172,9 @@ viewPasswordInput invalidCredentials active password =
 viewSubmitButton : Element Msg
 viewSubmitButton =
     Input.button
-        [ Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
+        [ width fill, Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
         { onPress = Just SubmitForm
-        , label = text "Logga in"
+        , label = el [ centerX ] (text "Logga in")
         }
 
 
