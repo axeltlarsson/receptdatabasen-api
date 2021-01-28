@@ -6,7 +6,7 @@ trap cleanup SIGINT SIGTERM ERR EXIT
 
 usage() {
   cat <<EOF
-Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-v] [-f] host
+Usage: $(basename "${BASH_SOURCE[0]}") [-h] [-v] [-d] host
 
 Import production database into local setup
 
@@ -16,7 +16,7 @@ host            the host to import from
 Available options:
 -h, --help      Print this help and exit
 -v, --verbose   Print script debug info
--f, --flag      Some flag description
+-d, --download  Also download images 
 EOF
   exit
 }
@@ -92,16 +92,16 @@ msg "${YELLOW}Import production into local db...${NOFORMAT}"
 docker-compose exec -T db psql -U superuser -d app < prod-dump.sql
 rm prod-dump.sql
 
-if [ -n "$download" ]; then
+if [ -z "$download" ]; then
   msg "${YELLOW}Download images..${NOFORMAT}"
   ssh "$host" "mkdir -p /tmp/uploads-recept"
   ssh "$host" "docker run -i --rm -v receptdatabasen_uploads-vol:/uploads -v /tmp/uploads-recept:/target ubuntu tar cvf /target/backup.tar /uploads > /dev/null"
   scp "$host":/tmp/uploads-recept/backup.tar .
   ssh "$host" "rm -rf /tmp/uploads-recept"
-  docker cp backup.tar receptdatabasen_openresty_1:/uploads
   docker-compose exec openresty bash -c "rm -rf /uploads/*"
+  docker cp backup.tar receptdatabasen_openresty_1:/uploads
   docker-compose exec openresty bash -c "cd /uploads && tar -xf backup.tar && mv uploads/* . && rmdir uploads && rm backup.tar"
-  docker-compose exec openresty chown -R nobody /uploads/*
+  docker-compose exec openresty bash -c "chown -R nobody /uploads/*"
   rm backup.tar
 fi
 
