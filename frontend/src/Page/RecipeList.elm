@@ -1,5 +1,6 @@
 port module Page.RecipeList exposing (Model, Msg, Status, init, subscriptions, toSession, update, view)
 
+import Api
 import BlurHash
 import Browser.Dom as Dom
 import Browser.Navigation as Nav
@@ -70,7 +71,7 @@ type ImageLoadingStatus recipe
 type Status recipes
     = Loading
     | Loaded recipes
-    | Failed Recipe.ServerError
+    | Failed Api.ServerError
 
 
 init : Session -> Maybe String -> ( Model, Cmd Msg )
@@ -104,7 +105,7 @@ view model =
             { title = "Kunde ej ladda in recept"
             , content =
                 column [ Region.mainContent ]
-                    [ Recipe.viewServerError "Kunde ej ladda in recept" err ]
+                    [ Api.viewServerError "Kunde ej ladda in recept" err ]
             }
 
         Loaded recipes ->
@@ -350,7 +351,7 @@ viewDescription description =
 
 
 type Msg
-    = LoadedRecipes (Result Recipe.ServerError (List (Recipe Preview)))
+    = LoadedRecipes (Result Api.ServerError (List (Recipe Preview)))
     | SearchQueryEntered String
     | SetViewport
     | PortMsg Decode.Value
@@ -385,7 +386,7 @@ update msg model =
 
         LoadedRecipes (Err error) ->
             case error of
-                Recipe.Unauthorized ->
+                Api.Unauthorized ->
                     ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
 
                 _ ->

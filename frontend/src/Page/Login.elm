@@ -1,5 +1,6 @@
 module Page.Login exposing (Model, Msg, init, toSession, update, view)
 
+import Api exposing (ServerError, expectJsonWithBody, viewServerError)
 import Browser.Navigation as Nav
 import Element exposing (Element, centerX, column, el, fill, padding, paddingEach, paddingXY, row, spacing, text, width)
 import Element.Background as Background
@@ -14,7 +15,6 @@ import Http
 import Json.Decode as Decode exposing (field, map2, string)
 import Json.Encode as Encode
 import Palette
-import Recipe exposing (ServerError, expectJsonWithBody)
 import Route
 import Session exposing (Session)
 import String.Verify
@@ -27,7 +27,7 @@ import Verify
 
 
 type alias Model =
-    { session : Session, status : Status, problem : Maybe Recipe.ServerError }
+    { session : Session, status : Status, problem : Maybe ServerError }
 
 
 type Status
@@ -67,6 +67,10 @@ initialForm =
     }
 
 
+debug =
+    Element.explain Debug.todo
+
+
 view : Model -> { title : String, content : Element Msg }
 view model =
     { title = "Logga in"
@@ -86,7 +90,7 @@ view model =
                 SubmittingForm form ->
                     viewForm form
             , model.problem
-                |> Maybe.map (Recipe.viewServerError "Kunde ej logga in")
+                |> Maybe.map (viewServerError "Kunde ej logga in")
                 |> Maybe.withDefault Element.none
             ]
     }
@@ -184,7 +188,7 @@ type Msg
     | PasswordChanged String
     | BlurredPassword
     | SubmitForm
-    | CompletedLogin (Result Recipe.ServerError Me)
+    | CompletedLogin (Result Api.ServerError Me)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -243,7 +247,7 @@ update msg ({ session, status } as model) =
 
                 CompletedLogin (Err err) ->
                     case err of
-                        Recipe.Unauthorized ->
+                        Api.Unauthorized ->
                             ( { model
                                 | status = FillingForm { form | invalidCredentials = True }
                               }
@@ -255,38 +259,6 @@ update msg ({ session, status } as model) =
 
                 _ ->
                     ( model, Cmd.none )
-
-
-toJson : VerifiedForm -> Encode.Value
-toJson form =
-    Encode.object
-        [ ( "user_name", Encode.string form.userName )
-        , ( "password", Encode.string form.password )
-        ]
-
-
-submitForm : VerifiedForm -> Cmd Msg
-submitForm form =
-    Http.request
-        { url = Url.Builder.crossOrigin "/rest/login" [] []
-        , method = "POST"
-        , timeout = Nothing
-        , tracker = Nothing
-        , headers = []
-        , body = Http.jsonBody (toJson form)
-        , expect = expectJsonWithBody CompletedLogin meDecoder
-        }
-
-
-meDecoder : Decode.Decoder Me
-meDecoder =
-    Decode.map2 Me
-        (field "me" (field "user_name" string))
-        (field "me" (field "role" string))
-
-
-type alias Me =
-    { userName : String, role : String }
 
 
 
@@ -327,3 +299,40 @@ passwordValidator =
 toSession : Model -> Session
 toSession model =
     model.session
+
+
+
+{--
+  - HTTP
+  --}
+
+
+submitForm : VerifiedForm -> Cmd Msg
+submitForm form =
+    let
+        jsonForm =
+            Encode.object
+                [ ( "user_name", Encode.string form.userName )
+                , ( "password", Encode.string form.password )
+                ]
+    in
+    Http.request
+        { url = Url.Builder.crossOrigin "/rest/login" [] []
+        , method = "POST"
+        , timeout = Nothing
+        , tracker = Nothing
+        , headers = []
+        , body = Http.jsonBody jsonForm
+        , expect = expectJsonWithBody CompletedLogin meDecoder
+        }
+
+
+meDecoder : Decode.Decoder Me
+meDecoder =
+    Decode.map2 Me
+        (field "me" (field "user_name" string))
+        (field "me" (field "role" string))
+
+
+type alias Me =
+    { userName : String, role : String }

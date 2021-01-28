@@ -1,5 +1,6 @@
 port module Page.Recipe.Editor exposing (Model, Msg, initEdit, initNew, subscriptions, toSession, update, view)
 
+import Api exposing (ServerError)
 import Browser.Dom as Dom
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
@@ -10,7 +11,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Loading
 import Page.Recipe.Form as Form
-import Recipe exposing (Full, Recipe, ServerError, fullDecoder)
+import Recipe exposing (Full, Recipe, fullDecoder)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
 import Session exposing (Session)
@@ -110,7 +111,7 @@ view model =
                     [ Element.map FormMsg children ]
                     [ el [ centerX ]
                         (prob
-                            |> (Maybe.map (Recipe.viewServerError "Något gick fel när receptet skulle sparas!")
+                            |> (Maybe.map (Api.viewServerError "Något gick fel när receptet skulle sparas!")
                                     >> Maybe.withDefault Element.none
                                )
                         )
@@ -148,9 +149,9 @@ view model =
 
 type Msg
     = FormMsg Form.Msg
-    | CompletedCreate (Result Recipe.ServerError (Recipe Full))
-    | CompletedRecipeLoad Slug (Result Recipe.ServerError (Recipe Full))
-    | CompletedEdit (Result Recipe.ServerError (Recipe Full))
+    | CompletedCreate (Result Api.ServerError (Recipe Full))
+    | CompletedRecipeLoad Slug (Result Api.ServerError (Recipe Full))
+    | CompletedEdit (Result Api.ServerError (Recipe Full))
     | PortMsg Decode.Value
     | GotImageUploadProgress Int Http.Progress
     | SetViewport
@@ -282,7 +283,7 @@ update msg ({ status, session } as model) =
                 |> Route.replaceUrl (Session.navKey model.session)
             )
 
-        CompletedCreate (Err Recipe.Unauthorized) ->
+        CompletedCreate (Err Api.Unauthorized) ->
             ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
 
         CompletedCreate (Err error) ->

@@ -4,22 +4,18 @@ module Recipe exposing
     , Metadata
     , Preview
     , Recipe(..)
-    , ServerError(..)
     , contents
     , create
     , delete
     , edit
-    , expectJsonWithBody
     , fetch
     , fetchMany
     , fullDecoder
-    , httpErrorToString
     , metadata
     , previewDecoder
     , search
     , slug
     , uploadImage
-    , viewServerError
     )
 
 {- The interface to the Recipe data structure.
@@ -30,10 +26,10 @@ module Recipe exposing
        - Ways to access information about a Recipe
        - Converting between various types
 -}
+-- import Element exposing (Element, column, el, fill, paragraph, spacing, text, width)
 
+import Api exposing (ServerError, expectJsonWithBody)
 import Dict exposing (Dict)
-import Element exposing (Element, column, el, text)
-import Element.Font as Font
 import File exposing (File)
 import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder, dict, field, index, int, list, map2, map8, maybe, string, value)
@@ -273,103 +269,3 @@ type ImageUrl
 imageUrlDecoder : Decode.Decoder ImageUrl
 imageUrlDecoder =
     Decode.map ImageUrl (field "image" (field "url" string))
-
-
-expectJsonWithBody : (Result ServerError a -> msg) -> Decoder a -> Expect msg
-expectJsonWithBody toMsg decoder =
-    Http.expectStringResponse toMsg <|
-        \response ->
-            case response of
-                Http.BadUrl_ urll ->
-                    Err (otherError (Http.BadUrl urll) Nothing)
-
-                Http.Timeout_ ->
-                    Err (otherError Http.Timeout Nothing)
-
-                Http.NetworkError_ ->
-                    Err (otherError Http.NetworkError Nothing)
-
-                Http.BadStatus_ { url, statusCode, statusText, headers } body ->
-                    case statusCode of
-                        401 ->
-                            Err Unauthorized
-
-                        _ ->
-                            Err (otherError (Http.BadStatus statusCode) (Just body))
-
-                Http.GoodStatus_ md body ->
-                    case Decode.decodeString decoder body of
-                        Ok value ->
-                            Ok value
-
-                        Err err ->
-                            Err (otherError (Http.BadBody (Decode.errorToString err)) (Just body))
-
-
-
-{--
-  - ServerError
-  - I specifically care about Unauthorized case - then we want to redirect to /login
-  - otherwise, I keep the type opaque, modules are expected to basically just pass it to
-  - viewServerError, if they wish to display the error to user
-  --}
-
-
-type ServerError
-    = Unauthorized
-    | Error OtherError
-
-
-type OtherError
-    = OtherError Http.Error (Maybe Body)
-
-
-otherError : Http.Error -> Maybe Body -> ServerError
-otherError httpError body =
-    Error (OtherError httpError body)
-
-
-type alias Body =
-    String
-
-
-httpErrorToString : Http.Error -> String
-httpErrorToString err =
-    case err of
-        Http.BadUrl str ->
-            "BadUrl " ++ str
-
-        Http.Timeout ->
-            "Timeout"
-
-        Http.NetworkError ->
-            "NetworkError"
-
-        Http.BadStatus code ->
-            "BadStatus " ++ String.fromInt code
-
-        Http.BadBody str ->
-            "BadBody " ++ str
-
-
-viewServerError : String -> ServerError -> Element msg
-viewServerError prefix serverError =
-    case serverError of
-        Error (OtherError httpError Nothing) ->
-            column []
-                [ el [ Font.heavy ] (text prefix)
-                , text <| httpErrorToString httpError
-                ]
-
-        Error (OtherError httpError (Just body)) ->
-            column []
-                [ el [ Font.heavy ] (text prefix)
-                , text <| httpErrorToString httpError
-                , text body
-                ]
-
-        Unauthorized ->
-            column []
-                [ el [ Font.heavy ] (text prefix)
-                , text "401 Unauthorized"
-                ]

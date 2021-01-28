@@ -1,5 +1,6 @@
 module Page.Recipe.Form exposing (Model, Msg(..), fromRecipe, init, portMsg, toJson, update, uploadProgressMsg, view)
 
+import Api
 import Dict exposing (Dict)
 import Element
     exposing
@@ -583,7 +584,7 @@ type Msg
     | BlurredTitle
     | BlurredDescription
     | ImageUrlEncoded Int File Base64Url
-    | ImageUploadComplete Int (Result Recipe.ServerError Recipe.ImageUrl)
+    | ImageUploadComplete Int (Result Api.ServerError Recipe.ImageUrl)
     | RemoveImage Int
     | MakeMainImage Int
     | GotImageUploadProgress Int Http.Progress

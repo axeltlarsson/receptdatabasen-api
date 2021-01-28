@@ -1,5 +1,6 @@
 module Page.Recipe exposing (Model, Msg(..), init, toSession, update, view)
 
+import Api
 import Browser.Dom as Dom
 import Dict exposing (Dict)
 import Element
@@ -61,7 +62,7 @@ type alias Model =
 type Status recipe
     = Loading
     | Loaded recipe
-    | Failed Recipe.ServerError
+    | Failed Api.ServerError
 
 
 init : Session -> Slug -> ( Model, Cmd Msg )
@@ -105,7 +106,7 @@ view model =
 
                 Failed err ->
                     { title = "Kunde ej hämta recept"
-                    , content = Recipe.viewServerError "" err
+                    , content = Api.viewServerError "" err
                     }
 
                 Loaded recipe ->
@@ -362,11 +363,11 @@ viewEditButton =
 
 
 type Msg
-    = LoadedRecipe (Result Recipe.ServerError (Recipe Full))
+    = LoadedRecipe (Result Api.ServerError (Recipe Full))
     | ClickedCheckbox Int Bool
     | ClickedDelete
     | ClickedEdit
-    | Deleted (Result Recipe.ServerError ())
+    | Deleted (Result Api.ServerError ())
     | SetViewport
 
 
@@ -378,7 +379,7 @@ update msg model =
 
         LoadedRecipe (Err error) ->
             case error of
-                Recipe.Unauthorized ->
+                Api.Unauthorized ->
                     ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
 
                 _ ->
