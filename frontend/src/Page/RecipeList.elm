@@ -129,7 +129,7 @@ viewSearchBox model =
                     ]
                 )
     in
-    Input.search [ Input.focusedOnLoad ]
+    Input.search []
         { onChange = SearchQueryEntered
         , text = model.query
         , placeholder = Just placeholder
