@@ -1,0 +1,3 @@
+-- Initial migraton
+-- I just want to deploy something without initially touching the prod db
+-- hence this empty file
