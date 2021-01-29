@@ -2,7 +2,7 @@
 
 _The new PostgREST backend and Elm frontend for receptdatabasen_
 
-## Development
+## Setup
 
 To run:
 
@@ -15,8 +15,6 @@ And then see [frontend](./frontend/) for spinning up the Elm frontend.
 ### Running with nginx prod conf in development
 
 Build a prod version of the frontend with `npm run build` in the `frontend` directory, then simply visit `localhost:8080` instead of `localhost:3000` as for the elm-app _dev_ server.
-
-Download the production database: `./import_prod_db.sh --download <host>`
 
 ### API
 
@@ -41,6 +39,7 @@ npm install                     # Install test dependencies
 npm test                        # Run all tests (db, rest)
 npm run test_db                 # Run pgTAP tests
 npm run test_rest               # Run integration tests
+npm run test_image_server
 ```
 
 ## Image upload endpoint
@@ -60,6 +59,54 @@ npm run test_image_server
 ## Import production database
 
 `import_prod.sh`
+
+## Deployment
+
+Add the production host as a bare git repo, and set up the post-recieve hook, then see scripts/deploy.
+
+## Migrations 🗃
+
+I use subzero for hot code reload when developing the schema.
+Every time something is changed in db/src the database is rebuilt from scratch by subzero (provided it is running).
+To then write a migration, you use
+
+```bash
+subzero migrations add <name-of-migration> --note 'Describe the change with a short note'
+```
+
+Whereby subzero will automatically generate a migration, however; you must:
+
+- i 👮 manually audit the generated migration so that it doesn't cause data loss
+- ii 🧪 run the migration to check that it actually works
+
+For step ii, you would ideally just do:
+
+```bash
+sqitch --cd db/migrations deploy
+```
+
+However, at this point, your dev db is already "migrated", so you need to test the migration by first resetting your dev db, or setting up another database for testing the migation.
+For example, you could test it on a production database dump by first running `./import_prod.sh`.
+
+## Authentication and Authorization flow
+
+PostgREST uses jwt to authenticate users, and Postgres roles and RLS and to authorize.
+See https://postgrest.org/en/v7.0.0/auth.html for more details.
+
+However, they are quite clear in their communication that jwt:s are **not suitable for sessions**.
+As numerous others have pointed out over the years, e.g. http://cryto.net/~joepie91/blog/2016/06/13/stop-using-jwt-for-sessions/.
+There are some great articles about using jwt:s on the frontend, like https://hasura.io/blog/best-practices-of-using-jwt-with-graphql/.
+However, that guide does stil admit that its solution is not perfect, even if you do go through all that trouble, with refresh tokens and whatnot (there is by default a refresh_token function in this repo actually).
+
+I then came across this project, but with this issue https://github.com/monacoremo/postgrest-sessions-example/issues/21.
+And decided to store the jwt in a plain old cookie, using this excellent library: https://github.com/bungle/lua-resty-session.
+Some inspiration for the actual lua code in openresty I found here https://ehsanfa.hashnode.dev/use-nginx-as-jwt-authentication-middleware-cjz4cwjmt002egls183sa5lvq.
+
+In general it seems like it is far from trivial to implement this correctly, even after doing quite a bit of research, and reading about OAuth 2.0, on Okta and Auth0, it seems that spec is very difficult to make 100 % safe for web apps actually, owing to some recent browser changes in how they treat cookies from third parties.
+
+All in all, that is why I chose to go with this quite simple solution of storing the jwt token in a secure cookie.
+
+---
 
 ## PostgREST Starter Kit
 
