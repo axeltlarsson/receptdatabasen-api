@@ -176,13 +176,15 @@ viewPreview index recipeStatus =
 
         imageUrl =
             case recipeStatus of
-                Blurred r ->
-                    List.head images
-                        |> Maybe.map .blurHash
-                        |> Maybe.map (Maybe.withDefault hash)
-                        |> Maybe.map (BlurHash.toUri { width = 4, height = 3 } 0.9)
-
-                FullyLoaded r ->
+                {--
+  -                 Blurred r ->
+  -                     List.head images
+  -                         |> Maybe.map .blurHash
+  -                         |> Maybe.map (Maybe.withDefault hash)
+  -                         |> Maybe.map (BlurHash.toUri { width = 4, height = 3 } 0.9)
+  - 
+  --}
+                _ ->
                     let
                         width =
                             -- *2 for Retina TODO: optimise with responsive/progressive images

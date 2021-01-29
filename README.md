@@ -58,7 +58,7 @@ npm run test_image_server
 
 ## Import production database
 
-`import_prod.sh`
+`import_prod_db.sh`
 
 ## Deployment
 
