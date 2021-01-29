@@ -55,25 +55,21 @@ pushUrl key route =
 
 toString : Route -> String
 toString page =
-    let
-        pieces =
-            case page of
-                Recipe slug ->
-                    [ "recipe", Url.percentEncode <| Slug.toString slug ]
+    case page of
+        Recipe slug ->
+            Url.Builder.absolute [ "recipe", Url.percentEncode <| Slug.toString slug ] []
 
-                RecipeList (Just query) ->
-                    [ Url.Builder.toQuery [ Url.Builder.string "search" query ] ]
+        RecipeList (Just query) ->
+            Url.Builder.absolute [] [ Url.Builder.string "search" query ]
 
-                RecipeList Nothing ->
-                    []
+        RecipeList Nothing ->
+            Url.Builder.absolute [] []
 
-                NewRecipe ->
-                    [ "editor" ]
+        NewRecipe ->
+            Url.Builder.absolute [ "editor" ] []
 
-                EditRecipe slug ->
-                    [ "editor", Url.percentEncode <| Slug.toString slug ]
+        EditRecipe slug ->
+            Url.Builder.absolute [ "editor", Url.percentEncode <| Slug.toString slug ] []
 
-                Login ->
-                    [ "login" ]
-    in
-    "/" ++ String.join "/" pieces
+        Login ->
+            Url.Builder.absolute [ "login" ] []
