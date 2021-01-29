@@ -26,17 +26,13 @@ module Recipe exposing
        - Ways to access information about a Recipe
        - Converting between various types
 -}
--- import Element exposing (Element, column, el, fill, paragraph, spacing, text, width)
 
 import Api exposing (ServerError, expectJsonWithBody)
-import Dict exposing (Dict)
 import File exposing (File)
 import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder, dict, field, index, int, list, map2, map8, maybe, string, value)
 import Json.Encode as Encode
-import Palette
 import Recipe.Slug as Slug exposing (Slug)
-import Url
 import Url.Builder exposing (QueryParameter)
 
 

@@ -67,10 +67,6 @@ initialForm =
     }
 
 
-debug =
-    Element.explain Debug.todo
-
-
 view : Model -> { title : String, content : Element Msg }
 view model =
     { title = "Logga in"
