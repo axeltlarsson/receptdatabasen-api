@@ -123,7 +123,7 @@ class EasyMDEditor extends HTMLElement {
         id,
         value: easyMDE.value(),
       };
-      app.ports.portReceiver.send(msg);
+      app.ports.editorPortReceiver.send(msg);
     });
 
     easyMDE.codemirror.on('blur', () => {
@@ -131,7 +131,7 @@ class EasyMDEditor extends HTMLElement {
         type: 'blur',
         id,
       };
-      app.ports.portReceiver.send(msg);
+      app.ports.editorPortReceiver.send(msg);
     });
   }
 
