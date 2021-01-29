@@ -39,7 +39,16 @@ expectJsonWithBody toMsg decoder =
                             Err (otherError (Http.BadStatus statusCode) (Just body))
 
                 Http.GoodStatus_ md body ->
-                    case Decode.decodeString decoder body of
+                    let
+                        jsonBodyStr =
+                            case body of
+                                "" ->
+                                    "{}"
+
+                                j ->
+                                    j
+                    in
+                    case Decode.decodeString decoder jsonBodyStr of
                         Ok value ->
                             Ok value
 
@@ -100,7 +109,9 @@ viewServerError prefix serverError =
             column [ width fill, spacing 10 ]
                 [ el [ Font.heavy ] (text prefix)
                 , el [ Font.family [ Font.typeface "Courier New", Font.monospace ], Font.heavy ] (text status)
-                , errBody |> Maybe.map (\err -> paragraph [ Font.family [ Font.typeface "Courier New", Font.monospace ] ] [ text err ]) |> Maybe.withDefault Element.none
+                , errBody
+                    |> Maybe.map (\err -> paragraph [ Font.family [ Font.typeface "Courier New", Font.monospace ] ] [ text err ])
+                    |> Maybe.withDefault Element.none
                 ]
     in
     case serverError of
