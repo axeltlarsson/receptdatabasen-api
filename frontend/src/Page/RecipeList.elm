@@ -114,7 +114,7 @@ view model =
                 column [ Region.mainContent, spacing 20, width fill, padding 10 ]
                     [ lazy viewSearchBox model
                     , wrappedRow [ centerX, spacing 10 ]
-                        (Dict.map viewPreview recipes |> Dict.values)
+                        (Dict.map viewPreviewWithBlur recipes |> Dict.values)
                     ]
             }
 
@@ -157,59 +157,27 @@ imageWidths =
     }
 
 
-viewPreview : Int -> ImageLoadingStatus (Recipe Preview) -> Element Msg
-viewPreview index recipeStatus =
+viewPreview : Recipe Preview -> Element Msg
+viewPreview recipe =
     let
-        recipe =
-            case recipeStatus of
-                Blurred r ->
-                    r
-
-                FullyLoaded r ->
-                    r
-
         { title, description, id, createdAt, images } =
             Recipe.metadata recipe
 
-        hash =
-            "LKLWb2_M9}f8AgIVt7t7PqRoaiR-"
-
-        imageUrl =
-            case recipeStatus of
-                {--
-  -                 Blurred r ->
-  -                     List.head images
-  -                         |> Maybe.map .blurHash
-  -                         |> Maybe.map (Maybe.withDefault hash)
-  -                         |> Maybe.map (BlurHash.toUri { width = 4, height = 3 } 0.9)
-  - 
-  --}
-                _ ->
-                    let
-                        width =
-                            -- *2 for Retina TODO: optimise with responsive/progressive images
-                            String.fromInt <| imageWidths.max * 2
-                    in
-                    List.head images
-                        |> Maybe.map .url
-                        |> Maybe.map (\i -> "/images/sig/" ++ width ++ "/" ++ i)
+        image =
+            List.head images
 
         titleStr =
             Slug.toString title
 
-        blurredUri =
-            Just (BlurHash.toUri { width = 4, height = 3 } 0.9 hash)
-
-        idAttr =
-            Element.htmlAttribute (Html.Attributes.id ("image" ++ String.fromInt index))
-
-        blurred =
-            case recipeStatus of
-                Blurred _ ->
-                    True
-
-                FullyLoaded _ ->
-                    False
+        imageUrl =
+            let
+                width =
+                    -- *2 for Retina TODO: optimise with responsive/progressive images
+                    String.fromInt <| imageWidths.max * 2
+            in
+            List.head images
+                |> Maybe.map .url
+                |> Maybe.map (\i -> "/images/sig/" ++ width ++ "/" ++ i)
     in
     lazy2 column
         [ width (fill |> Element.maximum imageWidths.max |> Element.minimum imageWidths.min)
@@ -218,76 +186,70 @@ viewPreview index recipeStatus =
         , Palette.cardShadow2
         , Border.rounded 2
         ]
-        [ Element.link [ idAttr, height fill, width fill ]
+        [ Element.link [ height fill, width fill ]
             { url = Route.toString (Route.Recipe title)
             , label =
-                el [ height fill, width fill ]
-                    (viewHeader id titleStr imageUrl description blurred)
+                column [ height fill, width fill ]
+                    [ viewHeader id titleStr imageUrl
+                    , viewDescription description
+                    ]
             }
         ]
 
 
-viewHeader : Int -> String -> Maybe String -> Maybe String -> Bool -> Element Msg
-viewHeader id title imageUrl description blurred =
+viewHeader : Int -> String -> Maybe String -> Element Msg
+viewHeader id title imageUrl =
     let
-        dataAttribute uri =
-            Element.htmlAttribute (Html.Attributes.attribute "data-src" uri)
-
-        imgAttr =
-            Element.htmlAttribute (Html.Attributes.class "fit-img")
-
-        blurredAttr =
-            if blurred then
-                Element.htmlAttribute (Html.Attributes.class "blurred")
-
-            else
-                Element.htmlAttribute (Html.Attributes.class "")
+        background =
+            imageUrl
+                |> Maybe.map Background.image
+                |> Maybe.withDefault (Background.color Palette.white)
     in
     column [ width fill, height fill, Border.rounded 2 ]
-        [ column
+        [ Element.el
             [ width fill
             , height fill
+            , Border.rounded 2
+            , background
             ]
-            [ el
-                [ height fill
-                , width fill
-                , Element.clip
-                , Element.inFront
-                    (el
-                        [ Element.behindContent <|
-                            el
-                                [ width fill
-                                , height fill
-                                , floorFade
-                                ]
-                                Element.none
-                        , width fill
+            (el
+                [ Element.behindContent <|
+                    el
+                        [ width fill
                         , height fill
+                        , floorFade
                         ]
-                        (column [ Element.alignBottom ]
-                            [ paragraph
-                                [ Font.medium
-                                , Font.color Palette.white
-                                , Palette.textShadow
-                                , Font.size Palette.medium
-                                , padding 20
-                                ]
-                                [ text title ]
-                            ]
-                        )
-                    )
+                        Element.none
+                , width fill
+                , height fill
                 ]
-                (imageUrl
-                    |> Maybe.map
-                        (\url ->
-                            image [ Border.rounded 2, width fill, height fill, imgAttr, blurredAttr, Element.clip ]
-                                { src = url, description = "" }
-                        )
-                    |> Maybe.withDefault Element.none
+                (column [ Element.alignBottom ]
+                    [ paragraph
+                        [ Font.medium
+                        , Font.color Palette.white
+                        , Palette.textShadow
+                        , Font.size Palette.medium
+                        , padding 20
+                        ]
+                        [ text title ]
+                    ]
                 )
-            , viewDescription description
-            ]
+            )
         ]
+
+
+viewPreviewWithBlur : Int -> ImageLoadingStatus (Recipe Preview) -> Element Msg
+viewPreviewWithBlur index recipeStatus =
+    let
+        recipe =
+            case recipeStatus of
+                Blurred r ->
+                    r
+
+                FullyLoaded r ->
+                    r
+    in
+    viewPreview recipe
 
 
 floorFade : Element.Attribute msg

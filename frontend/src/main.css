@@ -51,13 +51,13 @@
   width: 100% !important;
 }
 
-.fit-img {
-  height: 100%;
-}
-.fit-img img {
-  object-fit: cover !important;
-  height: 100%;
-}
+/* .fit-img { */
+  /* height: 100%; */
+/* } */
+/* .fit-img img { */
+  /* object-fit: cover !important; */
+  /* height: 100%; */
+/* } */
 
 /* .blurred img { */
   /* filter: blur(0.2em); */
