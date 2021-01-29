@@ -1,6 +1,10 @@
-module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, view)
+port module Page.RecipeList exposing (Model, Msg, Status, init, subscriptions, toSession, update, view)
 
+import Api
+import BlurHash
 import Browser.Dom as Dom
+import Browser.Navigation as Nav
+import Dict exposing (Dict)
 import Element
     exposing
         ( Element
@@ -10,6 +14,7 @@ import Element
         , el
         , fill
         , height
+        , image
         , link
         , padding
         , paragraph
@@ -22,13 +27,16 @@ import Element
         )
 import Element.Background as Background
 import Element.Border as Border
+import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
+import Element.Lazy exposing (lazy, lazy2)
 import Element.Region as Region
 import FeatherIcons
 import Html.Attributes
 import Http
-import Json.Decode as Decoder exposing (Decoder, list)
+import Json.Decode as Decode exposing (Decoder, list)
+import Json.Encode as Encode
 import Loading
 import Page.Recipe.Markdown as Markdown
 import Palette
@@ -41,18 +49,29 @@ import Url
 import Url.Builder
 
 
+port interSectionObserverSender : Encode.Value -> Cmd msg
+
+
+port interSectionObserverReceiver : (Decode.Value -> msg) -> Sub msg
+
+
 
 -- MODEL
 
 
 type alias Model =
-    { session : Session, recipes : Status (List (Recipe Preview)), query : String }
+    { session : Session, recipes : Status (Dict Int (ImageLoadingStatus (Recipe Preview))), query : String }
+
+
+type ImageLoadingStatus recipe
+    = Blurred recipe
+    | FullyLoaded recipe
 
 
 type Status recipes
     = Loading
     | Loaded recipes
-    | Failed Recipe.ServerError
+    | Failed Api.ServerError
 
 
 init : Session -> Maybe String -> ( Model, Cmd Msg )
@@ -86,16 +105,16 @@ view model =
             { title = "Kunde ej ladda in recept"
             , content =
                 column [ Region.mainContent ]
-                    [ Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err) ]
+                    [ Api.viewServerError "Kunde ej ladda in recept" err ]
             }
 
         Loaded recipes ->
             { title = "Recept"
             , content =
                 column [ Region.mainContent, spacing 20, width fill, padding 10 ]
-                    [ viewSearchBox model
+                    [ lazy viewSearchBox model
                     , wrappedRow [ centerX, spacing 10 ]
-                        (List.map viewPreview recipes)
+                        (Dict.map viewPreview recipes |> Dict.values)
                     ]
             }
 
@@ -111,7 +130,7 @@ viewSearchBox model =
                     ]
                 )
     in
-    Input.search [ Input.focusedOnLoad ]
+    Input.search []
         { onChange = SearchQueryEntered
         , text = model.query
         , placeholder = Just placeholder
@@ -138,83 +157,136 @@ imageWidths =
     }
 
 
-viewPreview : Recipe Preview -> Element Msg
-viewPreview recipe =
+viewPreview : Int -> ImageLoadingStatus (Recipe Preview) -> Element Msg
+viewPreview index recipeStatus =
     let
+        recipe =
+            case recipeStatus of
+                Blurred r ->
+                    r
+
+                FullyLoaded r ->
+                    r
+
         { title, description, id, createdAt, images } =
             Recipe.metadata recipe
 
-        image =
-            List.head images
+        hash =
+            "LKLWb2_M9}f8AgIVt7t7PqRoaiR-"
+
+        imageUrl =
+            case recipeStatus of
+                {--
+  -                 Blurred r ->
+  -                     List.head images
+  -                         |> Maybe.map .blurHash
+  -                         |> Maybe.map (Maybe.withDefault hash)
+  -                         |> Maybe.map (BlurHash.toUri { width = 4, height = 3 } 0.9)
+  - 
+  --}
+                _ ->
+                    let
+                        width =
+                            -- *2 for Retina TODO: optimise with responsive/progressive images
+                            String.fromInt <| imageWidths.max * 2
+                    in
+                    List.head images
+                        |> Maybe.map .url
+                        |> Maybe.map (\i -> "/images/sig/" ++ width ++ "/" ++ i)
 
         titleStr =
             Slug.toString title
 
-        imageUrl =
-            let
-                width =
-                    -- *2 for Retina TODO: optimise with responsive/progressive images
-                    String.fromInt <| imageWidths.max * 2
-            in
-            image
-                |> Maybe.map (\i -> "/images/sig/" ++ width ++ "/" ++ i)
+        blurredUri =
+            Just (BlurHash.toUri { width = 4, height = 3 } 0.9 hash)
+
+        idAttr =
+            Element.htmlAttribute (Html.Attributes.id ("image" ++ String.fromInt index))
+
+        blurred =
+            case recipeStatus of
+                Blurred _ ->
+                    True
+
+                FullyLoaded _ ->
+                    False
     in
-    column
+    lazy2 column
         [ width (fill |> Element.maximum imageWidths.max |> Element.minimum imageWidths.min)
         , height <| Element.px 400
         , Palette.cardShadow1
         , Palette.cardShadow2
         , Border.rounded 2
         ]
-        [ Element.link [ height fill, width fill ]
+        [ Element.link [ idAttr, height fill, width fill ]
             { url = Route.toString (Route.Recipe title)
             , label =
-                column [ height fill, width fill ]
-                    [ viewHeader id titleStr imageUrl
-                    , viewDescription description
-                    ]
+                el [ height fill, width fill ]
+                    (viewHeader id titleStr imageUrl description blurred)
             }
         ]
 
 
-viewHeader : Int -> String -> Maybe String -> Element Msg
-viewHeader id title imageUrl =
+viewHeader : Int -> String -> Maybe String -> Maybe String -> Bool -> Element Msg
+viewHeader id title imageUrl description blurred =
     let
-        background =
-            imageUrl
-                |> Maybe.map Background.image
-                |> Maybe.withDefault (Background.color Palette.white)
+        dataAttribute uri =
+            Element.htmlAttribute (Html.Attributes.attribute "data-src" uri)
+
+        imgAttr =
+            Element.htmlAttribute (Html.Attributes.class "fit-img")
+
+        blurredAttr =
+            if blurred then
+                Element.htmlAttribute (Html.Attributes.class "blurred")
+
+            else
+                Element.htmlAttribute (Html.Attributes.class "")
     in
     column [ width fill, height fill, Border.rounded 2 ]
-        [ Element.el
+        [ column
             [ width fill
             , height fill
-            , Border.rounded 2
-            , background
             ]
-            (el
-                [ Element.behindContent <|
-                    el
-                        [ width fill
-                        , height fill
-                        , floorFade
-                        ]
-                        Element.none
+            [ el
+                [ height fill
                 , width fill
-                , height fill
-                ]
-                (column [ Element.alignBottom ]
-                    [ paragraph
-                        [ Font.medium
-                        , Font.color Palette.white
-                        , Palette.textShadow
-                        , Font.size Palette.medium
-                        , padding 20
+                , Element.clip
+                , Element.inFront
+                    (el
+                        [ Element.behindContent <|
+                            el
+                                [ width fill
+                                , height fill
+                                , floorFade
+                                ]
+                                Element.none
+                        , width fill
+                        , height fill
                         ]
-                        [ text title ]
-                    ]
+                        (column [ Element.alignBottom ]
+                            [ paragraph
+                                [ Font.medium
+                                , Font.color Palette.white
+                                , Palette.textShadow
+                                , Font.size Palette.medium
+                                , padding 20
+                                ]
+                                [ text title ]
+                            ]
+                        )
+                    )
+                ]
+                (imageUrl
+                    |> Maybe.map
+                        (\url ->
+                            image [ Border.rounded 2, width fill, height fill, imgAttr, blurredAttr, Element.clip ]
+                                { src = url, description = "" }
+                        )
+                    |> Maybe.withDefault Element.none
                 )
-            )
+            , viewDescription description
+            ]
         ]
 
 
@@ -281,9 +353,10 @@ viewDescription description =
 
 
 type Msg
-    = LoadedRecipes (Result Recipe.ServerError (List (Recipe Preview)))
+    = LoadedRecipes (Result Api.ServerError (List (Recipe Preview)))
     | SearchQueryEntered String
     | SetViewport
+    | PortMsg Decode.Value
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -299,11 +372,27 @@ update msg model =
                             )
                         |> Maybe.withDefault []
                         |> Cmd.batch
+
+                recipesDict =
+                    recipes
+                        |> List.map Blurred
+                        |> List.indexedMap Tuple.pair
+                        |> Dict.fromList
             in
-            ( { model | recipes = Loaded recipes }, setViewportFromSession model.session )
+            ( { model | recipes = Loaded recipesDict }
+            , Cmd.batch
+                [ setViewportFromSession model.session
+                , observeImages (Dict.keys recipesDict)
+                ]
+            )
 
         LoadedRecipes (Err error) ->
-            ( { model | recipes = Failed error }, Cmd.none )
+            case error of
+                Api.Unauthorized ->
+                    ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+
+                _ ->
+                    ( { model | recipes = Failed error }, Cmd.none )
 
         SearchQueryEntered "" ->
             ( { model | query = "" }, Recipe.fetchMany LoadedRecipes )
@@ -313,6 +402,69 @@ update msg model =
 
         SetViewport ->
             ( model, Cmd.none )
+
+        PortMsg value ->
+            case Decode.decodeValue portMsgDecoder value of
+                Err err ->
+                    ( model, Cmd.none )
+
+                Ok (ImageIntersecting imageIndex) ->
+                    ( { model | recipes = unBlur imageIndex model.recipes }, Cmd.none )
+
+
+observeImages : List Int -> Cmd Msg
+observeImages images =
+    interSectionObserverSender
+        (Encode.object
+            [ ( "type", Encode.string "observeImages" )
+            , ( "images", images |> List.map Encode.int |> Encode.list identity )
+            ]
+        )
+
+
+unBlur : Int -> Status (Dict Int (ImageLoadingStatus (Recipe Preview))) -> Status (Dict Int (ImageLoadingStatus (Recipe Preview)))
+unBlur index recipeStatuses =
+    case recipeStatuses of
+        Loaded recipes ->
+            let
+                updated =
+                    Dict.update index
+                        (Maybe.map
+                            (\status ->
+                                case status of
+                                    Blurred r ->
+                                        FullyLoaded r
+
+                                    FullyLoaded r ->
+                                        FullyLoaded r
+                            )
+                        )
+                        recipes
+            in
+            Loaded updated
+
+        _ ->
+            recipeStatuses
+
+
+type PortMsg
+    = ImageIntersecting Int
+
+
+portMsgDecoder : Decode.Decoder PortMsg
+portMsgDecoder =
+    Decode.field "type" Decode.string |> Decode.andThen typeDecoder
+
+
+typeDecoder : String -> Decode.Decoder PortMsg
+typeDecoder t =
+    case t of
+        "imageIntersecting" ->
+            Decode.map ImageIntersecting
+                (Decode.field "image" Decode.int)
+
+        _ ->
+            Decode.fail ("trying to decode port message, but " ++ t ++ "is not supported")
 
 
 search : Session -> String -> Cmd Msg
@@ -324,10 +476,11 @@ search session query =
         ]
 
 
-
--- EXPORT
-
-
 toSession : Model -> Session
 toSession model =
     model.session
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    interSectionObserverReceiver PortMsg

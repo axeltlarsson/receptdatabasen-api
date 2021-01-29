@@ -1,5 +1,6 @@
 port module Page.Recipe.Editor exposing (Model, Msg, initEdit, initNew, subscriptions, toSession, update, view)
 
+import Api exposing (ServerError)
 import Browser.Dom as Dom
 import Browser.Navigation as Nav
 import Dict exposing (Dict)
@@ -10,7 +11,7 @@ import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Loading
 import Page.Recipe.Form as Form
-import Recipe exposing (Full, Recipe, ServerError, fullDecoder)
+import Recipe exposing (Full, Recipe, fullDecoder)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
 import Session exposing (Session)
@@ -19,10 +20,10 @@ import Url exposing (Url)
 import Url.Builder
 
 
-port portSender : Encode.Value -> Cmd msg
+port editorPortSender : Encode.Value -> Cmd msg
 
 
-port portReceiver : (Decode.Value -> msg) -> Sub msg
+port editorPortReceiver : (Decode.Value -> msg) -> Sub msg
 
 
 
@@ -110,7 +111,7 @@ view model =
                     [ Element.map FormMsg children ]
                     [ el [ centerX ]
                         (prob
-                            |> (Maybe.map (Recipe.viewServerError "Något gick fel när receptet skulle sparas!")
+                            |> (Maybe.map (Api.viewServerError "Något gick fel när receptet skulle sparas!")
                                     >> Maybe.withDefault Element.none
                                )
                         )
@@ -136,7 +137,7 @@ view model =
                     title =
                         Maybe.withDefault "" (Url.percentDecode (Slug.toString slug))
                 in
-                skeleton Nothing <| Loading.error title "Kunde ej ladda in receptet"
+                skeleton Nothing <| text (title ++ "Kunde ej ladda in receptet")
 
             Editing slug serverError form ->
                 skeleton serverError <| Form.view form
@@ -148,9 +149,9 @@ view model =
 
 type Msg
     = FormMsg Form.Msg
-    | CompletedCreate (Result Recipe.ServerError (Recipe Full))
-    | CompletedRecipeLoad Slug (Result Recipe.ServerError (Recipe Full))
-    | CompletedEdit (Result Recipe.ServerError (Recipe Full))
+    | CompletedCreate (Result Api.ServerError (Recipe Full))
+    | CompletedRecipeLoad Slug (Result Api.ServerError (Recipe Full))
+    | CompletedEdit (Result Api.ServerError (Recipe Full))
     | PortMsg Decode.Value
     | GotImageUploadProgress Int Http.Progress
     | SetViewport
@@ -186,8 +187,8 @@ update msg ({ status, session } as model) =
                 |> save status
                 |> Tuple.mapFirst (\newStatus -> { model | status = newStatus })
 
-        FormMsg (Form.SendPortMsg quillMsg) ->
-            ( model, portSender quillMsg )
+        FormMsg (Form.SendPortMsg mdeMsg) ->
+            ( model, editorPortSender mdeMsg )
 
         FormMsg subMsg ->
             let
@@ -282,6 +283,9 @@ update msg ({ status, session } as model) =
                 |> Route.replaceUrl (Session.navKey model.session)
             )
 
+        CompletedCreate (Err Api.Unauthorized) ->
+            ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+
         CompletedCreate (Err error) ->
             ( { model | status = savingError error model.status }
             , Cmd.none
@@ -336,7 +340,7 @@ toSession model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.batch
-        [ portReceiver PortMsg
+        [ editorPortReceiver PortMsg
         , Http.track "image0" (GotImageUploadProgress 0)
         , Http.track "image1" (GotImageUploadProgress 1)
         , Http.track "image2" (GotImageUploadProgress 2)

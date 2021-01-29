@@ -1,21 +1,21 @@
 
-create or replace function login(email text, password text) returns json as $$
+create or replace function login(user_name text, password text) returns json as $$
 declare
 usr record;
 begin
 
   select * from data."user" as u
-  where u.email = $1 and u.password = public.crypt($2, u.password)
+  where u.user_name = $1 and u.password = public.crypt($2, u.password)
   INTO usr;
 
   if usr is NULL then
-    raise exception 'invalid email/password';
+    raise "insufficient_privilege";
   else
 
     return json_build_object(
       'me', json_build_object(
         'id', usr.id,
-        'name', usr.name,
+        'user_name', usr.user_name,
         'email', usr.email,
         'role', 'customer'
       ),

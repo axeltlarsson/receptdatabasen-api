@@ -4,7 +4,6 @@ module Recipe exposing
     , Metadata
     , Preview
     , Recipe(..)
-    , ServerError
     , contents
     , create
     , delete
@@ -12,15 +11,11 @@ module Recipe exposing
     , fetch
     , fetchMany
     , fullDecoder
-    , httpErrorToString
     , metadata
     , previewDecoder
     , search
-    , serverErrorFromHttp
-    , serverErrorToString
     , slug
     , uploadImage
-    , viewServerError
     )
 
 {- The interface to the Recipe data structure.
@@ -32,16 +27,12 @@ module Recipe exposing
        - Converting between various types
 -}
 
-import Dict exposing (Dict)
-import Element exposing (Element, column, el, text)
-import Element.Font as Font
+import Api exposing (ServerError, expectJsonWithBody)
 import File exposing (File)
 import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder, dict, field, index, int, list, map2, map8, maybe, string, value)
 import Json.Encode as Encode
-import Palette
 import Recipe.Slug as Slug exposing (Slug)
-import Url
 import Url.Builder exposing (QueryParameter)
 
 
@@ -58,9 +49,15 @@ type alias Metadata =
     { id : Int
     , title : Slug
     , description : Maybe String
-    , images : List String
+    , images : List Image
     , createdAt : String
     , updatedAt : String
+    }
+
+
+type alias Image =
+    { url : String
+    , blurHash : Maybe String
     }
 
 
@@ -109,7 +106,12 @@ metadataDecoder =
         (field "id" int)
         (field "title" Slug.decoder)
         (field "description" <| Decode.nullable string)
-        (field "images" <| Decode.list <| Decode.field "url" <| string)
+        (field "images" <|
+            Decode.list <|
+                Decode.map2 Image
+                    (Decode.field "url" <| string)
+                    (Decode.maybe (Decode.field "blur_hash" <| string))
+        )
         (field "created_at" string)
         (field "updated_at" string)
 
@@ -151,15 +153,15 @@ previewsDecoder =
 -- HTTP
 
 
-url : List QueryParameter -> String
-url queryParams =
+restUrl : List QueryParameter -> String
+restUrl queryParams =
     Url.Builder.crossOrigin "/rest" [ "recipes" ] queryParams
 
 
 fetch : Slug -> (Result ServerError (Recipe Full) -> msg) -> Cmd msg
 fetch recipeSlug toMsg =
     Http.request
-        { url = url [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
+        { url = restUrl [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
         , method = "GET"
         , timeout = Nothing
         , tracker = Nothing
@@ -178,7 +180,7 @@ fetchMany toMsg =
             ]
     in
     Http.get
-        { url = url params
+        { url = restUrl params
         , expect = expectJsonWithBody toMsg previewsDecoder
         }
 
@@ -198,23 +200,23 @@ search toMsg query =
         }
 
 
-delete : Slug -> (Result Http.Error () -> msg) -> Cmd msg
+delete : Slug -> (Result ServerError () -> msg) -> Cmd msg
 delete recipeSlug toMsg =
     Http.request
-        { url = url [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
+        { url = restUrl [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
         , method = "DELETE"
         , timeout = Nothing
         , tracker = Nothing
         , headers = []
         , body = Http.emptyBody
-        , expect = Http.expectWhatever toMsg
+        , expect = expectJsonWithBody toMsg (Decode.succeed ())
         }
 
 
 create : Encode.Value -> (Result ServerError (Recipe Full) -> msg) -> Cmd msg
 create jsonForm toMsg =
     Http.request
-        { url = url []
+        { url = restUrl []
         , method = "POST"
         , timeout = Nothing
         , tracker = Nothing
@@ -230,7 +232,7 @@ create jsonForm toMsg =
 edit : Slug -> Encode.Value -> (Result ServerError (Recipe Full) -> msg) -> Cmd msg
 edit recipeSlug jsonForm toMsg =
     Http.request
-        { url = url [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
+        { url = restUrl [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
         , method = "PATCH"
         , timeout = Nothing
         , tracker = Nothing
@@ -263,146 +265,3 @@ type ImageUrl
 imageUrlDecoder : Decode.Decoder ImageUrl
 imageUrlDecoder =
     Decode.map ImageUrl (field "image" (field "url" string))
-
-
-expectJsonWithBody : (Result ServerError a -> msg) -> Decoder a -> Expect msg
-expectJsonWithBody toMsg decoder =
-    Http.expectStringResponse toMsg <|
-        \response ->
-            case response of
-                Http.BadUrl_ urll ->
-                    Err (ServerError (Http.BadUrl urll))
-
-                Http.Timeout_ ->
-                    Err (ServerError Http.Timeout)
-
-                Http.NetworkError_ ->
-                    Err (ServerError Http.NetworkError)
-
-                Http.BadStatus_ md body ->
-                    Err (ServerErrorWithBody (Http.BadStatus md.statusCode) (decodeServerError body))
-
-                Http.GoodStatus_ md body ->
-                    case Decode.decodeString decoder body of
-                        Ok value ->
-                            Ok value
-
-                        Err err ->
-                            Err (ServerError (Http.BadBody (Decode.errorToString err)))
-
-
-
-{--
-  - ServerError
-  --}
-
-
-type ServerError
-    = ServerError Http.Error
-    | ServerErrorWithBody Http.Error PGError
-
-
-type alias PGError =
-    { message : String
-    , details : Maybe String
-    , code : Maybe String
-    , hint : Maybe String
-    }
-
-
-serverErrorFromHttp : Http.Error -> ServerError
-serverErrorFromHttp =
-    ServerError
-
-
-httpErrorToString : Http.Error -> String
-httpErrorToString err =
-    case err of
-        Http.BadUrl str ->
-            "BadUrl " ++ str
-
-        Http.Timeout ->
-            "Timeout"
-
-        Http.NetworkError ->
-            "NetworkError"
-
-        Http.BadStatus code ->
-            "BadStatus " ++ String.fromInt code
-
-        Http.BadBody str ->
-            "BadBody " ++ str
-
-
-serverErrorToString : ServerError -> String
-serverErrorToString error =
-    case error of
-        ServerError httpErr ->
-            httpErrorToString httpErr
-
-        ServerErrorWithBody httpErr pgError ->
-            httpErrorToString httpErr ++ " " ++ pgErrorToString pgError
-
-
-viewServerError : String -> ServerError -> Element msg
-viewServerError prefix serverError =
-    case serverError of
-        ServerError httpError ->
-            column []
-                [ el [ Font.heavy ] (text prefix)
-                , text <| httpErrorToString httpError
-                ]
-
-        ServerErrorWithBody httpError pgError ->
-            column []
-                [ el [ Font.heavy ] (text prefix)
-                , text <| httpErrorToString httpError
-                , viewPgError pgError
-                ]
-
-
-viewPgError : PGError -> Element msg
-viewPgError error =
-    column [ Font.color Palette.red ]
-        [ text error.message
-        , text <| Maybe.withDefault "" error.details
-        ]
-
-
-pgErrorDecoder : Decode.Decoder PGError
-pgErrorDecoder =
-    Decode.map4 PGError
-        (Decode.field "message" Decode.string)
-        (Decode.field "details" <| Decode.nullable Decode.string)
-        (Decode.field "code" <| Decode.nullable Decode.string)
-        (Decode.field "hint" <| Decode.nullable Decode.string)
-
-
-pgErrorToString : PGError -> String
-pgErrorToString err =
-    "message: "
-        ++ err.message
-        ++ "\n"
-        ++ "details: "
-        ++ Maybe.withDefault "" err.details
-        ++ "\n"
-        ++ "code: "
-        ++ Maybe.withDefault "" err.code
-        ++ "\n"
-        ++ "hint: "
-        ++ Maybe.withDefault "" err.hint
-        ++ "\n"
-
-
-decodeServerError : String -> PGError
-decodeServerError str =
-    case Decode.decodeString pgErrorDecoder str of
-        Err err ->
-            { message = "Error! I couldn't decode the PostgREST error response "
-            , code = Nothing
-            , details = Just <| Decode.errorToString err
-            , hint = Nothing
-            }
-
-        Ok pgError ->
-            pgError

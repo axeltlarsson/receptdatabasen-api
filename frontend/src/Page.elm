@@ -1,10 +1,11 @@
-module Page exposing (Page(..), view)
+module Page exposing (Page(..), view, viewWithoutHeader)
 
 import Browser exposing (Document)
 import Element exposing (Element, alignBottom, alignLeft, alignTop, centerX, column, el, fill, height, link, padding, row, spacing, spacingXY, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
+import Element.Lazy exposing (lazy)
 import Element.Region as Region
 import Palette
 import Route exposing (Route)
@@ -16,6 +17,7 @@ type Page
     = Recipe
     | RecipeList
     | Editor
+    | Login
     | Other
 
 
@@ -30,7 +32,24 @@ view page { title, content } =
             , Font.color Palette.nearBlack
             , Font.size Palette.normal
             , width fill
-            , Element.inFront (viewHeader page)
+            , Element.inFront (lazy viewHeader page)
+            ]
+            (column [ Element.paddingXY 0 headerHeight, width (fill |> Element.maximum 1440), Element.centerX ]
+                [ content ]
+            )
+        ]
+    }
+
+
+viewWithoutHeader : Page -> { title : String, content : Element msg } -> Document msg
+viewWithoutHeader page { title, content } =
+    { title = title ++ " | Receptdatabasen"
+    , body =
+        [ Element.layout
+            [ Font.family [ Font.typeface "Metropolis" ]
+            , Font.color Palette.nearBlack
+            , Font.size Palette.normal
+            , width fill
             ]
             (column [ Element.paddingXY 0 headerHeight, width (fill |> Element.maximum 1440), Element.centerX ]
                 [ content ]

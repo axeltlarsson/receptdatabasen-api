@@ -39,6 +39,13 @@ local function buffer_response_body()
   end
 end
 
+local function return_error(msg, error_code)
+  ngx.status = error_code or ngx.HTTP_BAD_REQUEST
+  ngx.log(ngx.WARN, msg)
+  ngx.say(cjson.encode({error = msg}))
+  ngx.exit(ngx.OK)
+end
+
 return {
   postprocess_modes = {
     NONE = NONE,
@@ -49,5 +56,6 @@ return {
   get_body_postprocess_mode = get_body_postprocess_mode,
   buffer_response_body = buffer_response_body,
   get_body_postprocess_fn = get_body_postprocess_fn,
-  set_body_postprocess_fn = set_body_postprocess_fn
+  set_body_postprocess_fn = set_body_postprocess_fn,
+  return_error = return_error
 }

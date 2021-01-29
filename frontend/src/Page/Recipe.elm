@@ -1,5 +1,6 @@
 module Page.Recipe exposing (Model, Msg(..), init, toSession, update, view)
 
+import Api
 import Browser.Dom as Dom
 import Dict exposing (Dict)
 import Element
@@ -32,6 +33,7 @@ import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
+import Element.Lazy exposing (lazy2, lazy5)
 import Element.Region as Region
 import Html
 import Html.Attributes
@@ -60,7 +62,7 @@ type alias Model =
 type Status recipe
     = Loading
     | Loaded recipe
-    | Failed Recipe.ServerError
+    | Failed Api.ServerError
 
 
 init : Session -> Slug -> ( Model, Cmd Msg )
@@ -104,7 +106,7 @@ view model =
 
                 Failed err ->
                     { title = "Kunde ej hämta recept"
-                    , content = Loading.error "Kunde ej ladda in recept" (Recipe.serverErrorToString err)
+                    , content = Api.viewServerError "" err
                     }
 
                 Loaded recipe ->
@@ -161,7 +163,7 @@ viewRecipe recipe checkboxStatus device =
             Recipe.metadata recipe
 
         image =
-            List.head images
+            List.head images |> Maybe.map .url
 
         { portions, ingredients, instructions, tags } =
             Recipe.contents recipe
@@ -174,11 +176,12 @@ viewRecipe recipe checkboxStatus device =
                 row [ width fill, spacing 60 ]
     in
     column [ width fill, spacing 30 ]
-        [ viewHeader (Slug.toString title) tags description image device
-        , column [ width fill, padding <| paddingPx device, spacing 20 ]
+        [ lazy5 viewHeader (Slug.toString title) tags description image device
+        , lazy2 column
+            [ width fill, padding <| paddingPx device, spacing 20 ]
             [ responsiveLayout
-                [ viewInstructions instructions checkboxStatus
-                , viewIngredients ingredients portions
+                [ lazy2 viewInstructions instructions checkboxStatus
+                , lazy2 viewIngredients ingredients portions
                 ]
             , row [ spacing 20 ]
                 [ viewEditButton
@@ -360,11 +363,11 @@ viewEditButton =
 
 
 type Msg
-    = LoadedRecipe (Result Recipe.ServerError (Recipe Full))
+    = LoadedRecipe (Result Api.ServerError (Recipe Full))
     | ClickedCheckbox Int Bool
     | ClickedDelete
     | ClickedEdit
-    | Deleted (Result Http.Error ())
+    | Deleted (Result Api.ServerError ())
     | SetViewport
 
 
@@ -375,7 +378,12 @@ update msg model =
             ( { model | recipe = Loaded recipe, session = Session.addRecipe recipe model.session }, Cmd.none )
 
         LoadedRecipe (Err error) ->
-            ( { model | recipe = Failed error }, Cmd.none )
+            case error of
+                Api.Unauthorized ->
+                    ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+
+                _ ->
+                    ( { model | recipe = Failed error }, Cmd.none )
 
         ClickedCheckbox idx checked ->
             ( { model | checkboxStatus = Dict.update idx (\x -> Just checked) model.checkboxStatus }, Cmd.none )
@@ -407,7 +415,7 @@ update msg model =
             )
 
         Deleted (Err error) ->
-            ( { model | recipe = Failed (Recipe.serverErrorFromHttp error) }, Cmd.none )
+            ( { model | recipe = Failed error }, Cmd.none )
 
         SetViewport ->
             ( model, Cmd.none )

@@ -9,6 +9,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 import Page exposing (Page)
 import Page.Blank
+import Page.Login as Login
 import Page.NotFound
 import Page.Recipe as Recipe
 import Page.Recipe.Editor as Editor
@@ -30,6 +31,7 @@ type Model
     | Redirect Session
     | NotFound Session
     | Editor (Maybe Slug) Editor.Model
+    | Login Login.Model
 
 
 init : Encode.Value -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -74,6 +76,13 @@ view model =
                     Page.view page config
             in
             { title = title, body = List.map (Html.map toMsg) body }
+
+        viewPageWithoutHeader page toMsg config =
+            let
+                { title, body } =
+                    Page.viewWithoutHeader page config
+            in
+            { title = title, body = List.map (Html.map toMsg) body }
     in
     case model of
         Redirect _ ->
@@ -91,6 +100,9 @@ view model =
         Editor _ editor ->
             viewPage Page.Editor GotEditorMsg (Editor.view editor)
 
+        Login login ->
+            viewPageWithoutHeader Page.Login GotLoginMsg (Login.view login)
+
 
 
 -- UPDATE
@@ -103,6 +115,7 @@ type Msg
     | GotRecipeMsg Recipe.Msg
     | GotRecipeListMsg RecipeList.Msg
     | GotEditorMsg Editor.Msg
+    | GotLoginMsg Login.Msg
     | GotWindowResize Session.Window
 
 
@@ -123,6 +136,9 @@ toSession page =
 
         Editor _ editor ->
             Editor.toSession editor
+
+        Login login ->
+            Login.toSession login
 
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -157,6 +173,9 @@ changeRouteTo maybeRoute model =
             Editor.initEdit session slug
                 |> updateWith (Editor (Just slug)) GotEditorMsg
 
+        Just Route.Login ->
+            Login.init session |> updateWith Login GotLoginMsg
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -177,6 +196,9 @@ update msg model =
 
                 NotFound session ->
                     NotFound newSession
+
+                Login login ->
+                    Login { login | session = newSession }
     in
     case ( msg, model ) of
         ( LinkClicked urlRequest, _ ) ->
@@ -210,6 +232,10 @@ update msg model =
         ( GotEditorMsg subMsg, Editor slug editor ) ->
             Editor.update subMsg editor
                 |> updateWith (Editor slug) GotEditorMsg
+
+        ( GotLoginMsg subMsg, Login login ) ->
+            Login.update subMsg login
+                |> updateWith Login GotLoginMsg
 
         ( GotWindowResize window, page ) ->
             let
@@ -249,14 +275,17 @@ subscriptions model =
                 Recipe _ ->
                     Sub.none
 
-                RecipeList _ ->
-                    Sub.none
+                RecipeList recipeList ->
+                    Sub.map GotRecipeListMsg (RecipeList.subscriptions recipeList)
 
                 Redirect _ ->
                     Sub.none
 
                 Editor slug editor ->
                     Sub.map GotEditorMsg (Editor.subscriptions editor)
+
+                Login login ->
+                    Sub.none
 
         windowResizeSub =
             Browser.Events.onResize (\w h -> GotWindowResize { width = w, height = h })

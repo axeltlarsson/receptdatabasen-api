@@ -9,7 +9,7 @@ begin
 
     return json_build_object(
         'id', usr.id,
-        'name', usr.name,
+        'user_name', usr.user_name,
         'email', usr.email,
         'role', usr.role
     );

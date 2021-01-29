@@ -2,3 +2,5 @@
 %project=app
 
 20210128192846-initial 2021-01-28T19:28:53Z root <root@docker-desktop> # Add 20210128192846-initial migration
+20210128222018-authentication 2021-01-28T22:20:31Z root <root@docker-desktop> # Add authentication changes for cookie sessions
+20210128224105-auth_secrets 2021-01-28T22:41:06Z root <root@docker-desktop> # Add authentication secrets
