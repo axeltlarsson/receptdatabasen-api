@@ -157,10 +157,56 @@ imageWidths =
     }
 
 
-viewPreview : Recipe Preview -> Element Msg
-viewPreview recipe =
+viewPreviewWithBlur : Int -> ImageLoadingStatus (Recipe Preview) -> Element Msg
+viewPreviewWithBlur index recipeStatus =
     let
-        { title, description, id, createdAt, images } =
+        hash =
+            "LKLWb2_M9}f8AgIVt7t7PqRoaiR-"
+
+        recipe =
+            case recipeStatus of
+                Blurred r ->
+                    r
+
+                FullyLoaded r ->
+                    r
+
+        { images } =
+            Recipe.metadata recipe
+
+        blurAttr =
+            case recipeStatus of
+                Blurred r ->
+                    Element.htmlAttribute (Html.Attributes.class "image_blurred")
+
+                FullyLoaded r ->
+                    Element.htmlAttribute (Html.Attributes.class "image_fully_loaded")
+
+        imageUrl =
+            case recipeStatus of
+                Blurred r ->
+                    List.head images
+                        |> Maybe.map .blurHash
+                        |> Maybe.map (Maybe.withDefault hash)
+                        |> Maybe.map (BlurHash.toUri { width = 4, height = 3 } 0.9)
+
+                FullyLoaded r ->
+                    let
+                        width =
+                            -- *2 for Retina TODO: optimise with responsive/progressive images
+                            String.fromInt <| imageWidths.max * 2
+                    in
+                    List.head images
+                        |> Maybe.map .url
+                        |> Maybe.map (\i -> "/images/sig/" ++ width ++ "/" ++ i)
+    in
+    viewPreview recipe imageUrl index blurAttr
+
+
+viewPreview : Recipe Preview -> Maybe String -> Int -> Element.Attribute Msg -> Element Msg
+viewPreview recipe imageUrl index attr =
+    let
+        { title, description, id, images } =
             Recipe.metadata recipe
 
         image =
@@ -168,16 +214,6 @@ viewPreview recipe =
 
         titleStr =
             Slug.toString title
-
-        imageUrl =
-            let
-                width =
-                    -- *2 for Retina TODO: optimise with responsive/progressive images
-                    String.fromInt <| imageWidths.max * 2
-            in
-            List.head images
-                |> Maybe.map .url
-                |> Maybe.map (\i -> "/images/sig/" ++ width ++ "/" ++ i)
     in
     lazy2 column
         [ width (fill |> Element.maximum imageWidths.max |> Element.minimum imageWidths.min)
@@ -190,20 +226,23 @@ viewPreview recipe =
             { url = Route.toString (Route.Recipe title)
             , label =
                 column [ height fill, width fill ]
-                    [ viewHeader id titleStr imageUrl
+                    [ viewHeader index titleStr imageUrl attr
                     , viewDescription description
                     ]
             }
         ]
 
 
-viewHeader : Int -> String -> Maybe String -> Element Msg
-viewHeader id title imageUrl =
+viewHeader : Int -> String -> Maybe String -> Element.Attribute Msg -> Element Msg
+viewHeader id title imageUrl attr =
     let
         background =
             imageUrl
                 |> Maybe.map Background.image
                 |> Maybe.withDefault (Background.color Palette.white)
+
+        idAttr =
+            Element.htmlAttribute (Html.Attributes.id ("image" ++ String.fromInt id))
     in
     column [ width fill, height fill, Border.rounded 2 ]
         [ Element.el
@@ -211,6 +250,8 @@ viewHeader id title imageUrl =
             , height fill
             , Border.rounded 2
             , background
+            , idAttr
+            , attr
             ]
             (el
                 [ Element.behindContent <|
@@ -236,20 +277,6 @@ viewHeader id title imageUrl =
                 )
             )
         ]
-
-
-viewPreviewWithBlur : Int -> ImageLoadingStatus (Recipe Preview) -> Element Msg
-viewPreviewWithBlur index recipeStatus =
-    let
-        recipe =
-            case recipeStatus of
-                Blurred r ->
-                    r
-
-                FullyLoaded r ->
-                    r
-    in
-    viewPreview recipe
 
 
 floorFade : Element.Attribute msg
@@ -386,27 +413,28 @@ observeImages images =
 
 unBlur : Int -> Status (Dict Int (ImageLoadingStatus (Recipe Preview))) -> Status (Dict Int (ImageLoadingStatus (Recipe Preview)))
 unBlur index recipeStatuses =
-    case recipeStatuses of
-        Loaded recipes ->
-            let
-                updated =
-                    Dict.update index
-                        (Maybe.map
-                            (\status ->
-                                case status of
-                                    Blurred r ->
-                                        FullyLoaded r
+    Debug.log ("unblur " ++ Debug.toString index) <|
+        case recipeStatuses of
+            Loaded recipes ->
+                let
+                    updated =
+                        Dict.update index
+                            (Maybe.map
+                                (\status ->
+                                    case status of
+                                        Blurred r ->
+                                            FullyLoaded r
 
-                                    FullyLoaded r ->
-                                        FullyLoaded r
+                                        FullyLoaded r ->
+                                            FullyLoaded r
+                                )
                             )
-                        )
-                        recipes
-            in
-            Loaded updated
+                            recipes
+                in
+                Loaded updated
 
-        _ ->
-            recipeStatuses
+            _ ->
+                recipeStatuses
 
 
 type PortMsg

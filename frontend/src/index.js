@@ -17,6 +17,7 @@ const loadImage = (image) => {
       type: 'imageIntersecting',
       image: Number(image.id.split('image')[1]),
     };
+    console.log('image is intersecting', image.id);
     app.ports.interSectionObserverReceiver.send(msg);
   } catch (err) {
     console.error(`Could not load image ${image}`, err);
@@ -54,7 +55,7 @@ app.ports.interSectionObserverSender.subscribe((message) => {
         loadImage(img);
       });
     }
-  }, 0);
+  }, 10); // TODO: not sure why this is needed, but some form of dealy here appears necessary
 
   return true;
 });

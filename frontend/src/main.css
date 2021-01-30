@@ -51,20 +51,20 @@
   width: 100% !important;
 }
 
-/* .fit-img { */
-  /* height: 100%; */
-/* } */
-/* .fit-img img { */
-  /* object-fit: cover !important; */
-  /* height: 100%; */
-/* } */
+.image_blurred {
+   backdrop-filter: blur(10px);
+}
 
-/* .blurred img { */
-  /* filter: blur(0.2em); */
-/* } */
-
-/* img { */
- /* filter: blur(0em); */
+.image_fully_loaded {
+ backdrop-filter: blur(10px);
+ color: red;
  /* transition: filter 0.5s; */
-/* } */
+}
 
+
+/*
+ * .image_fully_loaded > div {
+ *   filter: blur(0em);
+ *   border: 2px solid red;
+ * }
+ */
