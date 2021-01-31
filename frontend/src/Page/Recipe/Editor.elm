@@ -2,22 +2,18 @@ port module Page.Recipe.Editor exposing (Model, Msg, initEdit, initNew, subscrip
 
 import Api exposing (ServerError)
 import Browser.Dom as Dom
-import Browser.Navigation as Nav
-import Dict exposing (Dict)
-import Element exposing (Element, centerX, column, el, fill, row, spacing, text, width)
-import Element.Input as Input
-import Http exposing (Expect)
-import Json.Decode as Decode exposing (Decoder)
+import Element exposing (Element, centerX, column, el, fill, text, width)
+import Http
+import Json.Decode as Decode
 import Json.Encode as Encode
 import Loading
 import Page.Recipe.Form as Form
-import Recipe exposing (Full, Recipe, fullDecoder)
+import Recipe exposing (Full, Recipe)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
 import Session exposing (Session)
 import Task
-import Url exposing (Url)
-import Url.Builder
+import Url
 
 
 port editorPortSender : Encode.Value -> Cmd msg
@@ -180,7 +176,7 @@ formToModel { status, session } form =
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ({ status, session } as model) =
+update msg ({ status } as model) =
     case msg of
         FormMsg (Form.SubmitValidForm jsonForm) ->
             jsonForm
@@ -200,7 +196,7 @@ update msg ({ status, session } as model) =
                 EditingNew _ form ->
                     updateForm form
 
-                Editing slug _ form ->
+                Editing _ _ form ->
                     updateForm form
 
                 Creating form ->
@@ -226,7 +222,7 @@ update msg ({ status, session } as model) =
                 EditingNew _ form ->
                     updateFormWithPortMsg form
 
-                Editing slug _ form ->
+                Editing _ _ form ->
                     updateFormWithPortMsg form
 
                 Creating form ->
@@ -338,7 +334,7 @@ toSession model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     Sub.batch
         [ editorPortReceiver PortMsg
         , Http.track "image0" (GotImageUploadProgress 0)

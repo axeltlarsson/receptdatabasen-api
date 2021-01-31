@@ -10,9 +10,7 @@ module Recipe exposing
     , edit
     , fetch
     , fetchMany
-    , fullDecoder
     , metadata
-    , previewDecoder
     , search
     , slug
     , uploadImage
@@ -29,8 +27,8 @@ module Recipe exposing
 
 import Api exposing (ServerError, expectJsonWithBody)
 import File exposing (File)
-import Http exposing (Expect)
-import Json.Decode as Decode exposing (Decoder, dict, field, index, int, list, map2, map8, maybe, string, value)
+import Http
+import Json.Decode as Decode exposing (Decoder, field, int, list, string)
 import Json.Encode as Encode
 import Recipe.Slug as Slug exposing (Slug)
 import Url.Builder exposing (QueryParameter)

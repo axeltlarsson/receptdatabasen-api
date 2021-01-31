@@ -4,28 +4,19 @@ import Dict exposing (Dict)
 import Element
     exposing
         ( Element
-        , alignBottom
         , alignLeft
-        , alignRight
         , alignTop
-        , centerX
-        , centerY
         , column
         , el
         , fill
         , height
         , htmlAttribute
-        , padding
         , paddingEach
-        , paddingXY
         , paragraph
-        , rgb255
-        , rgba255
         , row
         , spacing
         , text
         , width
-        , wrappedRow
         )
 import Element.Background as Background
 import Element.Border as Border
@@ -35,7 +26,7 @@ import Element.Input as Input
 import Element.Region as Region
 import Html
 import Html.Attributes
-import Markdown.Block as Block exposing (Block, Inline, ListItem(..), Task(..))
+import Markdown.Block as Block exposing (Block, ListItem(..), Task(..))
 import Markdown.Html
 import Markdown.Parser
 import Markdown.Renderer
@@ -115,7 +106,7 @@ renderer checkboxStatus clickedCheckbox =
     , emphasis = row [ Font.italic ]
     , codeSpan = text
     , link =
-        \{ title, destination } body ->
+        \{ destination } body ->
             Element.newTabLink
                 [ Element.htmlAttribute (Html.Attributes.style "display" "inline-flex") ]
                 { url = destination
@@ -138,22 +129,22 @@ renderer checkboxStatus clickedCheckbox =
                 children
     , unorderedList = unorderedList checkboxStatus clickedCheckbox
     , orderedList = orderedList
-    , codeBlock = \s -> Element.none
+    , codeBlock = \_ -> Element.none
     , html =
         Markdown.Html.oneOf [ youtube ]
     , table = column []
     , tableHeader = column []
     , tableBody = column []
     , tableRow = row []
-    , tableHeaderCell = \maybeAlignment children -> paragraph [] children
-    , tableCell = \maybeAlignment children -> paragraph [] children
+    , tableHeaderCell = \_ children -> paragraph [] children
+    , tableCell = \_ children -> paragraph [] children
     }
 
 
 youtube : Markdown.Html.Renderer (a -> Element msg)
 youtube =
     Markdown.Html.tag "youtube"
-        (\url thumb children ->
+        (\url _ _ ->
             el
                 [ htmlAttribute (Html.Attributes.class "iframe-container")
                 , width fill
@@ -177,7 +168,7 @@ youtube =
 
 
 heading : { level : Block.HeadingLevel, rawText : String, children : List (Element msg) } -> Element msg
-heading { level, rawText, children } =
+heading { level, children } =
     paragraph
         [ Font.size
             (case level of

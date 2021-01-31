@@ -1,20 +1,20 @@
 module Main exposing (main)
 
 import Browser exposing (Document)
-import Browser.Dom exposing (Viewport, getViewport)
+import Browser.Dom
 import Browser.Events
 import Browser.Navigation as Nav
 import Html
 import Json.Decode as Decode
 import Json.Encode as Encode
-import Page exposing (Page)
+import Page
 import Page.Blank
 import Page.Login as Login
 import Page.NotFound
 import Page.Recipe as Recipe
 import Page.Recipe.Editor as Editor
 import Page.RecipeList as RecipeList
-import Recipe.Slug as Slug exposing (Slug)
+import Recipe.Slug exposing (Slug)
 import Route exposing (Route)
 import Session exposing (Session)
 import Task
@@ -158,7 +158,7 @@ changeRouteTo maybeRoute model =
         Just (Route.RecipeList query) ->
             case model of
                 -- Avoid infinite recursion if URL change is in search query for RecipeList
-                RecipeList list ->
+                RecipeList _ ->
                     ( model, Cmd.none )
 
                 _ ->
@@ -191,10 +191,10 @@ update msg model =
                 Editor slug editor ->
                     Editor slug { editor | session = newSession }
 
-                Redirect session ->
+                Redirect _ ->
                     Redirect newSession
 
-                NotFound session ->
+                NotFound _ ->
                     NotFound newSession
 
                 Login login ->
@@ -244,7 +244,7 @@ update msg model =
             in
             ( updateSession page newSession, Cmd.none )
 
-        ( _, _ ) ->
+        _ ->
             -- Disregard messages that arrived for the wrong page
             ( model, Cmd.none )
 
@@ -275,16 +275,16 @@ subscriptions model =
                 Recipe _ ->
                     Sub.none
 
-                RecipeList recipeList ->
+                RecipeList _ ->
                     Sub.none
 
                 Redirect _ ->
                     Sub.none
 
-                Editor slug editor ->
+                Editor _ editor ->
                     Sub.map GotEditorMsg (Editor.subscriptions editor)
 
-                Login login ->
+                Login _ ->
                     Sub.none
 
         windowResizeSub =

@@ -8,10 +8,7 @@ import Element
         ( Element
         , alignBottom
         , alignLeft
-        , alignRight
         , alignTop
-        , centerX
-        , centerY
         , column
         , el
         , fill
@@ -30,25 +27,19 @@ import Element
         )
 import Element.Background as Background
 import Element.Border as Border
-import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Element.Lazy exposing (lazy2, lazy5)
 import Element.Region as Region
-import Html
 import Html.Attributes
-import Http
-import Json.Decode as Decoder exposing (Decoder, list)
 import Loading
 import Page.Recipe.Markdown as Markdown
 import Palette
-import Recipe exposing (Full, Metadata, Recipe, contents, fullDecoder, metadata)
+import Recipe exposing (Full, Recipe)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
 import Session exposing (Session)
 import Task
-import Url exposing (Url)
-import Url.Builder
 
 
 
@@ -125,7 +116,7 @@ view model =
 
 
 phoneLayout : Element.Device -> Bool
-phoneLayout ({ class, orientation } as device) =
+phoneLayout { class, orientation } =
     case ( class, orientation ) of
         ( Element.Phone, Element.Portrait ) ->
             True
@@ -135,7 +126,7 @@ phoneLayout ({ class, orientation } as device) =
 
 
 tabletOrSmaller : Element.Device -> Bool
-tabletOrSmaller ({ class, orientation } as device) =
+tabletOrSmaller { class, orientation } =
     case ( class, orientation ) of
         ( Element.Phone, Element.Portrait ) ->
             True
@@ -159,7 +150,7 @@ paddingPx device =
 viewRecipe : Recipe Full -> Dict Int Bool -> Element.Device -> Element Msg
 viewRecipe recipe checkboxStatus device =
     let
-        { title, description, id, images, createdAt, updatedAt } =
+        { title, description, images } =
             Recipe.metadata recipe
 
         image =
@@ -386,7 +377,7 @@ update msg model =
                     ( { model | recipe = Failed error }, Cmd.none )
 
         ClickedCheckbox idx checked ->
-            ( { model | checkboxStatus = Dict.update idx (\x -> Just checked) model.checkboxStatus }, Cmd.none )
+            ( { model | checkboxStatus = Dict.update idx (\_ -> Just checked) model.checkboxStatus }, Cmd.none )
 
         ClickedDelete ->
             case model.recipe of

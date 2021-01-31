@@ -1,12 +1,10 @@
-module Route exposing (Route(..), fromUrl, href, pushUrl, replaceUrl, toString)
+module Route exposing (Route(..), fromUrl, pushUrl, replaceUrl, toString)
 
 import Browser.Navigation as Nav
-import Html exposing (Attribute)
-import Html.Attributes as Attr
 import Recipe.Slug as Slug exposing (Slug)
 import Url exposing (Url)
 import Url.Builder
-import Url.Parser as Parser exposing ((</>), (<?>), Parser, int, map, oneOf, s, string)
+import Url.Parser as Parser exposing ((</>), (<?>), Parser, map, oneOf, s)
 import Url.Parser.Query as Query
 
 
@@ -31,11 +29,6 @@ parser =
         , map EditRecipe (s "editor" </> Slug.urlParser)
         , map Login (s "login")
         ]
-
-
-href : Route -> Attribute msg
-href targetRoute =
-    Attr.href (toString targetRoute)
 
 
 fromUrl : Url -> Maybe Route

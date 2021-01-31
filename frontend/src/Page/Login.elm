@@ -1,8 +1,7 @@
 module Page.Login exposing (Model, Msg, init, toSession, update, view)
 
 import Api exposing (ServerError, expectJsonWithBody, viewServerError)
-import Browser.Navigation as Nav
-import Element exposing (Element, centerX, column, el, fill, padding, paddingEach, paddingXY, row, spacing, text, width)
+import Element exposing (Element, centerX, column, el, fill, padding, paddingEach, row, spacing, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Events as Events
@@ -12,7 +11,7 @@ import Element.Region as Region
 import FeatherIcons
 import Form exposing (errorBorder, onEnter, viewValidationError)
 import Http
-import Json.Decode as Decode exposing (field, map2, string)
+import Json.Decode as Decode exposing (field, string)
 import Json.Encode as Encode
 import Palette
 import Route
@@ -220,20 +219,20 @@ update msg ({ session, status } as model) =
                             , submitForm verifiedForm
                             )
 
-                        Err err ->
+                        Err _ ->
                             ( { model | status = FillingForm (activatedForm form Invalid) }
                             , Cmd.none
                             )
 
-                CompletedLogin (Ok me) ->
+                CompletedLogin (Ok _) ->
                     ( model, Cmd.none )
 
-                CompletedLogin (Err err) ->
+                CompletedLogin (Err _) ->
                     ( model, Cmd.none )
 
         SubmittingForm form ->
             case msg of
-                CompletedLogin (Ok me) ->
+                CompletedLogin (Ok _) ->
                     ( { model
                         | status = FillingForm { form | invalidCredentials = False }
                         , problem = Nothing

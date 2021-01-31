@@ -1,6 +1,8 @@
 # Receptdatabasen SPA
 
-Run it in dev mode with: `elm-app start`
+Run it in dev mode with: `elm-app start` or `npm run dev`
+
+Use elm-review to finda and remove dead code: `npx elm-review --fix`
 
 This project is bootstrapped with [Create Elm App](https://github.com/halfzebra/create-elm-app).
 

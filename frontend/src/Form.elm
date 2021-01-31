@@ -4,7 +4,6 @@ import Element exposing (Element, el, text)
 import Element.Border as Border
 import Element.Font as Font
 import Html
-import Html.Attributes
 import Html.Events
 import Json.Decode as Decode
 import Palette
@@ -31,7 +30,7 @@ viewValidationError active input theValidator =
             Ok _ ->
                 Element.none
 
-            Err ( err, errs ) ->
+            Err ( err, _ ) ->
                 el
                     [ Font.color Palette.red ]
                     (text err)

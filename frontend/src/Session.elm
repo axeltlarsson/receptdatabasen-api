@@ -3,7 +3,6 @@ module Session exposing
     , Window
     , addRecipe
     , build
-    , buildWithRecipe
     , device
     , navKey
     , recipe
@@ -34,38 +33,33 @@ build key window =
     Session key (classifyDevice window) Nothing
 
 
-buildWithRecipe : Nav.Key -> Window -> Recipe Full -> Session
-buildWithRecipe key window fullRecipe =
-    SessionWithRecipe key (classifyDevice window) Nothing fullRecipe
-
-
 addRecipe : Recipe Full -> Session -> Session
 addRecipe fullRecipe session =
     case session of
         Session key dev theViewport ->
             SessionWithRecipe key dev theViewport fullRecipe
 
-        SessionWithRecipe key dev theViewport oldRecipe ->
+        SessionWithRecipe key dev theViewport _ ->
             SessionWithRecipe key dev theViewport fullRecipe
 
 
 updateWindowSize : Session -> Window -> Session
 updateWindowSize session window =
     case session of
-        Session key dev theViewport ->
+        Session key _ theViewport ->
             Session key (classifyDevice window) theViewport
 
-        SessionWithRecipe key dev theViewport fullRecipe ->
+        SessionWithRecipe key _ theViewport fullRecipe ->
             SessionWithRecipe key (classifyDevice window) theViewport fullRecipe
 
 
 updateViewport : Session -> Dom.Viewport -> Session
 updateViewport session theViewport =
     case session of
-        Session key dev oldViewport ->
+        Session key dev _ ->
             Session key dev (Just theViewport)
 
-        SessionWithRecipe key dev oldViewport fullRecipe ->
+        SessionWithRecipe key dev _ fullRecipe ->
             SessionWithRecipe key dev (Just theViewport) fullRecipe
 
 

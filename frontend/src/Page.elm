@@ -1,7 +1,7 @@
 module Page exposing (Page(..), view, viewWithoutHeader)
 
 import Browser exposing (Document)
-import Element exposing (Element, alignBottom, alignLeft, alignTop, centerX, column, el, fill, height, link, padding, row, spacing, spacingXY, text, width)
+import Element exposing (Element, alignLeft, alignTop, column, el, fill, height, link, padding, row, spacingXY, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
@@ -42,7 +42,7 @@ view page { title, content } =
 
 
 viewWithoutHeader : Page -> { title : String, content : Element msg } -> Document msg
-viewWithoutHeader page { title, content } =
+viewWithoutHeader _ { title, content } =
     { title = title ++ " | Receptdatabasen"
     , body =
         [ Element.layout
@@ -128,7 +128,7 @@ navbarLink page route linkContent =
 isActive : Page -> Route -> Bool
 isActive page route =
     case ( page, route ) of
-        ( RecipeList, Route.RecipeList q ) ->
+        ( RecipeList, Route.RecipeList _ ) ->
             True
 
         ( Recipe, Route.Recipe _ ) ->

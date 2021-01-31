@@ -1,4 +1,4 @@
-module Page.Recipe.Form exposing (Model, Msg(..), fromRecipe, init, portMsg, toJson, update, uploadProgressMsg, view)
+module Page.Recipe.Form exposing (Model, Msg(..), fromRecipe, init, portMsg, update, uploadProgressMsg, view)
 
 import Api
 import Dict exposing (Dict)
@@ -8,7 +8,6 @@ import Element
         , alignBottom
         , alignLeft
         , alignRight
-        , alignTop
         , alpha
         , centerX
         , centerY
@@ -18,9 +17,6 @@ import Element
         , height
         , mouseOver
         , padding
-        , paddingEach
-        , paragraph
-        , rgb255
         , row
         , spacing
         , text
@@ -37,9 +33,8 @@ import FeatherIcons
 import File exposing (File)
 import File.Select as Select
 import Form exposing (errorBorder, onEnter, validateSingle, viewValidationError)
-import Html exposing (Html)
+import Html
 import Html.Attributes
-import Html.Events
 import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
@@ -47,8 +42,7 @@ import Page.Recipe.Markdown as Markdown
 import Palette
 import Recipe
 import Recipe.Slug as Slug
-import Regex
-import Set exposing (Set)
+import Set
 import String.Verify
 import Task
 import Verify
@@ -139,7 +133,7 @@ initialForm =
 fromRecipe : Recipe.Recipe Recipe.Full -> Model
 fromRecipe recipe =
     let
-        { id, title, description, images } =
+        { title, description, images } =
             Recipe.metadata recipe
 
         { instructions, tags, portions, ingredients } =
@@ -198,14 +192,6 @@ viewForm form =
         ]
 
 
-edges =
-    { top = 0
-    , right = 0
-    , bottom = 0
-    , left = 0
-    }
-
-
 viewTitleInput : Bool -> String -> Element Msg
 viewTitleInput validationActive title =
     column [ spacing 10, width fill ]
@@ -228,7 +214,7 @@ viewTitleInput validationActive title =
 
 
 viewUploadProgress : { sent : Int, size : Int } -> Element Msg
-viewUploadProgress ({ sent, size } as sending) =
+viewUploadProgress sending =
     text <| (String.fromInt <| floor <| 100 * Http.fractionSent sending) ++ " %"
 
 
@@ -572,8 +558,6 @@ type Msg
     = TitleChanged String
     | DescriptionChanged String
     | PortionsChanged Int
-    | InstructionsChanged String
-    | IngredientsChanged String
     | NewTagInputChanged String
     | NewTagEntered
     | RemoveTag String
@@ -659,16 +643,6 @@ update msg ({ form } as model) =
             , Cmd.none
             )
 
-        InstructionsChanged instructions ->
-            ( updateForm (\f -> { f | instructions = instructions })
-            , Cmd.none
-            )
-
-        IngredientsChanged ingredients ->
-            ( updateForm (\f -> { f | ingredients = ingredients })
-            , Cmd.none
-            )
-
         NewTagInputChanged newTag ->
             ( updateForm (\f -> { f | newTagInput = newTag })
             , Cmd.none
@@ -699,7 +673,7 @@ update msg ({ form } as model) =
             let
                 idx =
                     -- The highest numbered key
-                    Dict.foldl (\k v i -> max k i) 0 form.images + 1
+                    Dict.foldl (\k _ i -> max k i) 0 form.images + 1
 
                 urlCmd i f =
                     Task.perform (ImageUrlEncoded i f) (File.toUrl f)
@@ -782,7 +756,7 @@ update msg ({ form } as model) =
                     Maybe.map
                         (\p ->
                             case p of
-                                InProgress file base64Url progress ->
+                                InProgress _ base64Url _ ->
                                     Done (Just base64Url) url
 
                                 x ->
@@ -796,7 +770,7 @@ update msg ({ form } as model) =
             , Cmd.none
             )
 
-        ImageUploadComplete base64Url (Err err) ->
+        ImageUploadComplete base64Url (Err _) ->
             -- TODO: handle debug
             -- Debug.log (Debug.toString err)
             ( model, Cmd.none )
@@ -848,7 +822,7 @@ update msg ({ form } as model) =
                     , submitForm verifiedForm
                     )
 
-                Err err ->
+                Err _ ->
                     -- TODO: handle debug
                     -- Debug.log ("error" ++ Debug.toString err)
                     ( activatedModel Invalid
@@ -861,7 +835,7 @@ update msg ({ form } as model) =
 
         PortMsgReceived m ->
             case Decode.decodeValue portMsgDecoder m of
-                Err err ->
+                Err _ ->
                     -- TODO: handle debug
                     -- Debug.log (Decode.errorToString err)
                     ( model, Cmd.none )
@@ -1085,7 +1059,7 @@ toJson form =
         imagesEncoder : Dict Int UploadStatus -> Encode.Value
         imagesEncoder =
             Dict.map
-                (\i imageStatus ->
+                (\_ imageStatus ->
                     case imageStatus of
                         Done _ url ->
                             Encode.object [ ( "url", Encode.string url ) ]

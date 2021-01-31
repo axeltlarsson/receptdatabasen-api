@@ -3,8 +3,7 @@ module Api exposing (ServerError(..), expectJsonWithBody, viewServerError)
 import Element exposing (Element, column, el, fill, paragraph, spacing, text, width)
 import Element.Font as Font
 import Http exposing (Expect)
-import Json.Decode as Decode exposing (Decoder, dict, field, index, int, list, map2, map8, maybe, string, value)
-import Json.Encode as Encode
+import Json.Decode as Decode exposing (Decoder, value)
 
 
 
@@ -30,7 +29,7 @@ expectJsonWithBody toMsg decoder =
                 Http.NetworkError_ ->
                     Err (otherError Http.NetworkError Nothing)
 
-                Http.BadStatus_ { url, statusCode, statusText, headers } body ->
+                Http.BadStatus_ { statusCode } body ->
                     case statusCode of
                         401 ->
                             Err Unauthorized
@@ -38,7 +37,7 @@ expectJsonWithBody toMsg decoder =
                         _ ->
                             Err (otherError (Http.BadStatus statusCode) (Just body))
 
-                Http.GoodStatus_ md body ->
+                Http.GoodStatus_ _ body ->
                     let
                         jsonBodyStr =
                             case body of

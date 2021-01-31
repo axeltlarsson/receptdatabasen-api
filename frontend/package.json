@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "create-elm-app": "^5.22.0",
+    "elm-review": "^2.4.0",
     "elm-tooling": "^1.1.0",
     "eslint": "^7.10.0",
     "eslint-config-airbnb-base": "^14.2.0",

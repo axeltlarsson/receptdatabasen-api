@@ -2,18 +2,14 @@ module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, vi
 
 import Api
 import Browser.Dom as Dom
-import Browser.Navigation as Nav
 import Element
     exposing
         ( Element
         , centerX
-        , centerY
         , column
         , el
         , fill
         , height
-        , image
-        , link
         , padding
         , paragraph
         , rgba255
@@ -25,26 +21,19 @@ import Element
         )
 import Element.Background as Background
 import Element.Border as Border
-import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Element.Lazy exposing (lazy, lazy2)
 import Element.Region as Region
 import FeatherIcons
 import Html.Attributes
-import Http
-import Json.Decode as Decode exposing (Decoder, list)
-import Json.Encode as Encode
 import Loading
-import Page.Recipe.Markdown as Markdown
 import Palette
-import Recipe exposing (Preview, Recipe, previewDecoder)
-import Recipe.Slug as Slug exposing (Slug)
-import Route exposing (Route)
+import Recipe exposing (Preview, Recipe)
+import Recipe.Slug as Slug
+import Route
 import Session exposing (Session)
 import Task
-import Url
-import Url.Builder
 
 
 
@@ -128,9 +117,6 @@ viewSearchBox model =
 imageWidths : { min : Int, max : Int }
 imageWidths =
     let
-        iPadWidth =
-            768
-
         pagePadding =
             10
 
@@ -147,11 +133,8 @@ imageWidths =
 viewPreview : Recipe Preview -> Element Msg
 viewPreview recipe =
     let
-        { title, description, id, createdAt, images } =
+        { title, description, images } =
             Recipe.metadata recipe
-
-        image =
-            List.head images
 
         titleStr =
             Slug.toString title
