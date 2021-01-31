@@ -56,9 +56,7 @@ type alias Metadata =
 
 
 type alias Image =
-    { url : String
-    , blurHash : Maybe String
-    }
+    { url : String }
 
 
 type Preview
@@ -108,9 +106,7 @@ metadataDecoder =
         (field "description" <| Decode.nullable string)
         (field "images" <|
             Decode.list <|
-                Decode.map2 Image
-                    (Decode.field "url" <| string)
-                    (Decode.maybe (Decode.field "blur_hash" <| string))
+                Decode.map Image (Decode.field "url" <| string)
         )
         (field "created_at" string)
         (field "updated_at" string)

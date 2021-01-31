@@ -276,7 +276,7 @@ subscriptions model =
                     Sub.none
 
                 RecipeList recipeList ->
-                    Sub.map GotRecipeListMsg (RecipeList.subscriptions recipeList)
+                    Sub.none
 
                 Redirect _ ->
                     Sub.none

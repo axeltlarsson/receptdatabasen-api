@@ -1,10 +1,8 @@
-port module Page.RecipeList exposing (Model, Msg, Status, init, subscriptions, toSession, update, view)
+module Page.RecipeList exposing (Model, Msg, Status, init, toSession, update, view)
 
 import Api
-import BlurHash
 import Browser.Dom as Dom
 import Browser.Navigation as Nav
-import Dict exposing (Dict)
 import Element
     exposing
         ( Element
@@ -49,23 +47,12 @@ import Url
 import Url.Builder
 
 
-port interSectionObserverSender : Encode.Value -> Cmd msg
-
-
-port interSectionObserverReceiver : (Decode.Value -> msg) -> Sub msg
-
-
 
 -- MODEL
 
 
 type alias Model =
-    { session : Session, recipes : Status (Dict Int (ImageLoadingStatus (Recipe Preview))), query : String }
-
-
-type ImageLoadingStatus recipe
-    = Blurred recipe
-    | FullyLoaded recipe
+    { session : Session, recipes : Status (List (Recipe Preview)), query : String }
 
 
 type Status recipes
@@ -114,7 +101,7 @@ view model =
                 column [ Region.mainContent, spacing 20, width fill, padding 10 ]
                     [ lazy viewSearchBox model
                     , wrappedRow [ centerX, spacing 10 ]
-                        (Dict.map viewPreviewWithBlur recipes |> Dict.values)
+                        (List.map viewPreview recipes)
                     ]
             }
 
@@ -190,15 +177,15 @@ viewPreview recipe =
             { url = Route.toString (Route.Recipe title)
             , label =
                 column [ height fill, width fill ]
-                    [ viewHeader id titleStr imageUrl
+                    [ viewHeader titleStr imageUrl
                     , viewDescription description
                     ]
             }
         ]
 
 
-viewHeader : Int -> String -> Maybe String -> Element Msg
-viewHeader id title imageUrl =
+viewHeader : String -> Maybe String -> Element Msg
+viewHeader title imageUrl =
     let
         background =
             imageUrl
@@ -236,20 +223,6 @@ viewHeader id title imageUrl =
                 )
             )
         ]
-
-
-viewPreviewWithBlur : Int -> ImageLoadingStatus (Recipe Preview) -> Element Msg
-viewPreviewWithBlur index recipeStatus =
-    let
-        recipe =
-            case recipeStatus of
-                Blurred r ->
-                    r
-
-                FullyLoaded r ->
-                    r
-    in
-    viewPreview recipe
 
 
 floorFade : Element.Attribute msg
@@ -318,7 +291,6 @@ type Msg
     = LoadedRecipes (Result Api.ServerError (List (Recipe Preview)))
     | SearchQueryEntered String
     | SetViewport
-    | PortMsg Decode.Value
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -334,18 +306,9 @@ update msg model =
                             )
                         |> Maybe.withDefault []
                         |> Cmd.batch
-
-                recipesDict =
-                    recipes
-                        |> List.map Blurred
-                        |> List.indexedMap Tuple.pair
-                        |> Dict.fromList
             in
-            ( { model | recipes = Loaded recipesDict }
-            , Cmd.batch
-                [ setViewportFromSession model.session
-                , observeImages (Dict.keys recipesDict)
-                ]
+            ( { model | recipes = Loaded recipes }
+            , setViewportFromSession model.session
             )
 
         LoadedRecipes (Err error) ->
@@ -365,69 +328,6 @@ update msg model =
         SetViewport ->
             ( model, Cmd.none )
 
-        PortMsg value ->
-            case Decode.decodeValue portMsgDecoder value of
-                Err err ->
-                    ( model, Cmd.none )
-
-                Ok (ImageIntersecting imageIndex) ->
-                    ( { model | recipes = unBlur imageIndex model.recipes }, Cmd.none )
-
-
-observeImages : List Int -> Cmd Msg
-observeImages images =
-    interSectionObserverSender
-        (Encode.object
-            [ ( "type", Encode.string "observeImages" )
-            , ( "images", images |> List.map Encode.int |> Encode.list identity )
-            ]
-        )
-
-
-unBlur : Int -> Status (Dict Int (ImageLoadingStatus (Recipe Preview))) -> Status (Dict Int (ImageLoadingStatus (Recipe Preview)))
-unBlur index recipeStatuses =
-    case recipeStatuses of
-        Loaded recipes ->
-            let
-                updated =
-                    Dict.update index
-                        (Maybe.map
-                            (\status ->
-                                case status of
-                                    Blurred r ->
-                                        FullyLoaded r
-
-                                    FullyLoaded r ->
-                                        FullyLoaded r
-                            )
-                        )
-                        recipes
-            in
-            Loaded updated
-
-        _ ->
-            recipeStatuses
-
-
-type PortMsg
-    = ImageIntersecting Int
-
-
-portMsgDecoder : Decode.Decoder PortMsg
-portMsgDecoder =
-    Decode.field "type" Decode.string |> Decode.andThen typeDecoder
-
-
-typeDecoder : String -> Decode.Decoder PortMsg
-typeDecoder t =
-    case t of
-        "imageIntersecting" ->
-            Decode.map ImageIntersecting
-                (Decode.field "image" Decode.int)
-
-        _ ->
-            Decode.fail ("trying to decode port message, but " ++ t ++ "is not supported")
-
 
 search : Session -> String -> Cmd Msg
 search session query =
@@ -441,8 +341,3 @@ search session query =
 toSession : Model -> Session
 toSession model =
     model.session
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-    interSectionObserverReceiver PortMsg

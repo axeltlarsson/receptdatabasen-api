@@ -153,7 +153,7 @@ fromRecipe recipe =
             , instructions = instructions
             , ingredients = ingredients
             , tags = tags
-            , images = List.indexedMap (\i { url, blurHash } -> ( i, Done Nothing url )) images |> Dict.fromList
+            , images = List.indexedMap (\i { url } -> ( i, Done Nothing url )) images |> Dict.fromList
         }
     }
 
