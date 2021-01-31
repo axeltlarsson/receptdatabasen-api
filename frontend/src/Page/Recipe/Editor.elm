@@ -16,9 +16,6 @@ import Task
 import Url
 
 
-port editorPortSender : Encode.Value -> Cmd msg
-
-
 port editorPortReceiver : (Decode.Value -> msg) -> Sub msg
 
 
@@ -182,9 +179,6 @@ update msg ({ status } as model) =
             jsonForm
                 |> save status
                 |> Tuple.mapFirst (\newStatus -> { model | status = newStatus })
-
-        FormMsg (Form.SendPortMsg mdeMsg) ->
-            ( model, editorPortSender mdeMsg )
 
         FormMsg subMsg ->
             let

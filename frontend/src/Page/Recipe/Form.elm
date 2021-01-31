@@ -564,7 +564,6 @@ type Msg
     | SubmitForm
     | SubmitValidForm Encode.Value
     | PortMsgReceived Decode.Value
-    | SendPortMsg Encode.Value
     | BlurredTitle
     | BlurredDescription
     | ImageUrlEncoded Int File Base64Url
@@ -851,10 +850,6 @@ update msg ({ form } as model) =
 
                 Ok InstructionsBlur ->
                     ( updateForm (\f -> { f | instructionsValidationActive = True }), Cmd.none )
-
-        SendPortMsg x ->
-            -- Editor deals with this
-            ( model, Cmd.none )
 
 
 submitForm : VerifiedForm -> Cmd Msg
