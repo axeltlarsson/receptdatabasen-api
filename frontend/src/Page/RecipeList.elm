@@ -80,7 +80,7 @@ view model =
         Failed err ->
             { title = "Kunde ej ladda in recept"
             , content =
-                column [ Region.mainContent ]
+                column [ Region.mainContent, spacing 20, width fill, padding 10 ]
                     [ Api.viewServerError "Kunde ej ladda in recept" err ]
             }
 

@@ -1,9 +1,11 @@
 module Api exposing (ServerError(..), expectJsonWithBody, viewServerError)
 
-import Element exposing (Element, column, el, fill, paragraph, spacing, text, width)
+import Element exposing (Element, column, el, fill, paddingEach, paragraph, row, spacing, text, width)
 import Element.Font as Font
+import FeatherIcons
 import Http exposing (Expect)
 import Json.Decode as Decode exposing (Decoder, value)
+import Palette
 
 
 
@@ -104,9 +106,13 @@ httpErrorToString err =
 viewServerError : String -> ServerError -> Element msg
 viewServerError prefix serverError =
     let
+        alertIcon =
+            el [ paddingEach { left = 0, right = 10, top = 0, bottom = 0 }, Font.color Palette.red ]
+                (FeatherIcons.alertTriangle |> FeatherIcons.toHtml [] |> Element.html)
+
         wrapError status errBody =
             column [ width fill, spacing 10 ]
-                [ el [ Font.heavy ] (text prefix)
+                [ row [ Font.heavy ] [ alertIcon, text prefix ]
                 , el [ Font.family [ Font.typeface "Courier New", Font.monospace ], Font.heavy ] (text status)
                 , errBody
                     |> Maybe.map (\err -> paragraph [ Font.family [ Font.typeface "Courier New", Font.monospace ] ] [ text err ])
