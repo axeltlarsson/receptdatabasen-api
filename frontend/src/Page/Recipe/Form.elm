@@ -651,8 +651,16 @@ update msg ({ form } as model) =
             ( updateForm
                 (\f ->
                     case validateSingle f.newTagInput tagValidator of
-                        Ok _ ->
-                            { f | newTagInput = "", tags = List.append f.tags [ f.newTagInput ], tagValidationActive = False }
+                        Ok verifiedTag ->
+                            let
+                                newTagList =
+                                    if List.member verifiedTag f.tags then
+                                        f.tags
+
+                                    else
+                                        List.append f.tags [ verifiedTag ]
+                            in
+                            { f | newTagInput = "", tags = newTagList, tagValidationActive = False }
 
                         Err _ ->
                             { f | tagValidationActive = True }
