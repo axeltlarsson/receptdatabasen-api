@@ -439,7 +439,7 @@ viewInstructionsEditor validationActive instructions =
         options =
             """
         {
-            "toolbar": ["bold", "italic", "strikethrough", "heading-1", "heading-2", "|", "unordered-list", "link", "|", "preview", "fullscreen", "|", "guide" ]
+            "toolbar": ["bold", "italic", "strikethrough", "heading-1", "heading-2", "|", "unordered-list", "link", "|", "preview", "|", "guide" ]
         }
         """
     in
@@ -463,7 +463,7 @@ viewIngredientsEditor validationActive ingredients =
         options =
             """
         {
-            "toolbar": ["bold", "italic", "heading-2", "|", "unordered-list", "|", "preview", "fullscreen", "|", "guide" ]
+            "toolbar": ["bold", "italic", "heading-2", "|", "unordered-list", "|", "preview", "|", "guide" ]
         }
         """
     in
