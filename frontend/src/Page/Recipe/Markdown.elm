@@ -5,6 +5,7 @@ import Element
     exposing
         ( Element
         , alignLeft
+        , alignRight
         , alignTop
         , column
         , el
@@ -15,6 +16,7 @@ import Element
         , paragraph
         , row
         , spacing
+        , spacingXY
         , text
         , width
         )
@@ -24,6 +26,7 @@ import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
+import FeatherIcons
 import Html
 import Html.Attributes
 import Markdown.Block as Block exposing (Block, ListItem(..), Task(..))
@@ -101,9 +104,9 @@ renderer checkboxStatus clickedCheckbox =
     { heading = heading
     , paragraph = paragraph [ overflowWrap, spacing 10 ]
     , thematicBreak = Element.none
-    , text = \t -> paragraph [ width fill, overflowWrap ] [ text t ]
-    , strong = row [ Font.bold ]
-    , emphasis = row [ Font.italic ]
+    , text = \t -> paragraph [ overflowWrap ] [ text t ]
+    , strong = paragraph [ Font.bold ]
+    , emphasis = paragraph [ Font.italic ]
     , codeSpan = text
     , link =
         \{ destination } body ->
@@ -201,16 +204,29 @@ edges =
 -- every i:th item will be clicked because index is not globally unique)
 
 
+circleIcon =
+    el []
+        (FeatherIcons.circle |> FeatherIcons.toHtml [] |> Element.html)
+
+
+checkIcon =
+    el []
+        (FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html)
+
+
 unorderedList : Dict Int Bool -> (Int -> Bool -> msg) -> List (ListItem (Element msg)) -> Element msg
 unorderedList checkboxStatus clickedCheckbox items =
     column [ spacing 15, width fill ]
         (items
             |> List.indexedMap
                 (\idx (ListItem task children) ->
-                    row [ width fill ]
-                        [ case task of
+                    el [ width fill ]
+                        (case task of
                             NoTask ->
-                                row [ width fill, spacing 10 ] ([ text "•" ] ++ children)
+                                row [ width fill, spacingXY 25 0 ]
+                                    [ el [ alignRight, alignTop, width (Element.px 15), Font.size 25, paddingEach { edges | left = 8 } ] (text "•")
+                                    , paragraph [] children
+                                    ]
 
                             _ ->
                                 -- IncompleteTask and CompletedTask - both treated the same
@@ -218,25 +234,32 @@ unorderedList checkboxStatus clickedCheckbox items =
                                     checked =
                                         Dict.get idx checkboxStatus |> Maybe.withDefault False
                                 in
-                                row [ width fill, spacing 10 ]
+                                row [ width fill, spacingXY 25 0 ]
                                     [ Input.checkbox
                                         [ alignLeft, alignTop, width (Element.px 15) ]
                                         { onChange = clickedCheckbox idx
-                                        , icon = Input.defaultCheckbox
+                                        , icon =
+                                            \x ->
+                                                if x then
+                                                    checkIcon
+
+                                                else
+                                                    circleIcon
                                         , checked = checked
                                         , label = Input.labelHidden "checkbox"
                                         }
                                     , row
                                         [ width fill
+                                        , alignTop
                                         , if checked then
                                             Font.color Palette.lightGrey
 
                                           else
                                             Font.color Palette.nearBlack
                                         ]
-                                        [ row [ width fill, Element.pointer, Events.onClick (clickedCheckbox idx (not checked)) ] children ]
+                                        [ paragraph [ Element.pointer, Events.onClick (clickedCheckbox idx (not checked)) ] children ]
                                     ]
-                        ]
+                        )
                 )
         )
 
