@@ -269,12 +269,16 @@ orderedList startingIndex items =
     column [ spacing 15, width fill ]
         (items
             |> List.indexedMap
-                (\index itemBlocks ->
-                    row [ spacing 5, width fill ]
-                        [ row [ width fill, spacing 5 ]
-                            (el [ alignTop ] (text (String.fromInt (index + startingIndex) ++ ". "))
-                                :: itemBlocks
-                            )
+                (\index children ->
+                    row [ width fill, spacingXY 15 0 ]
+                        [ row
+                            [ alignTop
+                            , Font.heavy
+                            , width (Element.px 15)
+                            , paddingEach { edges | top = 2 }
+                            ]
+                            [ text (String.fromInt (index + startingIndex) ++ ".") ]
+                        , paragraph [] children
                         ]
                 )
         )
