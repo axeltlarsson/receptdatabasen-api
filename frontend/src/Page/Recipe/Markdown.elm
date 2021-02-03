@@ -1,4 +1,4 @@
-module Page.Recipe.Markdown exposing (onlyListAndHeading, parsingErrors, render)
+module Page.Recipe.Markdown exposing (onlyListAndHeading, parsingErrors, render, renderWithAlwaysTaskList)
 
 import Dict exposing (Dict)
 import Element
@@ -36,12 +36,26 @@ import Markdown.Renderer
 import Palette
 
 
+{-| render markdown to elm-ui
+-}
 render : String -> Dict Int Bool -> (Int -> Bool -> msg) -> Result String (List (Element msg))
-render markdown checkboxStatus clickedCheckbox =
+render =
+    renderMarkdown False
+
+
+{-| render markdown to elm-ui - treating all lists unordered lists as task lists
+-}
+renderWithAlwaysTaskList : String -> Dict Int Bool -> (Int -> Bool -> msg) -> Result String (List (Element msg))
+renderWithAlwaysTaskList =
+    renderMarkdown True
+
+
+renderMarkdown : Bool -> String -> Dict Int Bool -> (Int -> Bool -> msg) -> Result String (List (Element msg))
+renderMarkdown alwaysTaskList markdown checkboxStatus clickedCheckbox =
     markdown
         |> Markdown.Parser.parse
         |> Result.mapError (\e -> e |> List.map Markdown.Parser.deadEndToString |> String.join "\n")
-        |> Result.andThen (Markdown.Renderer.render (renderer checkboxStatus clickedCheckbox))
+        |> Result.andThen (Markdown.Renderer.render (renderer alwaysTaskList checkboxStatus clickedCheckbox))
 
 
 all : (Block -> Bool) -> String -> Bool
@@ -99,8 +113,8 @@ overflowWrap =
     Element.htmlAttribute <| Html.Attributes.style "overflow-wrap" "anywhere"
 
 
-renderer : Dict Int Bool -> (Int -> Bool -> msg) -> Markdown.Renderer.Renderer (Element msg)
-renderer checkboxStatus clickedCheckbox =
+renderer : Bool -> Dict Int Bool -> (Int -> Bool -> msg) -> Markdown.Renderer.Renderer (Element msg)
+renderer alwaysTaskList checkboxStatus clickedCheckbox =
     { heading = heading
     , paragraph = paragraph [ overflowWrap, spacing 10 ]
     , thematicBreak = Element.none
@@ -130,7 +144,7 @@ renderer checkboxStatus clickedCheckbox =
                 , Background.color (Element.rgb255 245 245 245)
                 ]
                 children
-    , unorderedList = unorderedList checkboxStatus clickedCheckbox
+    , unorderedList = unorderedList alwaysTaskList checkboxStatus clickedCheckbox
     , orderedList = orderedList
     , codeBlock = \_ -> Element.none
     , html =
@@ -214,8 +228,47 @@ checkIcon =
         (FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html)
 
 
-unorderedList : Dict Int Bool -> (Int -> Bool -> msg) -> List (ListItem (Element msg)) -> Element msg
-unorderedList checkboxStatus clickedCheckbox items =
+unorderedList : Bool -> Dict Int Bool -> (Int -> Bool -> msg) -> List (ListItem (Element msg)) -> Element msg
+unorderedList alwaysTaskList checkboxStatus clickedCheckbox items =
+    let
+        bulletList children =
+            row [ width fill, spacingXY 10 0 ]
+                [ el [ alignRight, alignTop, width (Element.px 15), Font.size 25, paddingEach { edges | left = 8 } ] (text "•")
+                , paragraph [] children
+                ]
+
+        taskList idx children =
+            -- IncompleteTask and CompletedTask - both treated the same
+            let
+                checked =
+                    Dict.get idx checkboxStatus |> Maybe.withDefault False
+            in
+            row [ width fill, spacingXY 25 0 ]
+                [ Input.checkbox
+                    [ alignLeft, alignTop, width (Element.px 15) ]
+                    { onChange = clickedCheckbox idx
+                    , icon =
+                        \x ->
+                            if x then
+                                checkIcon
+
+                            else
+                                circleIcon
+                    , checked = checked
+                    , label = Input.labelHidden "checkbox"
+                    }
+                , row
+                    [ width fill
+                    , alignTop
+                    , if checked then
+                        Font.color Palette.lightGrey
+
+                      else
+                        Font.color Palette.nearBlack
+                    ]
+                    [ paragraph [ Element.pointer, Events.onClick (clickedCheckbox idx (not checked)) ] children ]
+                ]
+    in
     column [ spacing 15, width fill ]
         (items
             |> List.indexedMap
@@ -223,42 +276,14 @@ unorderedList checkboxStatus clickedCheckbox items =
                     el [ width fill ]
                         (case task of
                             NoTask ->
-                                row [ width fill, spacingXY 25 0 ]
-                                    [ el [ alignRight, alignTop, width (Element.px 15), Font.size 25, paddingEach { edges | left = 8 } ] (text "•")
-                                    , paragraph [] children
-                                    ]
+                                if alwaysTaskList then
+                                    taskList idx children
+
+                                else
+                                    bulletList children
 
                             _ ->
-                                -- IncompleteTask and CompletedTask - both treated the same
-                                let
-                                    checked =
-                                        Dict.get idx checkboxStatus |> Maybe.withDefault False
-                                in
-                                row [ width fill, spacingXY 25 0 ]
-                                    [ Input.checkbox
-                                        [ alignLeft, alignTop, width (Element.px 15) ]
-                                        { onChange = clickedCheckbox idx
-                                        , icon =
-                                            \x ->
-                                                if x then
-                                                    checkIcon
-
-                                                else
-                                                    circleIcon
-                                        , checked = checked
-                                        , label = Input.labelHidden "checkbox"
-                                        }
-                                    , row
-                                        [ width fill
-                                        , alignTop
-                                        , if checked then
-                                            Font.color Palette.lightGrey
-
-                                          else
-                                            Font.color Palette.nearBlack
-                                        ]
-                                        [ paragraph [ Element.pointer, Events.onClick (clickedCheckbox idx (not checked)) ] children ]
-                                    ]
+                                taskList idx children
                         )
                 )
         )

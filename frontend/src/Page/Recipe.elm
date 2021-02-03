@@ -296,7 +296,7 @@ viewInstructions : String -> Dict Int Bool -> Element Msg
 viewInstructions instructions checkboxStatus =
     column [ alignTop, alignLeft, width fill, Font.color Palette.nearBlack ]
         [ el [ Font.size Palette.xLarge ] (text "Gör så här")
-        , el [ paddingXY 0 20 ] (paragraph [] [ viewMarkdown instructions checkboxStatus ])
+        , el [ paddingXY 0 20 ] (paragraph [] [ viewMarkdown True instructions checkboxStatus ])
         ]
 
 
@@ -306,14 +306,22 @@ viewIngredients ingredients portions =
         [ column []
             [ el [ Font.size Palette.xLarge ] (text "Ingredienser")
             , paragraph [ paddingEach { edges | top = 10, bottom = 20 } ] [ text <| String.fromInt portions, text " portioner" ]
-            , column [] [ viewMarkdown ingredients Dict.empty ]
+            , column [] [ viewMarkdown False ingredients Dict.empty ]
             ]
         ]
 
 
-viewMarkdown : String -> Dict Int Bool -> Element Msg
-viewMarkdown instructions checkboxStatus =
-    case Markdown.render instructions checkboxStatus ClickedCheckbox of
+viewMarkdown : Bool -> String -> Dict Int Bool -> Element Msg
+viewMarkdown alwaysTaskList instructions checkboxStatus =
+    let
+        rendered =
+            if alwaysTaskList then
+                Markdown.renderWithAlwaysTaskList instructions checkboxStatus ClickedCheckbox
+
+            else
+                Markdown.render instructions checkboxStatus ClickedCheckbox
+    in
+    case rendered of
         Ok md ->
             column [ width fill, spacing 10, Font.light ]
                 md
