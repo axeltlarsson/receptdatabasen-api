@@ -213,24 +213,17 @@ edges =
     }
 
 
-
--- TODO: support multiple lists of independent checkboxes (if you have more than one list currently,
--- every i:th item will be clicked because index is not globally unique)
-
-
-circleIcon =
-    el []
-        (FeatherIcons.circle |> FeatherIcons.toHtml [] |> Element.html)
-
-
-checkIcon =
-    el []
-        (FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html)
-
-
 unorderedList : Bool -> Dict Int Bool -> (Int -> Bool -> msg) -> List (ListItem (Element msg)) -> Element msg
 unorderedList alwaysTaskList checkboxStatus clickedCheckbox items =
     let
+        circleIcon =
+            el []
+                (FeatherIcons.circle |> FeatherIcons.toHtml [] |> Element.html)
+
+        checkIcon =
+            el []
+                (FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html)
+
         bulletList children =
             row [ width fill, spacingXY 10 0 ]
                 [ el [ alignRight, alignTop, width (Element.px 15), Font.size 25, paddingEach { edges | left = 8 } ] (text "•")
@@ -238,7 +231,6 @@ unorderedList alwaysTaskList checkboxStatus clickedCheckbox items =
                 ]
 
         taskList idx children =
-            -- IncompleteTask and CompletedTask - both treated the same
             let
                 checked =
                     Dict.get idx checkboxStatus |> Maybe.withDefault False
@@ -273,6 +265,8 @@ unorderedList alwaysTaskList checkboxStatus clickedCheckbox items =
         (items
             |> List.indexedMap
                 (\idx (ListItem task children) ->
+                    -- TODO: support multiple lists of independent checkboxes (if you have more than one list currently,
+                    -- every i:th item will be clicked because index is not globally unique)
                     el [ width fill ]
                         (case task of
                             NoTask ->
@@ -282,6 +276,10 @@ unorderedList alwaysTaskList checkboxStatus clickedCheckbox items =
                                 else
                                     bulletList children
 
+                            {--
+                              - IncompleteTask and CompletedTask - both treated the same, state is determined by
+                              - checkboxStatus dict
+                              --}
                             _ ->
                                 taskList idx children
                         )
