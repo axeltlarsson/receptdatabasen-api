@@ -54,16 +54,18 @@ renderMarkdown : Bool -> String -> Dict Int Bool -> (Int -> Bool -> msg) -> Resu
 renderMarkdown alwaysTaskList markdown checkboxStatus clickedCheckbox =
     markdown
         |> Markdown.Parser.parse
+        |> (if alwaysTaskList then
+                Result.map allListsAsTaskList
+
+            else
+                Result.map identity
+           )
         |> Result.map addListIndexMetadata
         |> Result.mapError (\e -> e |> List.map Markdown.Parser.deadEndToString |> String.join "\n")
         |> Result.andThen
             (Markdown.Renderer.renderWithMeta
                 (\maybeListIdx ->
-                    let
-                        r =
-                            renderer alwaysTaskList checkboxStatus clickedCheckbox
-                    in
-                    { r | unorderedList = unorderedList (Maybe.withDefault 0 maybeListIdx) alwaysTaskList checkboxStatus clickedCheckbox }
+                    { renderer | unorderedList = unorderedList (Maybe.withDefault 0 maybeListIdx) checkboxStatus clickedCheckbox }
                 )
             )
 
@@ -77,7 +79,7 @@ addListIndexMetadata blocks =
         |> Block.mapAndAccumulate
             (\sofar block ->
                 case block of
-                    Block.UnorderedList items ->
+                    Block.UnorderedList _ ->
                         ( sofar + 1, ( block, Just sofar ) )
 
                     _ ->
@@ -85,6 +87,34 @@ addListIndexMetadata blocks =
             )
             1
         |> Tuple.second
+
+
+{-| Turn all unordered lists into task lists - useful so that people don't have to write the fiddly markdown for that
+-}
+allListsAsTaskList : List Block -> List Block
+allListsAsTaskList =
+    List.map
+        (Block.walk
+            (\block ->
+                case block of
+                    Block.UnorderedList listItems ->
+                        Block.UnorderedList
+                            (List.map
+                                (\listItem ->
+                                    case listItem of
+                                        ListItem NoTask children ->
+                                            ListItem IncompleteTask children
+
+                                        item ->
+                                            item
+                                )
+                                listItems
+                            )
+
+                    _ ->
+                        block
+            )
+        )
 
 
 all : (Block -> Bool) -> String -> Bool
@@ -142,8 +172,8 @@ overflowWrap =
     Element.htmlAttribute <| Html.Attributes.style "overflow-wrap" "anywhere"
 
 
-renderer : Bool -> Dict Int Bool -> (Int -> Bool -> msg) -> Markdown.Renderer.Renderer (Element msg)
-renderer alwaysTaskList checkboxStatus clickedCheckbox =
+renderer : Markdown.Renderer.Renderer (Element msg)
+renderer =
     { heading = heading
     , paragraph = paragraph [ overflowWrap, spacing 10 ]
     , thematicBreak = Element.none
@@ -242,8 +272,8 @@ edges =
     }
 
 
-unorderedList : Int -> Bool -> Dict Int Bool -> (Int -> Bool -> msg) -> List (ListItem (Element msg)) -> Element msg
-unorderedList index alwaysTaskList checkboxStatus clickedCheckbox items =
+unorderedList : Int -> Dict Int Bool -> (Int -> Bool -> msg) -> List (ListItem (Element msg)) -> Element msg
+unorderedList indexOffset checkboxStatus clickedCheckbox items =
     let
         circleIcon =
             el []
@@ -297,18 +327,14 @@ unorderedList index alwaysTaskList checkboxStatus clickedCheckbox items =
                     el [ width fill ]
                         (case task of
                             NoTask ->
-                                if alwaysTaskList then
-                                    taskList ((idx + 100) * index) children
-
-                                else
-                                    bulletList children
+                                bulletList children
 
                             {--
                               - IncompleteTask and CompletedTask - both treated the same, state is determined by
                               - checkboxStatus dict
                               --}
                             _ ->
-                                taskList ((idx + 100) * index) children
+                                taskList ((idx + 100) * indexOffset) children
                         )
                 )
         )
