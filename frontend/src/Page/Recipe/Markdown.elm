@@ -29,7 +29,7 @@ import Element.Region as Region
 import FeatherIcons
 import Html
 import Html.Attributes
-import Markdown.Block as Block exposing (Block, ListItem(..), Task(..))
+import Markdown.Block as Block exposing (Block, ListItem(..), Task(..), extractInlineText)
 import Markdown.Html
 import Markdown.Parser
 import Markdown.Renderer
@@ -107,6 +107,39 @@ allListsAsTaskList =
 
                                         item ->
                                             item
+                                )
+                                listItems
+                            )
+
+                    _ ->
+                        block
+            )
+        )
+
+
+mapIngredients : (String -> String) -> List Block -> List Block
+mapIngredients mappingFun =
+    List.map
+        (Block.walk
+            (\block ->
+                case block of
+                    Block.UnorderedList listItems ->
+                        Block.UnorderedList
+                            (List.map
+                                (\listItem ->
+                                    let
+                                        transformed is =
+                                            Block.Text (mappingFun (extractInlineText is))
+                                    in
+                                    case listItem of
+                                        ListItem NoTask inlines ->
+                                            ListItem NoTask [ transformed inlines ]
+
+                                        ListItem IncompleteTask inlines ->
+                                            ListItem IncompleteTask [ transformed inlines ]
+
+                                        ListItem CompletedTask inlines ->
+                                            ListItem CompletedTask [ transformed inlines ]
                                 )
                                 listItems
                             )
