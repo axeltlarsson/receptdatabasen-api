@@ -43,7 +43,7 @@ render =
     renderMarkdown False
 
 
-{-| render markdown to elm-ui - treating all lists unordered lists as task lists
+{-| render markdown to elm-ui - treating all unordered lists as task lists
 -}
 renderWithAlwaysTaskList : String -> Dict Int Bool -> (Int -> Bool -> msg) -> Result String (List (Element msg))
 renderWithAlwaysTaskList =
@@ -54,8 +54,37 @@ renderMarkdown : Bool -> String -> Dict Int Bool -> (Int -> Bool -> msg) -> Resu
 renderMarkdown alwaysTaskList markdown checkboxStatus clickedCheckbox =
     markdown
         |> Markdown.Parser.parse
+        |> Result.map addListIndexMetadata
         |> Result.mapError (\e -> e |> List.map Markdown.Parser.deadEndToString |> String.join "\n")
-        |> Result.andThen (Markdown.Renderer.render (renderer alwaysTaskList checkboxStatus clickedCheckbox))
+        |> Result.andThen
+            (Markdown.Renderer.renderWithMeta
+                (\maybeListIdx ->
+                    let
+                        r =
+                            renderer alwaysTaskList checkboxStatus clickedCheckbox
+                    in
+                    { r | unorderedList = unorderedList (Maybe.withDefault 0 maybeListIdx) alwaysTaskList checkboxStatus clickedCheckbox }
+                )
+            )
+
+
+{-| Give a unique index to each list in the markdown - so that I can render them with a unique event handler
+later on
+-}
+addListIndexMetadata : List Block -> List ( Block, Maybe Int )
+addListIndexMetadata blocks =
+    blocks
+        |> Block.mapAndAccumulate
+            (\sofar block ->
+                case block of
+                    Block.UnorderedList items ->
+                        ( sofar + 1, ( block, Just sofar ) )
+
+                    _ ->
+                        ( sofar, ( block, Nothing ) )
+            )
+            1
+        |> Tuple.second
 
 
 all : (Block -> Bool) -> String -> Bool
@@ -144,7 +173,7 @@ renderer alwaysTaskList checkboxStatus clickedCheckbox =
                 , Background.color (Element.rgb255 245 245 245)
                 ]
                 children
-    , unorderedList = unorderedList alwaysTaskList checkboxStatus clickedCheckbox
+    , unorderedList = \_ -> Element.none -- not used, renderWithMeta provides the indexes to lists
     , orderedList = orderedList
     , codeBlock = \_ -> Element.none
     , html =
@@ -213,8 +242,8 @@ edges =
     }
 
 
-unorderedList : Bool -> Dict Int Bool -> (Int -> Bool -> msg) -> List (ListItem (Element msg)) -> Element msg
-unorderedList alwaysTaskList checkboxStatus clickedCheckbox items =
+unorderedList : Int -> Bool -> Dict Int Bool -> (Int -> Bool -> msg) -> List (ListItem (Element msg)) -> Element msg
+unorderedList index alwaysTaskList checkboxStatus clickedCheckbox items =
     let
         circleIcon =
             el []
@@ -265,13 +294,11 @@ unorderedList alwaysTaskList checkboxStatus clickedCheckbox items =
         (items
             |> List.indexedMap
                 (\idx (ListItem task children) ->
-                    -- TODO: support multiple lists of independent checkboxes (if you have more than one list currently,
-                    -- every i:th item will be clicked because index is not globally unique)
                     el [ width fill ]
                         (case task of
                             NoTask ->
                                 if alwaysTaskList then
-                                    taskList idx children
+                                    taskList ((idx + 100) * index) children
 
                                 else
                                     bulletList children
@@ -281,7 +308,7 @@ unorderedList alwaysTaskList checkboxStatus clickedCheckbox items =
                               - checkboxStatus dict
                               --}
                             _ ->
-                                taskList idx children
+                                taskList ((idx + 100) * index) children
                         )
                 )
         )
