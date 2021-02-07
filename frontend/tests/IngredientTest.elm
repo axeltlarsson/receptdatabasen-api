@@ -12,6 +12,10 @@ ingredients strings =
         |> List.map (Result.map Ingredient.toString)
 
 
+
+-- TODO: assert structure of the ingredients - only looking at the string can be deceiving
+
+
 all : Test
 all =
     describe "Ingredient"
@@ -97,8 +101,16 @@ all =
                                 ]
             , test "prefixes" <|
                 \_ ->
-                    Expect.equal [] <|
-                        ingredients
-                            []
+                    let
+                        scaled =
+                            [ "ca 7 dl havregryn" ]
+                                |> List.map Ingredient.fromString
+                                |> List.map (Result.map (Ingredient.scale 2))
+                                |> List.map (Result.map Ingredient.toString)
+                    in
+                    Expect.equal
+                        [ Ok "ca 14 dl havregryn" ]
+                    <|
+                        scaled
             ]
         ]

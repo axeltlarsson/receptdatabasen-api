@@ -8,9 +8,10 @@ import Parser
         , andThen
         , backtrackable
         , chompUntilEndOr
+        , chompWhile
         , commit
         , deadEndsToString
-        , float
+        , end
         , getChompedString
         , int
         , map
@@ -23,7 +24,8 @@ import Parser
 
 
 type alias Ingredient =
-    { quantity : Maybe Float
+    { prefix : Maybe String
+    , quantity : Maybe Float
     , ingredient : String
     }
 
@@ -37,11 +39,38 @@ parser : Parser Ingredient
 parser =
     succeed Ingredient
         |= oneOf
+            [ succeed Just |= prefixParser
+            , succeed Nothing
+            ]
+        |= oneOf
             [ succeed Just |= quantityParser
             , succeed Nothing
             ]
         |. spaces
         |= getChompedString (chompUntilEndOr "\n")
+
+
+type alias Prefix =
+    { prefix : String, badEnding : Bool }
+
+
+prefixParser : Parser String
+prefixParser =
+    succeed Prefix
+        |= backtrackable (getChompedString (chompWhile (Char.isDigit >> not)))
+        -- Look ahead to make sure it is actually a prefix, and not the entire string we just chomped
+        |= oneOf
+            [ map (\_ -> True) (backtrackable end)
+            , succeed False
+            ]
+        |> andThen
+            (\{ prefix, badEnding } ->
+                if badEnding || String.isEmpty prefix || String.length prefix > 5 then
+                    problem "not a prefix to a quantity"
+
+                else
+                    commit prefix
+            )
 
 
 quantityParser : Parser Float
@@ -70,7 +99,7 @@ myFloatParser =
 
 
 myFloatToFloat : MyFloat -> Parser Float
-myFloatToFloat { num, sep, decimals } =
+myFloatToFloat { num, decimals } =
     let
         maybeFloat =
             String.fromInt num
@@ -130,26 +159,30 @@ mixedNumberToFloat { integer, fraction } =
 
 
 toString : Ingredient -> String
-toString { quantity, ingredient } =
+toString { prefix, quantity, ingredient } =
     let
+        prefixString =
+            prefix |> Maybe.withDefault ""
+
         floatWithComma =
             String.fromFloat >> String.replace "." ","
 
         quantityString =
             quantity |> Maybe.map (floatWithComma >> (\q -> q ++ " ")) |> Maybe.withDefault ""
     in
-    Debug.log ("quantity: " ++ Debug.toString quantity) <|
-        quantityString
-            ++ ingredient
+    prefixString
+        ++ quantityString
+        ++ ingredient
 
 
 scale : Float -> Ingredient -> Ingredient
-scale factor ({ quantity, ingredient } as original) =
+scale factor ({ prefix, quantity, ingredient } as original) =
     case quantity of
         Nothing ->
             original
 
         Just q ->
-            { quantity = Just (q * factor)
+            { prefix = prefix
+            , quantity = Just (q * factor)
             , ingredient = ingredient
             }
