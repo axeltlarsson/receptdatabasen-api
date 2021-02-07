@@ -8,14 +8,12 @@ import Parser
         , andThen
         , backtrackable
         , chompUntilEndOr
+        , commit
         , deadEndsToString
-        , end
         , float
         , getChompedString
         , int
-        , keyword
         , map
-        , number
         , oneOf
         , problem
         , spaces
@@ -49,13 +47,18 @@ parser =
 quantityParser : Parser Float
 quantityParser =
     oneOf
-        [ floatParser
+        [ backtrackable mixedNumberParser |> andThen mixedNumberToFloat
+        , backtrackable fractionsParser |> andThen fractionToFloat
+        , backtrackable myFloatParser |> andThen myFloatToFloat
         , map toFloat int
         ]
 
 
 type alias MyFloat =
-    { num : Int, sep : String, decimals : Int }
+    { num : Int
+    , sep : String
+    , decimals : Int
+    }
 
 
 myFloatParser : Parser MyFloat
@@ -66,27 +69,64 @@ myFloatParser =
         |= int
 
 
-floatParser : Parser Float
-floatParser =
-    backtrackable
-        (map
-            (\{ num, sep, decimals } ->
-                String.fromInt num
-                    ++ "."
-                    ++ String.fromInt decimals
-                    |> String.toFloat
-            )
-            myFloatParser
-            |> andThen
-                (\x ->
-                    case x of
-                        Just float ->
-                            succeed float
+myFloatToFloat : MyFloat -> Parser Float
+myFloatToFloat { num, sep, decimals } =
+    let
+        maybeFloat =
+            String.fromInt num
+                ++ "."
+                ++ String.fromInt decimals
+                |> String.toFloat
+    in
+    case maybeFloat of
+        Nothing ->
+            problem "could not parse float"
 
-                        Nothing ->
-                            problem "could not parse float"
-                )
-        )
+        Just f ->
+            commit f
+
+
+type alias MixedNumber =
+    { integer : Int
+    , fraction : Fraction
+    }
+
+
+type alias Fraction =
+    { numerator : Int
+    , denominator : Int
+    }
+
+
+mixedNumberParser : Parser MixedNumber
+mixedNumberParser =
+    succeed MixedNumber
+        |= int
+        |. spaces
+        |= fractionsParser
+
+
+fractionsParser : Parser Fraction
+fractionsParser =
+    succeed Fraction
+        |= int
+        |. token "/"
+        |= int
+
+
+fractionToFloat : Fraction -> Parser Float
+fractionToFloat { numerator, denominator } =
+    case denominator of
+        0 ->
+            problem "cannot divide by zero"
+
+        _ ->
+            commit (toFloat numerator / toFloat denominator)
+
+
+mixedNumberToFloat : MixedNumber -> Parser Float
+mixedNumberToFloat { integer, fraction } =
+    fractionToFloat fraction |> map (\f -> toFloat integer + f)
 
 
 toString : Ingredient -> String
@@ -98,7 +138,9 @@ toString { quantity, ingredient } =
         quantityString =
             quantity |> Maybe.map (floatWithComma >> (\q -> q ++ " ")) |> Maybe.withDefault ""
     in
-    quantityString ++ ingredient
+    Debug.log ("quantity: " ++ Debug.toString quantity) <|
+        quantityString
+            ++ ingredient
 
 
 scale : Float -> Ingredient -> Ingredient
