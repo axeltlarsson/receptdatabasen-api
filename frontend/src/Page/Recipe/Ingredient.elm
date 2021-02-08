@@ -19,15 +19,21 @@ import Parser
         , problem
         , spaces
         , succeed
+        , symbol
         , token
         )
 
 
 type alias Ingredient =
     { prefix : Maybe String
-    , quantity : Maybe Float
+    , quantity : Maybe Quantity
     , ingredient : String
     }
+
+
+type Quantity
+    = Number Float
+    | Range Float String Float
 
 
 fromString : String -> Result String Ingredient
@@ -73,13 +79,14 @@ prefixParser =
             )
 
 
-quantityParser : Parser Float
+quantityParser : Parser Quantity
 quantityParser =
     oneOf
-        [ backtrackable mixedNumberParser |> andThen mixedNumberToFloat
-        , backtrackable fractionsParser |> andThen fractionToFloat
-        , backtrackable myFloatParser |> andThen myFloatToFloat
-        , map toFloat int
+        [ backtrackable rangeParser
+        , backtrackable mixedNumberParser |> andThen mixedNumberToQuantity
+        , backtrackable fractionsParser |> andThen fractionToQuantity
+        , backtrackable myFloatParser |> andThen myFloatToQuantity
+        , map (toFloat >> Number) int
         ]
 
 
@@ -98,8 +105,8 @@ myFloatParser =
         |= int
 
 
-myFloatToFloat : MyFloat -> Parser Float
-myFloatToFloat { num, decimals } =
+myFloatToQuantity : MyFloat -> Parser Quantity
+myFloatToQuantity { num, decimals } =
     let
         maybeFloat =
             String.fromInt num
@@ -112,7 +119,7 @@ myFloatToFloat { num, decimals } =
             problem "could not parse float"
 
         Just f ->
-            commit f
+            commit (Number f)
 
 
 type alias MixedNumber =
@@ -143,19 +150,54 @@ fractionsParser =
         |= int
 
 
-fractionToFloat : Fraction -> Parser Float
-fractionToFloat { numerator, denominator } =
+fractionToQuantity : Fraction -> Parser Quantity
+fractionToQuantity { numerator, denominator } =
     case denominator of
         0 ->
             problem "cannot divide by zero"
 
         _ ->
-            commit (toFloat numerator / toFloat denominator)
+            commit (Number <| toFloat numerator / toFloat denominator)
 
 
-mixedNumberToFloat : MixedNumber -> Parser Float
-mixedNumberToFloat { integer, fraction } =
-    fractionToFloat fraction |> map (\f -> toFloat integer + f)
+mixedNumberToQuantity : MixedNumber -> Parser Quantity
+mixedNumberToQuantity { integer, fraction } =
+    fractionToQuantity fraction
+        |> andThen
+            (\q ->
+                case q of
+                    Number f ->
+                        commit (Number <| toFloat integer + f)
+
+                    Range _ _ _ ->
+                        problem "cannot have a range in a mixed number"
+            )
+
+
+toFloatParser : Quantity -> Parser Float
+toFloatParser q =
+    case q of
+        Number f ->
+            commit f
+
+        Range _ _ _ ->
+            problem "cannot convert a range to a simple float"
+
+
+rangeParser : Parser Quantity
+rangeParser =
+    succeed Range
+        |= oneOf
+            [ backtrackable mixedNumberParser |> andThen mixedNumberToQuantity |> andThen toFloatParser
+            , map toFloat int
+            ]
+        |. spaces
+        |= getChompedString (symbol "-")
+        |. spaces
+        |= oneOf
+            [ backtrackable mixedNumberParser |> andThen mixedNumberToQuantity |> andThen toFloatParser
+            , map toFloat int
+            ]
 
 
 toString : Ingredient -> String
@@ -168,7 +210,15 @@ toString { prefix, quantity, ingredient } =
             String.fromFloat >> String.replace "." ","
 
         quantityString =
-            quantity |> Maybe.map (floatWithComma >> (\q -> q ++ " ")) |> Maybe.withDefault ""
+            case quantity of
+                Nothing ->
+                    ""
+
+                Just (Number f) ->
+                    floatWithComma f ++ " "
+
+                Just (Range i sep j) ->
+                    floatWithComma i ++ " " ++ sep ++ " " ++ floatWithComma j ++ " "
     in
     prefixString
         ++ quantityString
@@ -181,8 +231,14 @@ scale factor ({ prefix, quantity, ingredient } as original) =
         Nothing ->
             original
 
-        Just q ->
+        Just (Number q) ->
             { prefix = prefix
-            , quantity = Just (q * factor)
+            , quantity = Just (Number <| q * factor)
+            , ingredient = ingredient
+            }
+
+        Just (Range i sep j) ->
+            { prefix = prefix
+            , quantity = Just (Range (i * factor) sep (j * factor))
             , ingredient = ingredient
             }
