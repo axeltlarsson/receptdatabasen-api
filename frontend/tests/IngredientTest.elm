@@ -31,6 +31,7 @@ all =
                         , Ok "1,2 l mjölk"
                         , Ok "1,1 l chicken broth see"
                         , Ok "123,46 l maizena"
+                        , Ok "3,02 dl majs"
                         ]
                     <|
                         ingredients
@@ -38,6 +39,7 @@ all =
                             , "1,2 l mjölk"
                             , "1,1l chicken broth see"
                             , "123,456 l maizena"
+                            , "3,015 dl majs"
                             ]
             , test "fractions" <|
                 \_ ->

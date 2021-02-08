@@ -203,40 +203,34 @@ rangeParser =
 {-| Take a float and turn it into a string, rounding it down to use a maximum of 2 decimals
 -}
 floatToString : Float -> String
-floatToString =
+floatToString f =
+    roundFloat f |> String.fromFloat |> String.replace "." ","
+
+
+roundFloat : Float -> Float
+roundFloat f =
     let
-        roundDecimals ds =
-            let
-                digits =
-                    ds |> String.left 3 |> String.split "" |> List.map String.toInt
-            in
-            case digits of
-                [ Just x, Just y, Just z ] ->
-                    String.fromInt x
-                        ++ String.fromInt
-                            (if z >= 5 then
-                                y + 1
+        int =
+            f |> truncate |> toFloat
 
-                             else
-                                y
-                            )
+        decimals =
+            f - int
 
-                _ ->
-                    ds |> String.left 2
+        threeDecimals : Maybe Float
+        threeDecimals =
+            decimals
+                |> String.fromFloat
+                |> String.dropLeft 2
+                |> String.left 3
+                |> String.padRight 3 '0'
+                |> String.toFloat
     in
-    String.fromFloat
-        >> String.split "."
-        >> (\x ->
-                case x of
-                    [ int, decimals ] ->
-                        int ++ "," ++ roundDecimals decimals
+    case threeDecimals of
+        Just d ->
+            d / 10 |> round |> toFloat |> (\x -> x / 100) |> (+) (truncate f |> toFloat)
 
-                    [ int ] ->
-                        int
-
-                    _ ->
-                        ""
-           )
+        Nothing ->
+            f
 
 
 toString : Ingredient -> String
