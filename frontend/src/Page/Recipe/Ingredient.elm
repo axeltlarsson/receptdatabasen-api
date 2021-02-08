@@ -22,6 +22,7 @@ import Parser
         , symbol
         , token
         )
+import Round
 
 
 type alias Ingredient =
@@ -204,33 +205,7 @@ rangeParser =
 -}
 floatToString : Float -> String
 floatToString f =
-    roundFloat f |> String.fromFloat |> String.replace "." ","
-
-
-roundFloat : Float -> Float
-roundFloat f =
-    let
-        int =
-            f |> truncate |> toFloat
-
-        decimals =
-            f - int
-
-        threeDecimals : Maybe Float
-        threeDecimals =
-            decimals
-                |> String.fromFloat
-                |> String.dropLeft 2
-                |> String.left 3
-                |> String.padRight 3 '0'
-                |> String.toFloat
-    in
-    case threeDecimals of
-        Just d ->
-            d / 10 |> round |> toFloat |> (\x -> x / 100) |> (+) (truncate f |> toFloat)
-
-        Nothing ->
-            f
+    Round.roundNum 2 f |> String.fromFloat |> String.replace "." ","
 
 
 toString : Ingredient -> String

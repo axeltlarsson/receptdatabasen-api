@@ -24,23 +24,24 @@ all : Test
 all =
     describe "Ingredient"
         [ describe "fromString"
-            [ test "floats" <|
-                \_ ->
-                    Expect.equal
-                        [ Ok "1 kg mjöl"
-                        , Ok "1,2 l mjölk"
-                        , Ok "1,1 l chicken broth see"
-                        , Ok "123,46 l maizena"
-                        , Ok "3,02 dl majs"
-                        ]
-                    <|
-                        ingredients
-                            [ "1 kg mjöl"
-                            , "1,2 l mjölk"
-                            , "1,1l chicken broth see"
-                            , "123,456 l maizena"
-                            , "3,015 dl majs"
+            [ only <|
+                test "floats" <|
+                    \_ ->
+                        Expect.equal
+                            [ Ok "1 kg mjöl"
+                            , Ok "1,2 l mjölk"
+                            , Ok "1,1 l chicken broth see"
+                            , Ok "123,46 l maizena"
+                            , Ok "3,02 dl majs"
                             ]
+                        <|
+                            ingredients
+                                [ "1 kg mjöl"
+                                , "1,2 l mjölk"
+                                , "1,1l chicken broth see"
+                                , "123,456 l maizena"
+                                , "3,015 dl majs" -- TODO: this is parsed as quantity = 3 and ",015 dl majs" as the ingredient
+                                ]
             , test "fractions" <|
                 \_ ->
                     Expect.equal
