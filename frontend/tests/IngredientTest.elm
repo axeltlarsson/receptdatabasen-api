@@ -30,7 +30,7 @@ all =
                         [ Ok "1 kg mjöl"
                         , Ok "1,2 l mjölk"
                         , Ok "1,1 l chicken broth see"
-                        , Ok "123,456 l maizena"
+                        , Ok "123,46 l maizena"
                         ]
                     <|
                         ingredients
@@ -46,6 +46,7 @@ all =
                         , Ok "0,75 onion, sliced"
                         , Ok "2,75 dl socker"
                         , Ok "3 /0 dl kakao" -- TODO: ideally the 3 should not be parsed as a quantity here, so that scaling is disabled
+                        , Ok "0,33 dl mjölk"
                         ]
                     <|
                         ingredients
@@ -53,6 +54,7 @@ all =
                             , "3/4 onion, sliced"
                             , "2 3/4 dl socker"
                             , "3/0 dl kakao"
+                            , "1/3 dl mjölk"
                             ]
             , test "basic" <|
                 \_ ->
@@ -95,7 +97,7 @@ all =
                         , Ok "2 - 3 msk fresh lime juice"
                         , Ok "2 - 3 msk green onions (sv. saladslök) sliced thin"
                         , Ok "2 - 2,75 dl polentagryn"
-                        , Ok "2,875 - 3,75 dl cashewnötter"
+                        , Ok "2,88 - 3,75 dl cashewnötter"
                         ]
                     <|
                         ingredients
@@ -161,7 +163,7 @@ all =
                         , Ok "6 - 9 msk fresh lime juice"
                         , Ok "6 - 9 msk green onions (sv. saladslök) sliced thin"
                         , Ok "6 - 8,25 dl polentagryn"
-                        , Ok "8,625 - 11,25 dl cashewnötter"
+                        , Ok "8,63 - 11,25 dl cashewnötter"
                         ]
                     <|
                         scaledIngredients 3

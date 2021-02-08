@@ -200,14 +200,50 @@ rangeParser =
             ]
 
 
+{-| Take a float and turn it into a string, rounding it down to use a maximum of 2 decimals
+-}
+floatToString : Float -> String
+floatToString =
+    let
+        roundDecimals ds =
+            let
+                digits =
+                    ds |> String.left 3 |> String.split "" |> List.map String.toInt
+            in
+            case digits of
+                [ Just x, Just y, Just z ] ->
+                    String.fromInt x
+                        ++ String.fromInt
+                            (if z >= 5 then
+                                y + 1
+
+                             else
+                                y
+                            )
+
+                _ ->
+                    ds |> String.left 2
+    in
+    String.fromFloat
+        >> String.split "."
+        >> (\x ->
+                case x of
+                    [ int, decimals ] ->
+                        int ++ "," ++ roundDecimals decimals
+
+                    [ int ] ->
+                        int
+
+                    _ ->
+                        ""
+           )
+
+
 toString : Ingredient -> String
 toString { prefix, quantity, ingredient } =
     let
         prefixString =
             prefix |> Maybe.withDefault ""
-
-        floatWithComma =
-            String.fromFloat >> String.replace "." ","
 
         quantityString =
             case quantity of
@@ -215,10 +251,10 @@ toString { prefix, quantity, ingredient } =
                     ""
 
                 Just (Number f) ->
-                    floatWithComma f ++ " "
+                    floatToString f ++ " "
 
                 Just (Range i sep j) ->
-                    floatWithComma i ++ " " ++ sep ++ " " ++ floatWithComma j ++ " "
+                    floatToString i ++ " " ++ sep ++ " " ++ floatToString j ++ " "
     in
     prefixString
         ++ quantityString
