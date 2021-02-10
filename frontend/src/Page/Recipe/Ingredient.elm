@@ -190,6 +190,7 @@ rangeParser =
     succeed Range
         |= oneOf
             [ backtrackable mixedNumberParser |> andThen mixedNumberToQuantity |> andThen toFloatParser
+            , backtrackable myFloatParser |> andThen myFloatToQuantity |> andThen toFloatParser
             , map toFloat int
             ]
         |. spaces
@@ -197,6 +198,7 @@ rangeParser =
         |. spaces
         |= oneOf
             [ backtrackable mixedNumberParser |> andThen mixedNumberToQuantity |> andThen toFloatParser
+            , backtrackable myFloatParser |> andThen myFloatToQuantity |> andThen toFloatParser
             , map toFloat int
             ]
 
