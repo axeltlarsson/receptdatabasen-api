@@ -1,4 +1,4 @@
-module Page.Recipe.Markdown exposing (onlyListAndHeading, parsingErrors, render, renderWithAlwaysTaskList)
+module Page.Recipe.Markdown exposing (onlyListAndHeading, parsingErrors, render, renderWithAlwaysTaskList, renderWithScaledIngredients)
 
 import Dict exposing (Dict)
 import Element
@@ -33,6 +33,7 @@ import Markdown.Block as Block exposing (Block, ListItem(..), Task(..), extractI
 import Markdown.Html
 import Markdown.Parser
 import Markdown.Renderer
+import Page.Recipe.Ingredient as Ingredient
 import Palette
 
 
@@ -48,6 +49,30 @@ render =
 renderWithAlwaysTaskList : String -> Dict Int Bool -> (Int -> Bool -> msg) -> Result String (List (Element msg))
 renderWithAlwaysTaskList =
     renderMarkdown True
+
+
+scaler : Float -> String -> String
+scaler scale str =
+    str
+        |> Ingredient.fromString
+        |> Result.map (Ingredient.scale scale)
+        |> Result.map Ingredient.toString
+        |> Result.withDefault str
+
+
+renderWithScaledIngredients : String -> Float -> (Int -> Bool -> msg) -> Result String (List (Element msg))
+renderWithScaledIngredients markdown scale clickedCheckbox =
+    markdown
+        |> Markdown.Parser.parse
+        |> Result.mapError (\e -> e |> List.map Markdown.Parser.deadEndToString |> String.join "\n")
+        |> Result.map (mapIngredients (scaler scale))
+        |> Result.map addListIndexMetadata
+        |> Result.andThen
+            (Markdown.Renderer.renderWithMeta
+                (\maybeListIdx ->
+                    { renderer | unorderedList = unorderedList (Maybe.withDefault 0 maybeListIdx) Dict.empty clickedCheckbox }
+                )
+            )
 
 
 renderMarkdown : Bool -> String -> Dict Int Bool -> (Int -> Bool -> msg) -> Result String (List (Element msg))
