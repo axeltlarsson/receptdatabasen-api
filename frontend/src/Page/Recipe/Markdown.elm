@@ -1,4 +1,4 @@
-module Page.Recipe.Markdown exposing (onlyListAndHeading, parsingErrors, render, renderWithAlwaysTaskList)
+module Page.Recipe.Markdown exposing (onlyListAndHeading, parsingErrors, renderWithMapping, renderWithTaskList)
 
 import Dict exposing (Dict)
 import Element
@@ -29,25 +29,35 @@ import Element.Region as Region
 import FeatherIcons
 import Html
 import Html.Attributes
-import Markdown.Block as Block exposing (Block, ListItem(..), Task(..))
+import Markdown.Block as Block exposing (Block, ListItem(..), Task(..), extractInlineText)
 import Markdown.Html
 import Markdown.Parser
 import Markdown.Renderer
 import Palette
 
 
-{-| render markdown to elm-ui
--}
-render : String -> Dict Int Bool -> (Int -> Bool -> msg) -> Result String (List (Element msg))
-render =
-    renderMarkdown False
-
-
 {-| render markdown to elm-ui - treating all unordered lists as task lists
 -}
-renderWithAlwaysTaskList : String -> Dict Int Bool -> (Int -> Bool -> msg) -> Result String (List (Element msg))
-renderWithAlwaysTaskList =
+renderWithTaskList : String -> Dict Int Bool -> (Int -> Bool -> msg) -> Result String (List (Element msg))
+renderWithTaskList =
     renderMarkdown True
+
+
+{-| render after first applying a mapping function over the list items in the markdown
+-}
+renderWithMapping : String -> (String -> String) -> (Int -> Bool -> msg) -> Result String (List (Element msg))
+renderWithMapping markdown mapper clickedCheckbox =
+    markdown
+        |> Markdown.Parser.parse
+        |> Result.mapError (\e -> e |> List.map Markdown.Parser.deadEndToString |> String.join "\n")
+        |> Result.map (mapListItems mapper)
+        |> Result.map addListIndexMetadata
+        |> Result.andThen
+            (Markdown.Renderer.renderWithMeta
+                (\maybeListIdx ->
+                    { renderer | unorderedList = unorderedList (Maybe.withDefault 0 maybeListIdx) Dict.empty clickedCheckbox }
+                )
+            )
 
 
 renderMarkdown : Bool -> String -> Dict Int Bool -> (Int -> Bool -> msg) -> Result String (List (Element msg))
@@ -107,6 +117,39 @@ allListsAsTaskList =
 
                                         item ->
                                             item
+                                )
+                                listItems
+                            )
+
+                    _ ->
+                        block
+            )
+        )
+
+
+mapListItems : (String -> String) -> List Block -> List Block
+mapListItems mappingFun =
+    List.map
+        (Block.walk
+            (\block ->
+                case block of
+                    Block.UnorderedList listItems ->
+                        Block.UnorderedList
+                            (List.map
+                                (\listItem ->
+                                    let
+                                        transformed is =
+                                            Block.Text (mappingFun (extractInlineText is))
+                                    in
+                                    case listItem of
+                                        ListItem NoTask inlines ->
+                                            ListItem NoTask [ transformed inlines ]
+
+                                        ListItem IncompleteTask inlines ->
+                                            ListItem IncompleteTask [ transformed inlines ]
+
+                                        ListItem CompletedTask inlines ->
+                                            ListItem CompletedTask [ transformed inlines ]
                                 )
                                 listItems
                             )
@@ -283,16 +326,16 @@ unorderedList indexOffset checkboxStatus clickedCheckbox items =
             el []
                 (FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html)
 
-        bulletList children =
+        bullet children =
             row [ width fill, spacingXY 10 0 ]
                 [ el [ alignRight, alignTop, width (Element.px 15), Font.size 25, paddingEach { edges | left = 8 } ] (text "•")
                 , paragraph [] children
                 ]
 
-        taskList idx children =
+        taskItem idx children checkedFromStart =
             let
                 checked =
-                    Dict.get idx checkboxStatus |> Maybe.withDefault False
+                    Dict.get idx checkboxStatus |> Maybe.withDefault checkedFromStart
             in
             row [ width fill, spacingXY 25 0 ]
                 [ Input.checkbox
@@ -327,14 +370,13 @@ unorderedList indexOffset checkboxStatus clickedCheckbox items =
                     el [ width fill ]
                         (case task of
                             NoTask ->
-                                bulletList children
+                                bullet children
 
-                            {--
-                              - IncompleteTask and CompletedTask - both treated the same, state is determined by
-                              - checkboxStatus dict
-                              --}
-                            _ ->
-                                taskList ((idx + 100) * indexOffset) children
+                            IncompleteTask ->
+                                taskItem ((idx + 100) * indexOffset) children False
+
+                            CompletedTask ->
+                                taskItem ((idx + 100) * indexOffset) children True
                         )
                 )
         )

@@ -27,12 +27,15 @@ import Element
         )
 import Element.Background as Background
 import Element.Border as Border
+import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
-import Element.Lazy exposing (lazy2, lazy5)
+import Element.Lazy exposing (lazy2, lazy3, lazy5)
 import Element.Region as Region
+import FeatherIcons
 import Html.Attributes
 import Loading
+import Page.Recipe.Ingredient as Ingredient
 import Page.Recipe.Markdown as Markdown
 import Palette
 import Recipe exposing (Full, Recipe)
@@ -47,7 +50,7 @@ import Task
 
 
 type alias Model =
-    { session : Session, recipe : Status (Recipe Full), checkboxStatus : Dict Int Bool }
+    { session : Session, recipe : Status (Recipe Full), checkboxStatus : Dict Int Bool, scaledPortions : Int }
 
 
 type Status recipe
@@ -63,6 +66,7 @@ init session slug =
             ( { recipe = Loaded recipe
               , session = session
               , checkboxStatus = Dict.empty
+              , scaledPortions = recipe |> Recipe.contents |> .portions
               }
             , resetViewport
             )
@@ -71,6 +75,7 @@ init session slug =
             ( { recipe = Loading
               , session = session
               , checkboxStatus = Dict.empty
+              , scaledPortions = 0
               }
             , Cmd.batch [ Recipe.fetch slug LoadedRecipe, resetViewport ]
             )
@@ -106,7 +111,7 @@ view model =
                             Recipe.metadata recipe
                     in
                     { title = Slug.toString title
-                    , content = viewRecipe recipe model.checkboxStatus (Session.device model.session)
+                    , content = viewRecipe recipe model.checkboxStatus model.scaledPortions (Session.device model.session)
                     }
     in
     { title = ui.title
@@ -147,8 +152,8 @@ paddingPx device =
         30
 
 
-viewRecipe : Recipe Full -> Dict Int Bool -> Element.Device -> Element Msg
-viewRecipe recipe checkboxStatus device =
+viewRecipe : Recipe Full -> Dict Int Bool -> Int -> Element.Device -> Element Msg
+viewRecipe recipe checkboxStatus scaledPortions device =
     let
         { title, description, images } =
             Recipe.metadata recipe
@@ -172,7 +177,7 @@ viewRecipe recipe checkboxStatus device =
             [ width fill, padding <| paddingPx device, spacing 20 ]
             [ responsiveLayout
                 [ lazy2 viewInstructions instructions checkboxStatus
-                , lazy2 viewIngredients ingredients portions
+                , lazy3 viewIngredients ingredients scaledPortions portions
                 ]
             , row [ spacing 20 ]
                 [ viewEditButton
@@ -296,30 +301,85 @@ viewInstructions : String -> Dict Int Bool -> Element Msg
 viewInstructions instructions checkboxStatus =
     column [ alignTop, alignLeft, width fill, Font.color Palette.nearBlack ]
         [ el [ Font.size Palette.xLarge ] (text "Gör så här")
-        , el [ paddingXY 0 20 ] (paragraph [] [ viewMarkdown True instructions checkboxStatus ])
+        , el [ paddingXY 0 20 ] (paragraph [] [ viewMarkdown 1 True instructions checkboxStatus ])
         ]
 
 
-viewIngredients : String -> Int -> Element Msg
-viewIngredients ingredients portions =
+viewIngredients : String -> Int -> Int -> Element Msg
+viewIngredients ingredients scaledPortions originalPortions =
     column [ alignTop, width fill ]
         [ column []
             [ el [ Font.size Palette.xLarge ] (text "Ingredienser")
-            , paragraph [ paddingEach { edges | top = 10, bottom = 20 } ] [ text <| String.fromInt portions, text " portioner" ]
-            , column [] [ viewMarkdown False ingredients Dict.empty ]
+            , viewPortions scaledPortions originalPortions
+            , column [] [ viewMarkdown (toFloat scaledPortions / toFloat originalPortions) False ingredients Dict.empty ]
             ]
         ]
 
 
-viewMarkdown : Bool -> String -> Dict Int Bool -> Element Msg
-viewMarkdown alwaysTaskList instructions checkboxStatus =
+viewPortions : Int -> Int -> Element Msg
+viewPortions scaledPortions portions =
+    let
+        wrapIcon icon =
+            el [ Element.centerX ]
+                (icon |> FeatherIcons.withSize 26 |> FeatherIcons.withStrokeWidth 1 |> FeatherIcons.toHtml [] |> Element.html)
+
+        decrementButton =
+            Input.button
+                [ Border.rounded 20 ]
+                { onPress = Just DecrementPortions
+                , label = wrapIcon FeatherIcons.minusCircle
+                }
+
+        incrementButton =
+            Input.button
+                [ Border.rounded 20 ]
+                { onPress = Just IncrementPortions
+                , label = wrapIcon FeatherIcons.plusCircle
+                }
+
+        scaledAttrs =
+            if portions /= scaledPortions then
+                [ Font.underline
+                , Font.bold
+                ]
+
+            else
+                []
+
+        portionString =
+            if scaledPortions > 1 then
+                " portioner"
+
+            else
+                " portion"
+    in
+    row [ paddingEach { edges | top = 10, bottom = 10 }, spacing 10 ]
+        [ decrementButton
+        , row [ Events.onClick ResetPortions, Element.pointer, Element.centerX, width (Element.px 115) ]
+            [ el (List.append [ Element.centerX ] scaledAttrs) <| text (String.fromInt scaledPortions ++ portionString)
+            ]
+        , incrementButton
+        ]
+
+
+portionsScaler : Float -> String -> String
+portionsScaler scale str =
+    str
+        |> Ingredient.fromString
+        |> Result.map (Ingredient.scale scale)
+        |> Result.map Ingredient.toString
+        |> Result.withDefault str
+
+
+viewMarkdown : Float -> Bool -> String -> Dict Int Bool -> Element Msg
+viewMarkdown scale alwaysTaskList instructions checkboxStatus =
     let
         rendered =
             if alwaysTaskList then
-                Markdown.renderWithAlwaysTaskList instructions checkboxStatus ClickedCheckbox
+                Markdown.renderWithTaskList instructions checkboxStatus ClickedCheckbox
 
             else
-                Markdown.render instructions checkboxStatus ClickedCheckbox
+                Markdown.renderWithMapping instructions (portionsScaler scale) ClickedCheckbox
     in
     case rendered of
         Ok md ->
@@ -366,6 +426,9 @@ type Msg
     | ClickedCheckbox Int Bool
     | ClickedDelete
     | ClickedEdit
+    | DecrementPortions
+    | IncrementPortions
+    | ResetPortions
     | Deleted (Result Api.ServerError ())
     | SetViewport
 
@@ -374,7 +437,16 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         LoadedRecipe (Ok recipe) ->
-            ( { model | recipe = Loaded recipe, session = Session.addRecipe recipe model.session }, Cmd.none )
+            ( { model
+                | recipe = Loaded recipe
+                , session = Session.addRecipe recipe model.session
+                , scaledPortions =
+                    recipe
+                        |> Recipe.contents
+                        |> .portions
+              }
+            , Cmd.none
+            )
 
         LoadedRecipe (Err error) ->
             case error of
@@ -403,6 +475,24 @@ update msg model =
                             Route.EditRecipe (Recipe.slug recipe)
                     in
                     ( model, Route.pushUrl (Session.navKey model.session) newRoute )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        DecrementPortions ->
+            ( { model | scaledPortions = max (model.scaledPortions - 1) 1 }, Cmd.none )
+
+        IncrementPortions ->
+            ( { model | scaledPortions = min (model.scaledPortions + 1) 100 }, Cmd.none )
+
+        ResetPortions ->
+            case model.recipe of
+                Loaded recipe ->
+                    let
+                        portions =
+                            recipe |> Recipe.contents |> .portions
+                    in
+                    ( { model | scaledPortions = portions }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
