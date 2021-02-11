@@ -34,6 +34,7 @@ import Element.Region as Region
 import FeatherIcons
 import Html.Attributes
 import Loading
+import Page.Recipe.Ingredient as Ingredient
 import Page.Recipe.Markdown as Markdown
 import Palette
 import Recipe exposing (Full, Recipe)
@@ -342,15 +343,24 @@ viewPortions portions =
         ]
 
 
+scaler : Float -> String -> String
+scaler scale str =
+    str
+        |> Ingredient.fromString
+        |> Result.map (Ingredient.scale scale)
+        |> Result.map Ingredient.toString
+        |> Result.withDefault str
+
+
 viewMarkdown : Float -> Bool -> String -> Dict Int Bool -> Element Msg
 viewMarkdown scale alwaysTaskList instructions checkboxStatus =
     let
         rendered =
             if alwaysTaskList then
-                Markdown.renderWithAlwaysTaskList instructions checkboxStatus ClickedCheckbox
+                Markdown.renderWithTaskList instructions checkboxStatus ClickedCheckbox
 
             else
-                Markdown.renderWithScaledIngredients instructions scale ClickedCheckbox
+                Markdown.renderWithMapping instructions (scaler scale) ClickedCheckbox
     in
     case rendered of
         Ok md ->
