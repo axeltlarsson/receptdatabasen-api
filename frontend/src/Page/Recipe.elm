@@ -27,6 +27,7 @@ import Element
         )
 import Element.Background as Background
 import Element.Border as Border
+import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Element.Lazy exposing (lazy2, lazy3, lazy5)
@@ -309,14 +310,14 @@ viewIngredients ingredients scaledPortions originalPortions =
     column [ alignTop, width fill ]
         [ column []
             [ el [ Font.size Palette.xLarge ] (text "Ingredienser")
-            , viewPortions scaledPortions
+            , viewPortions scaledPortions originalPortions
             , column [] [ viewMarkdown (toFloat scaledPortions / toFloat originalPortions) False ingredients Dict.empty ]
             ]
         ]
 
 
-viewPortions : Int -> Element Msg
-viewPortions portions =
+viewPortions : Int -> Int -> Element Msg
+viewPortions scaledPortions portions =
     let
         wrapIcon icon =
             el [ Element.centerX ]
@@ -324,27 +325,45 @@ viewPortions portions =
 
         decrementButton =
             Input.button
-                [ Border.rounded 20, Element.focused [ Background.color Palette.orange ] ]
+                [ Border.rounded 20 ]
                 { onPress = Just DecrementPortions
                 , label = wrapIcon FeatherIcons.minusCircle
                 }
 
         incrementButton =
             Input.button
-                [ Border.rounded 20, Element.focused [ Background.color Palette.green ] ]
+                [ Border.rounded 20 ]
                 { onPress = Just IncrementPortions
                 , label = wrapIcon FeatherIcons.plusCircle
                 }
+
+        scaledAttrs =
+            if portions /= scaledPortions then
+                [ Font.underline
+                , Font.bold
+                ]
+
+            else
+                []
+
+        portionString =
+            if scaledPortions > 1 then
+                " portioner"
+
+            else
+                " portion"
     in
     row [ paddingEach { edges | top = 10, bottom = 10 }, spacing 10 ]
         [ decrementButton
-        , paragraph [] [ text <| String.fromInt portions, text " portioner" ]
+        , row [ Events.onClick ResetPortions, Element.pointer, Element.centerX, width (Element.px 115) ]
+            [ el (List.append [ Element.centerX ] scaledAttrs) <| text (String.fromInt scaledPortions ++ portionString)
+            ]
         , incrementButton
         ]
 
 
-scaler : Float -> String -> String
-scaler scale str =
+portionsScaler : Float -> String -> String
+portionsScaler scale str =
     str
         |> Ingredient.fromString
         |> Result.map (Ingredient.scale scale)
@@ -360,7 +379,7 @@ viewMarkdown scale alwaysTaskList instructions checkboxStatus =
                 Markdown.renderWithTaskList instructions checkboxStatus ClickedCheckbox
 
             else
-                Markdown.renderWithMapping instructions (scaler scale) ClickedCheckbox
+                Markdown.renderWithMapping instructions (portionsScaler scale) ClickedCheckbox
     in
     case rendered of
         Ok md ->
@@ -409,6 +428,7 @@ type Msg
     | ClickedEdit
     | DecrementPortions
     | IncrementPortions
+    | ResetPortions
     | Deleted (Result Api.ServerError ())
     | SetViewport
 
@@ -464,6 +484,18 @@ update msg model =
 
         IncrementPortions ->
             ( { model | scaledPortions = min (model.scaledPortions + 1) 100 }, Cmd.none )
+
+        ResetPortions ->
+            case model.recipe of
+                Loaded recipe ->
+                    let
+                        portions =
+                            recipe |> Recipe.contents |> .portions
+                    in
+                    ( { model | scaledPortions = portions }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         Deleted (Ok _) ->
             ( model
