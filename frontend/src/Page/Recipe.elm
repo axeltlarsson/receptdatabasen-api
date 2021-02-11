@@ -342,10 +342,6 @@ viewPortions portions =
         ]
 
 
-debug =
-    Element.explain Debug.todo
-
-
 viewMarkdown : Float -> Bool -> String -> Dict Int Bool -> Element Msg
 viewMarkdown scale alwaysTaskList instructions checkboxStatus =
     let
@@ -454,7 +450,7 @@ update msg model =
                     ( model, Cmd.none )
 
         DecrementPortions ->
-            ( { model | scaledPortions = max (model.scaledPortions - 1) 0 }, Cmd.none )
+            ( { model | scaledPortions = max (model.scaledPortions - 1) 1 }, Cmd.none )
 
         IncrementPortions ->
             ( { model | scaledPortions = min (model.scaledPortions + 1) 100 }, Cmd.none )

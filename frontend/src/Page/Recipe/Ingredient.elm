@@ -25,7 +25,11 @@ import Parser
 import Round
 
 
-type alias Ingredient =
+type Ingredient
+    = Ingredient IngredientRecord
+
+
+type alias IngredientRecord =
     { prefix : Maybe String
     , quantity : Maybe Quantity
     , ingredient : String
@@ -44,7 +48,7 @@ fromString input =
 
 parser : Parser Ingredient
 parser =
-    succeed Ingredient
+    succeed IngredientRecord
         |= oneOf
             [ succeed Just |= prefixParser
             , succeed Nothing
@@ -55,6 +59,7 @@ parser =
             ]
         |. spaces
         |= getChompedString (chompUntilEndOr "\n")
+        |> map Ingredient
 
 
 type alias Prefix =
@@ -86,41 +91,33 @@ quantityParser =
         [ backtrackable rangeParser
         , backtrackable mixedNumberParser |> andThen mixedNumberToQuantity
         , backtrackable fractionsParser |> andThen fractionToQuantity
-        , backtrackable myFloatParser |> andThen myFloatToQuantity
+        , backtrackable myFloatParser |> map Number
         , map (toFloat >> Number) int
         ]
 
 
 type alias MyFloat =
-    { num : Int
+    { num : String
     , sep : String
-    , decimals : Int
+    , decimals : String
     }
 
 
-myFloatParser : Parser MyFloat
+myFloatParser : Parser Float
 myFloatParser =
     succeed MyFloat
-        |= int
+        |= getChompedString (chompWhile Char.isDigit)
         |= getChompedString (oneOf [ token ",", token "." ])
-        |= int
-
-
-myFloatToQuantity : MyFloat -> Parser Quantity
-myFloatToQuantity { num, decimals } =
-    let
-        maybeFloat =
-            String.fromInt num
-                ++ "."
-                ++ String.fromInt decimals
-                |> String.toFloat
-    in
-    case maybeFloat of
-        Nothing ->
-            problem "could not parse float"
-
-        Just f ->
-            commit (Number f)
+        |= getChompedString (chompWhile Char.isDigit)
+        |> andThen
+            (\{ num, decimals } ->
+                num
+                    ++ "."
+                    ++ decimals
+                    |> String.toFloat
+                    |> Maybe.map commit
+                    |> Maybe.withDefault (problem "could not parse float")
+            )
 
 
 type alias MixedNumber =
@@ -190,7 +187,7 @@ rangeParser =
     succeed Range
         |= oneOf
             [ backtrackable mixedNumberParser |> andThen mixedNumberToQuantity |> andThen toFloatParser
-            , backtrackable myFloatParser |> andThen myFloatToQuantity |> andThen toFloatParser
+            , backtrackable myFloatParser
             , map toFloat int
             ]
         |. spaces
@@ -198,7 +195,7 @@ rangeParser =
         |. spaces
         |= oneOf
             [ backtrackable mixedNumberParser |> andThen mixedNumberToQuantity |> andThen toFloatParser
-            , backtrackable myFloatParser |> andThen myFloatToQuantity |> andThen toFloatParser
+            , backtrackable myFloatParser
             , map toFloat int
             ]
 
@@ -211,7 +208,7 @@ floatToString f =
 
 
 toString : Ingredient -> String
-toString { prefix, quantity, ingredient } =
+toString (Ingredient { prefix, quantity, ingredient }) =
     let
         prefixString =
             prefix |> Maybe.withDefault ""
@@ -233,19 +230,21 @@ toString { prefix, quantity, ingredient } =
 
 
 scale : Float -> Ingredient -> Ingredient
-scale factor ({ prefix, quantity, ingredient } as original) =
+scale factor ((Ingredient { prefix, quantity, ingredient }) as original) =
     case quantity of
         Nothing ->
             original
 
         Just (Number q) ->
-            { prefix = prefix
-            , quantity = Just (Number <| q * factor)
-            , ingredient = ingredient
-            }
+            Ingredient
+                { prefix = prefix
+                , quantity = Just (Number <| q * factor)
+                , ingredient = ingredient
+                }
 
         Just (Range i sep j) ->
-            { prefix = prefix
-            , quantity = Just (Range (i * factor) sep (j * factor))
-            , ingredient = ingredient
-            }
+            Ingredient
+                { prefix = prefix
+                , quantity = Just (Range (i * factor) sep (j * factor))
+                , ingredient = ingredient
+                }

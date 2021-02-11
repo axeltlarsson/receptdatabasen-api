@@ -24,24 +24,25 @@ all : Test
 all =
     describe "Ingredient"
         [ describe "fromString"
-            [ skip <|
-                test "floats" <|
-                    \_ ->
-                        Expect.equal
-                            [ Ok "1 kg mjöl"
-                            , Ok "1,2 l mjölk"
-                            , Ok "1,1 l chicken broth see"
-                            , Ok "123,46 l maizena"
-                            , Ok "3,02 dl majs"
+            [ test "floats" <|
+                \_ ->
+                    Expect.equal
+                        [ Ok "1 kg mjöl"
+                        , Ok "1,2 l mjölk"
+                        , Ok "1,2 l mjölk"
+                        , Ok "1,1 l chicken broth see"
+                        , Ok "123,46 l maizena"
+                        , Ok "3,02 dl majs"
+                        ]
+                    <|
+                        ingredients
+                            [ "1 kg mjöl"
+                            , "1,2 l mjölk"
+                            , "1.2 l mjölk"
+                            , "1,1l chicken broth see"
+                            , "123,456 l maizena"
+                            , "3,015 dl majs"
                             ]
-                        <|
-                            ingredients
-                                [ "1 kg mjöl"
-                                , "1,2 l mjölk"
-                                , "1,1l chicken broth see"
-                                , "123,456 l maizena"
-                                , "3,015 dl majs" -- TODO: this is parsed as quantity = 3 and ",015 dl majs" as the ingredient
-                                ]
             , test "fractions" <|
                 \_ ->
                     Expect.equal
@@ -158,31 +159,32 @@ all =
                         [ Ok "ca 14 dl havregryn" ]
                     <|
                         scaledIngredients 2 [ "ca 7 dl havregryn" ]
-            , only <|
-                test "ranges" <|
-                    \_ ->
-                        Expect.equal
-                            [ Ok "3 - 6 msk coconut sugar (alt brunt farinsocker)"
-                            , Ok "4,5 - 6 msk fish sauce plus more to taste"
-                            , Ok "6 - 9 msk fresh lime juice"
-                            , Ok "6 - 9 msk green onions (sv. saladslök) sliced thin"
-                            , Ok "6 - 8,25 dl polentagryn"
-                            , Ok "8,63 - 11,25 dl cashewnötter"
-                            , Ok "3 - 4,5 dl mjölk"
-                            , Ok "10,5 - 12 dl mjölk"
-                            , Ok "10,5 - 13,5 dl mjölk"
+            , test "ranges" <|
+                \_ ->
+                    Expect.equal
+                        [ Ok "3 - 6 msk coconut sugar (alt brunt farinsocker)"
+                        , Ok "4,5 - 6 msk fish sauce plus more to taste"
+                        , Ok "6 - 9 msk fresh lime juice"
+                        , Ok "6 - 9 msk green onions (sv. saladslök) sliced thin"
+                        , Ok "6 - 8,25 dl polentagryn"
+                        , Ok "8,63 - 11,25 dl cashewnötter"
+                        , Ok "3 - 4,5 dl mjölk"
+                        , Ok "10,5 - 12 dl mjölk"
+                        , Ok "10,5 - 13,5 dl mjölk"
+                        , Ok "10,5 - 13,5 dl mjölk"
+                        ]
+                    <|
+                        scaledIngredients 3
+                            [ "1-2 msk coconut sugar (alt brunt farinsocker)"
+                            , "1 1/2 - 2 msk fish sauce plus more to taste"
+                            , "2-3 msk fresh lime juice"
+                            , "2-3 msk green onions (sv. saladslök) sliced thin"
+                            , "2 - 2 3/4 dl polentagryn"
+                            , "2 7/8 - 3 3/4 dl cashewnötter"
+                            , "1 - 1,5 dl mjölk"
+                            , "3,5 - 4 dl mjölk"
+                            , "3,5 - 4,5 dl mjölk"
+                            , "3.5 - 4.5 dl mjölk"
                             ]
-                        <|
-                            scaledIngredients 3
-                                [ "1-2 msk coconut sugar (alt brunt farinsocker)"
-                                , "1 1/2 - 2 msk fish sauce plus more to taste"
-                                , "2-3 msk fresh lime juice"
-                                , "2-3 msk green onions (sv. saladslök) sliced thin"
-                                , "2 - 2 3/4 dl polentagryn"
-                                , "2 7/8 - 3 3/4 dl cashewnötter"
-                                , "1 - 1,5 dl mjölk"
-                                , "3,5 - 4 dl mjölk"
-                                , "3,5 - 4,5 dl mjölk"
-                                ]
             ]
         ]

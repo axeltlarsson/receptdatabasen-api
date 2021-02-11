@@ -1,4 +1,4 @@
-module Page.Recipe.Markdown exposing (onlyListAndHeading, parsingErrors, render, renderWithAlwaysTaskList, renderWithScaledIngredients)
+module Page.Recipe.Markdown exposing (onlyListAndHeading, parsingErrors, renderWithAlwaysTaskList, renderWithScaledIngredients)
 
 import Dict exposing (Dict)
 import Element
@@ -35,13 +35,6 @@ import Markdown.Parser
 import Markdown.Renderer
 import Page.Recipe.Ingredient as Ingredient
 import Palette
-
-
-{-| render markdown to elm-ui
--}
-render : String -> Dict Int Bool -> (Int -> Bool -> msg) -> Result String (List (Element msg))
-render =
-    renderMarkdown False
 
 
 {-| render markdown to elm-ui - treating all unordered lists as task lists
