@@ -105,13 +105,26 @@ viewSearchBox model =
                     , text " Sök recept..."
                     ]
                 )
+
+        xIcon =
+            FeatherIcons.x |> FeatherIcons.toHtml [] |> Element.html
     in
-    Input.search []
-        { onChange = SearchQueryEntered
-        , text = model.query
-        , placeholder = Just placeholder
-        , label = Input.labelHidden "sök recept"
-        }
+    row [ width fill, Border.width 1, Border.rounded 3, Border.color Palette.lightGrey ]
+        [ Input.search [ Border.width 0 ]
+            { onChange = SearchQueryEntered
+            , text = model.query
+            , placeholder = Just placeholder
+            , label = Input.labelHidden "sök recept"
+            }
+        , Input.button [ padding 10 ]
+            { onPress = Just ClearSearch
+            , label = xIcon
+            }
+        ]
+
+
+debug =
+    Element.explain Debug.todo
 
 
 imageWidths : { min : Int, max : Int }
@@ -273,6 +286,7 @@ viewDescription description =
 type Msg
     = LoadedRecipes (Result Api.ServerError (List (Recipe Preview)))
     | SearchQueryEntered String
+    | ClearSearch
     | SetViewport
 
 
@@ -307,6 +321,14 @@ update msg model =
 
         SearchQueryEntered query ->
             ( { model | query = query }, search model.session query )
+
+        ClearSearch ->
+            ( { model | query = "" }
+            , Cmd.batch
+                [ Recipe.fetchMany LoadedRecipes
+                , Route.replaceUrl (Session.navKey (toSession model)) (Route.RecipeList Nothing)
+                ]
+            )
 
         SetViewport ->
             ( model, Cmd.none )
