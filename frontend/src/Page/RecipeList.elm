@@ -123,10 +123,6 @@ viewSearchBox model =
         ]
 
 
-debug =
-    Element.explain Debug.todo
-
-
 imageWidths : { min : Int, max : Int }
 imageWidths =
     let
