@@ -95,7 +95,7 @@ resetViewport =
 -- VIEW
 
 
-view : Model -> { title : String, content : Element Msg }
+view : Model -> { title : String, stickyContent : Element msg, content : Element Msg }
 view model =
     let
         skeleton prob children =
@@ -112,6 +112,7 @@ view model =
                 )
     in
     { title = "Skapa nytt recept"
+    , stickyContent = Element.none
     , content =
         case model.status of
             -- Creating a new recipe

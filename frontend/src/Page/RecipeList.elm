@@ -69,16 +69,18 @@ init session query =
 -- VIEW
 
 
-view : Model -> { title : String, content : Element Msg }
+view : Model -> { title : String, stickyContent : Element Msg, content : Element Msg }
 view model =
     case model.recipes of
         Loading ->
             { title = "Recept"
+            , stickyContent = Element.none
             , content = Element.html Loading.animation
             }
 
         Failed err ->
             { title = "Kunde ej ladda in recept"
+            , stickyContent = Element.none
             , content =
                 column [ Region.mainContent, spacing 20, width fill, padding 10 ]
                     [ Api.viewServerError "Kunde ej ladda in recept" err ]
@@ -86,10 +88,10 @@ view model =
 
         Loaded recipes ->
             { title = "Recept"
+            , stickyContent = lazy viewSearchBox model
             , content =
                 column [ Region.mainContent, spacing 20, width fill, padding 10 ]
-                    [ lazy viewSearchBox model
-                    , wrappedRow [ centerX, spacing 10 ]
+                    [ wrappedRow [ centerX, spacing 10 ]
                         (List.map viewPreview recipes)
                     ]
             }
@@ -101,26 +103,30 @@ viewSearchBox model =
         placeholder =
             Input.placeholder []
                 (row []
-                    [ FeatherIcons.search |> FeatherIcons.toHtml [] |> Element.html
-                    , text " Sök recept..."
+                    [ --FeatherIcons.search |> FeatherIcons.toHtml [] |> Element.html
+                      text " Sök recept"
                     ]
                 )
 
         xIcon =
             FeatherIcons.x |> FeatherIcons.toHtml [] |> Element.html
     in
-    row [ width fill, Border.width 1, Border.rounded 3, Border.color Palette.lightGrey ]
-        [ Input.search [ Border.width 0 ]
+    row [ Border.width 1, Border.rounded 3, Border.color Palette.lightGrey, width fill ]
+        [ Input.search [ Border.width 0, width fill ]
             { onChange = SearchQueryEntered
             , text = model.query
             , placeholder = Just placeholder
             , label = Input.labelHidden "sök recept"
             }
-        , Input.button [ padding 10 ]
+        , Input.button [ padding 10, Element.alignRight ]
             { onPress = Just ClearSearch
             , label = xIcon
             }
         ]
+
+
+debug =
+    Element.explain Debug.todo
 
 
 imageWidths : { min : Int, max : Int }

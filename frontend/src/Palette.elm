@@ -63,6 +63,11 @@ orange =
   --}
 
 
+small : Int
+small =
+    10
+
+
 normal : Int
 normal =
     20
@@ -91,6 +96,14 @@ xxLarge =
 textShadow : Element.Attribute msg
 textShadow =
     Font.shadow { offset = ( 0, 1 ), blur = 1, color = black }
+
+
+edges =
+    { top = 0
+    , right = 0
+    , bottom = 0
+    , left = 0
+    }
 
 
 

@@ -37,7 +37,7 @@ import Html.Attributes
 import Loading
 import Page.Recipe.Ingredient as Ingredient
 import Page.Recipe.Markdown as Markdown
-import Palette
+import Palette exposing (edges)
 import Recipe exposing (Full, Recipe)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
@@ -90,7 +90,7 @@ resetViewport =
 -- VIEW
 
 
-view : Model -> { title : String, content : Element Msg }
+view : Model -> { title : String, stickyContent : Element msg, content : Element Msg }
 view model =
     let
         ui =
@@ -115,6 +115,7 @@ view model =
                     }
     in
     { title = ui.title
+    , stickyContent = Element.none
     , content =
         column [ Region.mainContent, width fill ] [ ui.content ]
     }
@@ -389,14 +390,6 @@ viewMarkdown scale alwaysTaskList instructions checkboxStatus =
         Err err ->
             column [ width fill, Font.light ]
                 [ text err ]
-
-
-edges =
-    { top = 0
-    , right = 0
-    , bottom = 0
-    , left = 0
-    }
 
 
 viewDeleteButton : Element Msg

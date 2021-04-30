@@ -33,7 +33,7 @@ import Markdown.Block as Block exposing (Block, ListItem(..), Task(..), extractI
 import Markdown.Html
 import Markdown.Parser
 import Markdown.Renderer
-import Palette
+import Palette exposing (edges)
 
 
 {-| render markdown to elm-ui - treating all unordered lists as task lists
@@ -305,14 +305,6 @@ heading { level, children } =
         , paddingEach { edges | bottom = 15, top = 15 }
         ]
         children
-
-
-edges =
-    { top = 0
-    , right = 0
-    , bottom = 0
-    , left = 0
-    }
 
 
 unorderedList : Int -> Dict Int Bool -> (Int -> Bool -> msg) -> List (ListItem (Element msg)) -> Element msg

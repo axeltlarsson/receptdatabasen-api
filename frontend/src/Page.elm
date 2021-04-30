@@ -1,13 +1,13 @@
 module Page exposing (Page(..), view, viewWithoutHeader)
 
 import Browser exposing (Document)
-import Element exposing (Element, alignLeft, alignTop, column, el, fill, height, link, padding, row, spacingXY, text, width)
+import Element exposing (Element, alignLeft, alignTop, centerX, column, el, fill, height, link, maximum, padding, paddingEach, paddingXY, row, spacing, spacingXY, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
-import Element.Lazy exposing (lazy)
+import Element.Lazy exposing (lazy2)
 import Element.Region as Region
-import Palette
+import Palette exposing (edges)
 import Route exposing (Route)
 
 
@@ -23,8 +23,8 @@ type Page
 
 {-| Takes a page's Html and frames it with header and footer.
 -}
-view : Page -> { title : String, content : Element msg } -> Document msg
-view page { title, content } =
+view : Page -> { title : String, stickyContent : Element msg, content : Element msg } -> Document msg
+view page { title, stickyContent, content } =
     { title = title ++ " | Receptdatabasen"
     , body =
         [ Element.layout
@@ -32,9 +32,9 @@ view page { title, content } =
             , Font.color Palette.nearBlack
             , Font.size Palette.normal
             , width fill
-            , Element.inFront (lazy viewHeader page)
+            , Element.inFront (lazy2 viewHeader page stickyContent)
             ]
-            (column [ Element.paddingXY 0 headerHeight, width (fill |> Element.maximum 1440), Element.centerX ]
+            (column [ Element.paddingXY 0 headerHeight, width (fill |> maximum maxPageWidth), Element.centerX ]
                 [ content ]
             )
         ]
@@ -51,7 +51,7 @@ viewWithoutHeader _ { title, content } =
             , Font.size Palette.normal
             , width fill
             ]
-            (column [ Element.paddingXY 0 headerHeight, width (fill |> Element.maximum 1440), Element.centerX ]
+            (column [ Element.paddingXY 0 headerHeight, width (fill |> maximum maxPageWidth), Element.centerX ]
                 [ content ]
             )
         ]
@@ -62,41 +62,60 @@ headerHeight =
     58
 
 
-viewHeader : Page -> Element msg
-viewHeader page =
+maxPageWidth =
+    1440
+
+
+viewHeader : Page -> Element msg -> Element msg
+viewHeader page stickyContent =
     row
-        [ Region.navigation
-        , alignTop
-        , width fill
-        , height (Element.px headerHeight)
+        [ width fill
         , Border.glow Palette.lightGrey 0.5
-        , Element.behindContent
-            (el
-                [ Element.alpha 0.95
-                , Background.color <| Palette.white
-                , width fill
-                , height fill
-                ]
-                Element.none
-            )
         ]
-        [ viewMenu page ]
+        [ row
+            [ Region.navigation
+            , alignTop
+            , centerX
+            , width (fill |> maximum maxPageWidth)
+            , height (Element.px headerHeight)
+            , paddingXY 10 0
+            , Element.behindContent
+                (el
+                    [ Element.alpha 0.95
+                    , Background.color <| Palette.white
+                    , width fill
+                    , height fill
+                    ]
+                    Element.none
+                )
+            ]
+            [ viewMenu page, stickyContent ]
+        ]
+
+
+debug =
+    Element.explain Debug.todo
 
 
 viewMenu : Page -> Element msg
 viewMenu page =
     let
-        linkTo route title =
+        linkTo route label =
             navbarLink page
                 route
-                (el
-                    [ Font.light ]
-                    (text title)
-                )
+                (el [ Font.light ] label)
     in
     row [ alignLeft, spacingXY 20 0 ]
-        [ linkTo (Route.RecipeList Nothing) "Alla recept"
-        , linkTo Route.NewRecipe "Nytt recept"
+        [ linkTo (Route.RecipeList Nothing) logo
+
+        -- , linkTo Route.NewRecipe "Nytt recept"
+        ]
+
+
+logo : Element msg
+logo =
+    row [ height fill, paddingXY 10 0, spacing 10 ]
+        [ Element.image [ height (Element.px (headerHeight - 20)) ] { src = "%PUBLIC_URL%/logo.png", description = "home" }
         ]
 
 
@@ -116,7 +135,7 @@ navbarLink page route linkContent =
             [ Element.mouseOver [ Element.alpha 0.5, Background.color Palette.grey, Font.color Palette.white ]
             , Font.size Palette.large
             , height fill
-            , padding 15
+            , paddingEach { edges | top = 15, bottom = 15, right = 15 }
             ]
             activeAttrs
         )
