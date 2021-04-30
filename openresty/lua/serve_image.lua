@@ -39,6 +39,9 @@ local image = vips.Image.thumbnail(source_fname, tonumber(size))
 -- write the result to file (/uploads/cache)
 image:write_to_file(dest_fname)
 
+-- set header indicating cache miss
+ngx.header['x-image-server'] = 'cache miss'
+
 -- redirect back to same location again, this time try_files will pick up the
 -- cached file!
 ngx.exec(ngx.var.request_uri)
