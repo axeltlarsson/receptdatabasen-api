@@ -7,7 +7,7 @@ _The new PostgREST backend and Elm frontend for receptdatabasen_
 To run:
 
 ```bash
-docker-compose up
+docker compose up
 ```
 
 And then see [frontend](./frontend/) for spinning up the Elm frontend.
