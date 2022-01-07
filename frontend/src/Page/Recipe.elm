@@ -187,6 +187,15 @@ viewRecipe recipe checkboxStatus scaledPortions device =
         ]
 
 
+fontColor =
+    Font.color (rgb255 218 221 212)
+
+
+background2 =
+    -- Background.color (rgb255 213 168 96)
+    Background.color (rgb255 246 204 190)
+
+
 viewHeader : String -> List String -> Maybe String -> Maybe String -> Element.Device -> Element Msg
 viewHeader title tags description image device =
     let
@@ -197,6 +206,9 @@ viewHeader title tags description image device =
             imageUrl
                 |> Maybe.map Background.image
                 |> Maybe.withDefault (Background.color Palette.white)
+
+        background1 =
+            Background.color (rgb255 125 57 17)
     in
     if tabletOrSmaller device then
         column [ width fill, height <| Element.px 600 ]
@@ -228,13 +240,17 @@ viewHeader title tags description image device =
 
     else
         row [ width fill, Border.glow Palette.lightGrey 0.5 ]
-            [ column [ height (fill |> Element.minimum 400), width fill, alignBottom, spacing 20, paddingXY (paddingPx device) 20 ]
-                [ paragraph [ Font.size Palette.xxLarge, Font.heavy ] [ text title ]
+            [ column [ height (fill |> Element.minimum 400), width fill, alignBottom, spacing 20, paddingXY (paddingPx device) 20, background2 ]
+                [ paragraph [ Font.size Palette.xxLarge, Font.heavy, fontColor ] [ text title ]
                 , viewTags tags
                 , viewDescription description
                 ]
             , el [ spacing 0, padding 0, width fill, height fill, background ] Element.none
             ]
+
+
+debug =
+    Element.explain Debug.todo
 
 
 floorFade : Element.Attribute msg
@@ -290,7 +306,7 @@ viewDescription description =
                 >> List.map List.singleton
                 >> List.map
                     (paragraph
-                        [ Font.light, width fill, overflowWrap ]
+                        [ Font.light, width fill, overflowWrap, fontColor ]
                     )
                 >> column [ spacing 10 ]
             )
