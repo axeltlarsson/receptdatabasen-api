@@ -4,7 +4,11 @@ _The new PostgREST backend and Elm frontend for receptdatabasen_
 
 ## Setup
 
-To run:
+Once do:
+`(cd frontend && docker build -t receptdatabasen_frontend_builder .)`
+so that the openresty service can be spun up happily.
+
+then run:
 
 ```bash
 docker compose up
