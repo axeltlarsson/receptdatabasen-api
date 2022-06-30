@@ -18,6 +18,7 @@ services:
       - DB_ANON_ROLE=${DB_ANON_ROLE}
       - DEVELOPMENT=${DEVELOPMENT}
       - JWT_SECRET=${JWT_SECRET}
+      - JWT_LIFETIME=${JWT_LIFETIME}
 
     volumes:
       - db-vol:/var/lib/postgresql/data

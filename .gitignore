@@ -1,5 +1,4 @@
-node_modules
-package-lock.json
+node_modules/
 # Created by https://www.gitignore.io/api/macos
 # Edit at https://www.gitignore.io/?templates=macos
 
@@ -37,3 +36,11 @@ Temporary Items
 openresty/html
 
 .env
+# Created by https://www.toptal.com/developers/gitignore/api/direnv
+# Edit at https://www.toptal.com/developers/gitignore?templates=direnv
+
+### direnv ###
+.direnv
+.envrc
+
+# End of https://www.toptal.com/developers/gitignore/api/direnv

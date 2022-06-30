@@ -18,3 +18,12 @@ node_modules
 
 # Desktop Services Store on macOS
 .DS_Store
+
+# Created by https://www.toptal.com/developers/gitignore/api/direnv
+# Edit at https://www.toptal.com/developers/gitignore?templates=direnv
+
+### direnv ###
+.direnv
+# .envrc
+
+# End of https://www.toptal.com/developers/gitignore/api/direnv
