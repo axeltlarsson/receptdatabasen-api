@@ -3,7 +3,7 @@
 ARG GOLANG="1.13"
 FROM golang:${GOLANG} as builder
 
-ARG LIBVIPS_VERSION="8.9.2"
+ARG LIBVIPS_VERSION="8.12.2"
 
 # Installs libvips + required libraries
 RUN DEBIAN_FRONTEND=noninteractive \
