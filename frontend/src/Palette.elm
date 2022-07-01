@@ -6,6 +6,41 @@ import Element.Border as Border
 import Element.Font as Font
 
 
+{-|
+
+    from <https://coolors.co/8be1d8-454851-fceff9-db5375-b95f89>
+
+-}
+middleBlueGreen : Element.Color
+middleBlueGreen =
+    rgb255 139 225 216
+
+
+charcoal : Element.Color
+charcoal =
+    rgb255 69 72 81
+
+
+lavenderBlush : Element.Color
+lavenderBlush =
+    rgb255 252 239 249
+
+
+blush : Element.Color
+blush =
+    rgb255 219 83 117
+
+
+pictorialCarmine : Element.Color
+pictorialCarmine =
+    rgb255 185 39 76
+
+
+mulberry : Element.Color
+mulberry =
+    rgb255 185 95 137
+
+
 
 {--
   - Colours

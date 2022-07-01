@@ -38,6 +38,7 @@ import Loading
 import Page.Recipe.Ingredient as Ingredient
 import Page.Recipe.Markdown as Markdown
 import Palette exposing (edges)
+import Process
 import Recipe exposing (Full, Recipe)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
@@ -50,7 +51,7 @@ import Task
 
 
 type alias Model =
-    { session : Session, recipe : Status (Recipe Full), checkboxStatus : Dict Int Bool, scaledPortions : Int }
+    { session : Session, recipe : Status (Recipe Full), checkboxStatus : Dict Int Bool, scaledPortions : Int, toDelete : Bool }
 
 
 type Status recipe
@@ -67,6 +68,7 @@ init session slug =
               , session = session
               , checkboxStatus = Dict.empty
               , scaledPortions = recipe |> Recipe.contents |> .portions
+              , toDelete = False
               }
             , resetViewport
             )
@@ -76,6 +78,7 @@ init session slug =
               , session = session
               , checkboxStatus = Dict.empty
               , scaledPortions = 0
+              , toDelete = False
               }
             , Cmd.batch [ Recipe.fetch slug LoadedRecipe, resetViewport ]
             )
@@ -109,9 +112,12 @@ view model =
                     let
                         { title } =
                             Recipe.metadata recipe
+
+                        toDelete =
+                            model.toDelete
                     in
                     { title = Slug.toString title
-                    , content = viewRecipe recipe model.checkboxStatus model.scaledPortions (Session.device model.session)
+                    , content = viewRecipe toDelete recipe model.checkboxStatus model.scaledPortions (Session.device model.session)
                     }
     in
     { title = ui.title
@@ -153,8 +159,8 @@ paddingPx device =
         30
 
 
-viewRecipe : Recipe Full -> Dict Int Bool -> Int -> Element.Device -> Element Msg
-viewRecipe recipe checkboxStatus scaledPortions device =
+viewRecipe : Bool -> Recipe Full -> Dict Int Bool -> Int -> Element.Device -> Element Msg
+viewRecipe toDelete recipe checkboxStatus scaledPortions device =
     let
         { title, description, images } =
             Recipe.metadata recipe
@@ -182,7 +188,7 @@ viewRecipe recipe checkboxStatus scaledPortions device =
                 ]
             , row [ spacing 20 ]
                 [ viewEditButton
-                , viewDeleteButton
+                , viewDeleteButton toDelete
                 ]
             ]
         ]
@@ -266,8 +272,8 @@ viewTags tags =
     let
         viewTag tag =
             el
-                [ Background.color Palette.grey
-                , Font.color Palette.white
+                [ Background.color Palette.lavenderBlush
+                , Font.color Palette.nearBlack
                 , Border.rounded 2
                 , padding 10
                 ]
@@ -317,13 +323,14 @@ viewIngredients ingredients scaledPortions originalPortions =
         ]
 
 
+wrapIcon icon =
+    el [ Element.centerX ]
+        (icon |> FeatherIcons.withSize 26 |> FeatherIcons.withStrokeWidth 1 |> FeatherIcons.toHtml [] |> Element.html)
+
+
 viewPortions : Int -> Int -> Element Msg
 viewPortions scaledPortions portions =
     let
-        wrapIcon icon =
-            el [ Element.centerX ]
-                (icon |> FeatherIcons.withSize 26 |> FeatherIcons.withStrokeWidth 1 |> FeatherIcons.toHtml [] |> Element.html)
-
         decrementButton =
             Input.button
                 [ Border.rounded 20 ]
@@ -392,21 +399,40 @@ viewMarkdown scale alwaysTaskList instructions checkboxStatus =
                 [ text err ]
 
 
-viewDeleteButton : Element Msg
-viewDeleteButton =
-    Input.button
-        [ Background.color (rgb255 255 0 0), Border.rounded 3, padding 10, Font.color Palette.white ]
-        { onPress = Just ClickedDelete
-        , label = text "Radera"
-        }
+viewDeleteButton : Bool -> Element Msg
+viewDeleteButton toDelete =
+    let
+        btn content msg =
+            Input.button
+                [ Background.color Palette.pictorialCarmine
+                , Border.rounded 3
+                , padding 10
+                , Font.color Palette.white
+                , Element.mouseOver [ Border.glow Palette.lightGrey 3 ]
+                , Events.onLoseFocus BlurredDelete
+                ]
+                { onPress = Just msg
+                , label = content
+                }
+    in
+    if not toDelete then
+        btn (row [ spacing 10 ] [ wrapIcon FeatherIcons.archive, text "Radera" ]) ClickedDelete
+
+    else
+        btn (row [ spacing 10 ] [ wrapIcon FeatherIcons.alertTriangle, text "Är du säker?" ]) ClickedConfirmedDelete
 
 
 viewEditButton : Element Msg
 viewEditButton =
     Input.button
-        [ Background.color (rgb255 255 127 0), Border.rounded 3, padding 10, Font.color Palette.white ]
+        [ Background.color (Element.rgb255 247 146 86)
+        , Border.rounded 3
+        , padding 10
+        , Font.color Palette.white
+        , Element.mouseOver [ Border.glow Palette.lightGrey 3 ]
+        ]
         { onPress = Just ClickedEdit
-        , label = text "Ändra"
+        , label = row [ spacing 10 ] [ wrapIcon FeatherIcons.edit, text "Ändra" ]
         }
 
 
@@ -418,6 +444,8 @@ type Msg
     = LoadedRecipe (Result Api.ServerError (Recipe Full))
     | ClickedCheckbox Int Bool
     | ClickedDelete
+    | ClickedConfirmedDelete
+    | BlurredDelete
     | ClickedEdit
     | DecrementPortions
     | IncrementPortions
@@ -455,10 +483,22 @@ update msg model =
         ClickedDelete ->
             case model.recipe of
                 Loaded recipe ->
-                    ( model, Recipe.delete (Recipe.slug recipe) Deleted )
+                    ( { model | toDelete = True }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
+
+        ClickedConfirmedDelete ->
+            case model.recipe of
+                Loaded recipe ->
+                    ( { model | toDelete = False }, Cmd.none )
+
+                -- Recipe.delete (Recipe.slug recipe) Deleted )
+                _ ->
+                    ( model, Cmd.none )
+
+        BlurredDelete ->
+            ( { model | toDelete = False }, Cmd.none )
 
         ClickedEdit ->
             case model.recipe of
