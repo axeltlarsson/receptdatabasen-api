@@ -7,6 +7,7 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Lazy exposing (lazy2)
 import Element.Region as Region
+import FeatherIcons
 import Palette exposing (edges)
 import Route exposing (Route)
 
@@ -34,7 +35,7 @@ view page { title, stickyContent, content } =
             , width fill
             , Element.inFront (lazy2 viewHeader page stickyContent)
             ]
-            (column [ Element.paddingXY 0 headerHeight, width (fill |> maximum maxPageWidth), Element.centerX ]
+            (column [ Element.paddingXY 0 (headerHeight + 10), width (fill |> maximum maxPageWidth), Element.centerX ]
                 [ content ]
             )
         ]
@@ -51,7 +52,7 @@ viewWithoutHeader _ { title, content } =
             , Font.size Palette.normal
             , width fill
             ]
-            (column [ Element.paddingXY 0 headerHeight, width (fill |> maximum maxPageWidth), Element.centerX ]
+            (column [ Element.paddingXY 0 (headerHeight + 10), width (fill |> maximum maxPageWidth), Element.centerX ]
                 [ content ]
             )
         ]
@@ -81,8 +82,8 @@ viewHeader page stickyContent =
             , paddingXY 10 0
             , Element.behindContent
                 (el
-                    [ Element.alpha 0.95
-                    , Background.color <| Palette.white
+                    [ Element.alpha 0.9
+                    , Background.color <| Palette.blush
                     , width fill
                     , height fill
                     ]
@@ -106,10 +107,14 @@ viewMenu page =
                 (el [ Font.light ] label)
     in
     row [ alignLeft, spacingXY 20 0 ]
-        [ linkTo (Route.RecipeList Nothing) logo
-
-        -- , linkTo Route.NewRecipe "Nytt recept"
+        [ row [] [ linkTo (Route.RecipeList Nothing) logo ]
+        , linkTo Route.NewRecipe (row [ spacing 10 ] [ wrapIcon FeatherIcons.plusCircle, text "Nytt recept" ])
         ]
+
+
+wrapIcon icon =
+    el [ Element.centerX ]
+        (icon |> FeatherIcons.withSize 26 |> FeatherIcons.withStrokeWidth 1 |> FeatherIcons.toHtml [] |> Element.html)
 
 
 logo : Element msg
@@ -132,7 +137,7 @@ navbarLink page route linkContent =
     in
     link
         (List.append
-            [ Element.mouseOver [ Element.alpha 0.5, Background.color Palette.grey, Font.color Palette.white ]
+            [ Element.mouseOver [ Element.alpha 0.5, Background.color Palette.mulberry, Font.color Palette.white ]
             , Font.size Palette.large
             , height fill
             , paddingEach { edges | top = 15, bottom = 15, right = 15 }

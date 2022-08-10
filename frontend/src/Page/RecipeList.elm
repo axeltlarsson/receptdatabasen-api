@@ -88,10 +88,11 @@ view model =
 
         Loaded recipes ->
             { title = "Recept"
-            , stickyContent = lazy viewSearchBox model
+            , stickyContent = Element.none
             , content =
                 column [ Region.mainContent, spacing 20, width fill, padding 10 ]
-                    [ wrappedRow [ centerX, spacing 10 ]
+                    [ lazy viewSearchBox model
+                    , wrappedRow [ centerX, spacing 10 ]
                         (List.map viewPreview recipes)
                     ]
             }
