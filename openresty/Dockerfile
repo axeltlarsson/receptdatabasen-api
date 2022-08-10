@@ -1,7 +1,7 @@
 # Build vips in a builder container, taken from:
 # https://github.com/h2non/imaginary/blob/master/Dockerfile
 ARG GOLANG="1.13"
-FROM golang:${GOLANG} as builder
+FROM --platform=linux/amd64 golang:${GOLANG}  as builder
 
 ARG LIBVIPS_VERSION="8.12.2"
 
@@ -38,10 +38,9 @@ RUN DEBIAN_FRONTEND=noninteractive \
       make && \
       make install && \
       ldconfig
-#
-# The final openresty image
-FROM openresty/openresty:buster
 
+# The final openresty image
+FROM --platform=linux/amd64 openresty/openresty:buster
 
 COPY --from=builder /usr/local/lib /usr/local/lib
 
