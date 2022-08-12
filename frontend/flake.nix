@@ -9,7 +9,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
 
         dev = pkgs.writeScriptBin "dev" ''
-          elm-app start
+          npm start
         '';
 
       in {
@@ -19,8 +19,8 @@
             elm-format
             elm-json
             elm-test
-            create-elm-app
 
+            pkgs.nodejs
             dev
           ];
         };
