@@ -94,10 +94,6 @@ viewHeader page stickyContent =
         ]
 
 
-debug =
-    Element.explain Debug.todo
-
-
 viewMenu : Page -> Element msg
 viewMenu page =
     let
