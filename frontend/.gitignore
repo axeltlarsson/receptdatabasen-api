@@ -11,6 +11,7 @@ repl-temp-*
 # End of https://www.gitignore.io/api/elm
 
 # Distribution
+dist/
 build/
 
 # Dependency directories
@@ -27,3 +28,5 @@ node_modules
 # .envrc
 
 # End of https://www.toptal.com/developers/gitignore/api/direnv
+
+.parcel-cache/
