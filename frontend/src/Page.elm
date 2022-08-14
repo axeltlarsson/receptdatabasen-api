@@ -117,6 +117,7 @@ navbarLink page route linkContent =
             , Font.size Palette.large
             , height fill
             , padding 15
+
             ]
             activeAttrs
         )
