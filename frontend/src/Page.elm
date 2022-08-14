@@ -116,7 +116,7 @@ wrapIcon icon =
 logo : Element msg
 logo =
     row [ height fill, paddingXY 10 0, spacing 10 ]
-        [ Element.image [ height (Element.px (headerHeight - 20)) ] { src = "%PUBLIC_URL%/logo.png", description = "home" }
+        [ Element.image [ height (Element.px (headerHeight - 20)) ] { src = "logo.png", description = "home" }
         ]
 
 

@@ -12,6 +12,10 @@
           npm start
         '';
 
+        build = pkgs.writeScriptBin "build" ''
+          npm run build
+        '';
+
       in {
         devShell = pkgs.mkShell {
           buildInputs = with pkgs.elmPackages; [
@@ -22,6 +26,7 @@
 
             pkgs.nodejs
             dev
+            build
           ];
         };
       });
