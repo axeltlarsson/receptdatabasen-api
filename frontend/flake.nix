@@ -23,6 +23,8 @@
             elm-format
             elm-json
             elm-test
+            elm-review
+            elm-language-server
 
             pkgs.nodejs
             dev
