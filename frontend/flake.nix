@@ -17,7 +17,7 @@
         '';
 
       in {
-        devShell = pkgs.mkShell {
+        devShells.default = pkgs.mkShell {
           buildInputs = with pkgs.elmPackages; [
             elm
             elm-format
