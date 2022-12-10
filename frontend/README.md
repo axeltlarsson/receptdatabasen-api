@@ -1,8 +1,17 @@
 # Receptdatabasen SPA
 
-Use `nix-shell` or nix-direnv with the .envrc to automatically get the dev tools set up.
+## Setup
 
-Run it in dev mode with: `dev` or `npm start`
+- Active the nix shell (`nix develop` / `direnv allow`).
+- `npm install` (on first setup only)
+
+## Develop
+
+Run it in dev mode with: `dev`
+
+## Build
+
+- `build`
 
 Use elm-review to find and remove dead code: `npx elm-review --fix`.
 

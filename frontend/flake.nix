@@ -27,8 +27,10 @@
             elm-language-server
 
             pkgs.nodejs
+            pkgs.nodePackages.parcel
             dev
             build
+            pkgs.node2nix
           ];
         };
       });
