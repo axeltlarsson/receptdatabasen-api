@@ -14,7 +14,7 @@ create or replace view api.recipes as (
   from data.recipe
 );
 
-alter view recipes owner to api; -- it is important to set the correct owner to the RLS policy kicks in
+alter view recipes owner to api; -- it is important to set the correct owner to the RLS policy kicks in TODO: what?
 
 -- Mutations
 create function insert_recipe()
