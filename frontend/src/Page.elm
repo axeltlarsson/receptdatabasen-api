@@ -100,23 +100,14 @@ viewMenu page =
         linkTo route label =
             navbarLink page
                 route
-                (el [ Font.light ] label)
+                (el
+                    [ Font.light ]
+                    (text title)
+                )
     in
     row [ alignLeft, spacingXY 20 0 ]
-        [ row [] [ linkTo (Route.RecipeList Nothing) logo ]
-        , linkTo Route.NewRecipe (row [ spacing 10 ] [ wrapIcon FeatherIcons.plusCircle, text "Nytt recept" ])
-        ]
-
-
-wrapIcon icon =
-    el [ Element.centerX ]
-        (icon |> FeatherIcons.withSize 26 |> FeatherIcons.withStrokeWidth 1 |> FeatherIcons.toHtml [] |> Element.html)
-
-
-logo : Element msg
-logo =
-    row [ height fill, paddingXY 10 0, spacing 10 ]
-        [ Element.image [ height (Element.px (headerHeight - 20)) ] { src = "logo.png", description = "home" }
+        [ linkTo (Route.RecipeList Nothing) "Alla recept"
+        , linkTo Route.NewRecipe "Nytt recept"
         ]
 
 
@@ -133,10 +124,10 @@ navbarLink page route linkContent =
     in
     link
         (List.append
-            [ Element.mouseOver [ Element.alpha 0.5, Background.color Palette.mulberry, Font.color Palette.white ]
+            [ Element.mouseOver [ Element.alpha 0.5, Background.color Palette.grey, Font.color Palette.white ]
             , Font.size Palette.large
             , height fill
-            , paddingEach { edges | top = 15, bottom = 15, right = 15 }
+            , padding 15
             ]
             activeAttrs
         )
