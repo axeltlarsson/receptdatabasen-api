@@ -17,7 +17,7 @@
         };
       in {
 
-        devShell = pkgs.mkShell {
+        devShells.default = pkgs.mkShell {
           nativeBuildInputs = [ pkgs.bashInteractive ];
           buildInputs = [ db pkgs.shellcheck ];
 
