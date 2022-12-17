@@ -102,7 +102,7 @@ viewMenu page =
                 route
                 (el
                     [ Font.light ]
-                    (text title)
+                    (text label)
                 )
     in
     row [ alignLeft, spacingXY 20 0 ]
@@ -128,6 +128,7 @@ navbarLink page route linkContent =
             , Font.size Palette.large
             , height fill
             , padding 15
+
             ]
             activeAttrs
         )
