@@ -16,7 +16,27 @@
           npm run build
         '';
 
+        nodeDependencies =
+          (pkgs.callPackage ./default.nix { inherit pkgs; }).nodeDependencies;
+
       in {
+        packages.default = pkgs.stdenv.mkDerivation {
+          name = "my-parcel-app";
+          src = ./.;
+          buildInputs = [ pkgs.nodejs pkgs.nodePackages.parcel ];
+          buildPhase = ''
+            ln -s ${nodeDependencies}/lib/node_modules ./node_modules
+            export PATH="${nodeDependencies}/bin:$PATH"
+
+            # Build the distribution bundle in "dist"
+            echo parcel command coming up
+            rm -rf dist
+            parcel --version
+            parcel build
+            cp -R dist/* $out/
+          '';
+          installPhase = "";
+        };
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs.elmPackages; [
             elm
