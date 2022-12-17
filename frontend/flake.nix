@@ -27,12 +27,13 @@
           buildPhase = ''
             ln -s ${nodeDependencies}/lib/node_modules ./node_modules
             export PATH="${nodeDependencies}/bin:$PATH"
-
+            export HOME=$(mktemp -d) # solves non-writable /homeless-shelter issue
             # Build the distribution bundle in "dist"
             echo parcel command coming up
             rm -rf dist
             parcel --version
-            parcel build
+            parcel build src/index.html
+            # npm run build
             cp -R dist/* $out/
           '';
           installPhase = "";
