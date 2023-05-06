@@ -8,8 +8,8 @@ if [[ -z $DB_PORT || -z $DB_NAME || -z $DB_PORT || -z $SUPER_USER || -z $SUPER_U
   echo "One or more required env vars are not set!"
   exit 1
 fi
-DB_USER=$SUPER_USER
-DB_PASSWORD=$SUPER_USER_PASSWORD
+
+CONN="postgresql://$SUPER_USER:$SUPER_USER_PASSWORD@localhost:$DB_PORT/$DB_NAME"
 
 help () {
 cat << DOC
@@ -29,11 +29,22 @@ DOC
 
 }
 
+_createdb() {
+  createdb -p "$DB_PORT" -U "$SUPER_USER" "$DB_NAME"
+  # psql "$CONN" -c "create role $USER2 with login SUPERUSER";
+}
+
 init_db() {
   mkdir -p "$PGHOST"
-  initdb --no-locale --encoding=UTF8 --auth=trust --username "$DB_USER" "$PGHOST"
+  initdb --no-locale --encoding=UTF8 --auth=trust --username "$SUPER_USER" "$PGHOST"
   start_db
-  createdb -p "$DB_PORT" -U "$DB_USER" "$DB_NAME"
+  _createdb
+  _seed_db
+}
+
+_seed_db() {
+  # need another user to run the init.sql script (as it drops its own superuser)
+  (cd db/src && psql "$CONN" < ./init.sql)
 }
 
 start_db() {
@@ -49,17 +60,31 @@ import_prod() {
     start_db
   fi
 
-  # If db already exists, we must drop it
-  if psql -p "$DB_PORT" --user "$DB_USER" -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
-    echo "Drop $DB_NAME"
-    dropdb --username "$DB_USER" -p "$DB_PORT" "$DB_NAME"
+  # If db already exists, we must drop it and then recreate it
+  if psql -p "$DB_PORT" --user "$SUPER_USER" -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
+    echo "Dropping $DB_NAME..."
+    echo dropdb --username "$SUPER_USER" -p "$DB_PORT" "$DB_NAME"
+    dropdb --username "$SUPER_USER" -p "$DB_PORT" "$DB_NAME"
+    echo "Creating $DB_NAME..."
+    _createdb
+    _seed_db
   fi
 
-  # Import latest version from prod
-  # TODO
+  DUMP_CMD=$(
+cat <<EOF
+cd /srv/receptdatabasen
+set -a
+source .env
+set +a
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump --clean --if-exists "postgresql://$SUPER_USER@localhost:$DB_PORT/$DB_NAME"
+EOF
+  )
+
+  echo "Importing prod database into local database..."
+  ssh -CqT "$1" "$DUMP_CMD" | psql "$CONN"
+  echo "✅"
 }
 
-CONN="postgresql://$DB_USER:$DB_PASSWORD@localhost:$DB_PORT/$DB_NAME"
 
 case "${1-help}" in
 
@@ -73,7 +98,7 @@ case "${1-help}" in
     stop_db
     ;;
   import_prod)
-    import_prod stiftelseapp
+    import_prod andrimner
     ;;
   shell)
     psql "$CONN"
