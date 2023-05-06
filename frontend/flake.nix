@@ -33,5 +33,11 @@
             pkgs.node2nix
           ];
         };
+
+        apps.default = {
+          type = "app";
+          program = "${dev}/bin/dev";
+        };
+
       });
 }

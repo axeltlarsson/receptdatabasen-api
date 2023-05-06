@@ -7,7 +7,7 @@
 
 ## Develop
 
-Run it in dev mode with: `dev`
+Run it in dev mode with: `dev` or `nix run`.
 
 ## Build
 
