@@ -15,11 +15,22 @@
           runtimeInputs = [ pg ];
           text = pkgs.lib.strings.fileContents ./scripts/db.sh;
         };
+
+        openresty = pkgs.writeShellApplication {
+          name = "openresty";
+          runtimeInputs = [
+            pkgs.openresty
+            (pkgs.lua5_2.withPackages (ps: with ps; [ lua-resty-session ]))
+          ];
+          text = ''
+            openresty -p "$(pwd)/openresty/nginx" -c nginx.conf -e ../logs/error.log "$@"
+          '';
+        };
       in {
 
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = [ pkgs.bashInteractive ];
-          buildInputs = [ db pkgs.shellcheck ];
+          buildInputs = [ db openresty pkgs.shellcheck ];
 
           # source the .env file
           shellHook = ''
