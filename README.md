@@ -62,7 +62,10 @@ npm run test_image_server
 
 ## Import production database
 
-`import_prod_db.sh`
+`import_prod_db.sh` or with Nix devShell `import-prod`.
+
+N.B! `JWT_SECRET` and `COOKIE_SECRET` need to match from prod unless you create a new user manually (future improvement for the script).
+N.B! The image download doesn't work.
 
 ## Deployment
 

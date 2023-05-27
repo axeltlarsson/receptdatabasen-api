@@ -1,3 +1,4 @@
+# This script is currently not used - local db not reachable from docker
 set -euo pipefail
 
 PGHOST=./pg_db

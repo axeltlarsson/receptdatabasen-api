@@ -9,17 +9,16 @@
         pkgs = nixpkgs.legacyPackages.${system};
 
         pg = pkgs.postgresql_12;
-        db = pkgs.writeShellApplication {
-          # TODO: would be pretty sick with command line completion 🤓
-          name = "db";
-          runtimeInputs = [ pg ];
-          text = pkgs.lib.strings.fileContents ./scripts/db.sh;
+        import_prod = pkgs.writeShellApplication {
+          name = "import-prod";
+          runtimeInputs = [ pkgs.docker pkgs.docker-compose ];
+          text = pkgs.lib.strings.fileContents ./scripts/import_prod_db.sh;
         };
       in {
 
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = [ pkgs.bashInteractive ];
-          buildInputs = [ db pkgs.shellcheck ];
+          buildInputs = [ import_prod pkgs.shellcheck ];
 
           # source the .env file
           shellHook = ''
