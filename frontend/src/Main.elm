@@ -14,6 +14,7 @@ import Page.NotFound
 import Page.Recipe as Recipe
 import Page.Recipe.Editor as Editor
 import Page.RecipeList as RecipeList
+import Page.MyProfile as MyProfile
 import Recipe.Slug exposing (Slug)
 import Route exposing (Route)
 import Session exposing (Session)
@@ -32,6 +33,7 @@ type Model
     | NotFound Session
     | Editor (Maybe Slug) Editor.Model
     | Login Login.Model
+    | MyProfile MyProfile.Model
 
 
 init : Encode.Value -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -102,6 +104,8 @@ view model =
 
         Login login ->
             viewPageWithoutHeader Page.Login GotLoginMsg (Login.view login)
+        MyProfile profile ->
+            viewPage Page.MyProfile GotMyProfileMsg (MyProfile.view profile)
 
 
 
@@ -116,6 +120,7 @@ type Msg
     | GotRecipeListMsg RecipeList.Msg
     | GotEditorMsg Editor.Msg
     | GotLoginMsg Login.Msg
+    | GotMyProfileMsg MyProfile.Msg
     | GotWindowResize Session.Window
 
 
@@ -139,6 +144,8 @@ toSession page =
 
         Login login ->
             Login.toSession login
+        MyProfile profile ->
+            MyProfile.toSession profile
 
 
 changeRouteTo : Maybe Route -> Model -> ( Model, Cmd Msg )
@@ -176,6 +183,9 @@ changeRouteTo maybeRoute model =
         Just Route.Login ->
             Login.init session |> updateWith Login GotLoginMsg
 
+        Just Route.MyProfile ->
+            MyProfile.init session |> updateWith MyProfile GotMyProfileMsg
+
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -199,6 +209,8 @@ update msg model =
 
                 Login login ->
                     Login { login | session = newSession }
+                MyProfile profile ->
+                    MyProfile { profile | session = newSession }
     in
     case ( msg, model ) of
         ( LinkClicked urlRequest, _ ) ->
@@ -285,6 +297,8 @@ subscriptions model =
                     Sub.map GotEditorMsg (Editor.subscriptions editor)
 
                 Login _ ->
+                    Sub.none
+                MyProfile _ ->
                     Sub.none
 
         windowResizeSub =

@@ -18,6 +18,7 @@ type Route
     | NewRecipe
     | EditRecipe Slug
     | Login
+    | MyProfile
 
 
 parser : Parser (Route -> a) a
@@ -28,6 +29,7 @@ parser =
         , map NewRecipe (s "editor")
         , map EditRecipe (s "editor" </> Slug.urlParser)
         , map Login (s "login")
+        , map MyProfile (s "my-profile")
         ]
 
 
@@ -66,3 +68,5 @@ toString page =
 
         Login ->
             Url.Builder.absolute [ "login" ] []
+        MyProfile ->
+            Url.Builder.absolute [ "my-profile" ] []

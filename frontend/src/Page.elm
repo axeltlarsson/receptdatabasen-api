@@ -1,14 +1,13 @@
 module Page exposing (Page(..), view, viewWithoutHeader)
 
 import Browser exposing (Document)
-import Element exposing (Element, alignLeft, alignTop, centerX, column, el, fill, height, link, maximum, padding, paddingEach, paddingXY, row, spacing, spacingXY, text, width)
+import Element exposing (Element, alignLeft, alignTop, centerX, column, el, fill, height, link, maximum, padding, paddingXY, row, spacingXY, text, width)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Lazy exposing (lazy2)
 import Element.Region as Region
-import FeatherIcons
-import Palette exposing (edges)
+import Palette
 import Route exposing (Route)
 
 
@@ -19,6 +18,7 @@ type Page
     | RecipeList
     | Editor
     | Login
+    | MyProfile
     | Other
 
 
@@ -59,10 +59,12 @@ viewWithoutHeader _ { title, content } =
     }
 
 
+headerHeight : Int
 headerHeight =
     58
 
 
+maxPageWidth : Int
 maxPageWidth =
     1440
 
@@ -108,6 +110,7 @@ viewMenu page =
     row [ alignLeft, spacingXY 20 0 ]
         [ linkTo (Route.RecipeList Nothing) "Alla recept"
         , linkTo Route.NewRecipe "Nytt recept"
+        , linkTo Route.MyProfile "Min profil"
         ]
 
 
@@ -147,6 +150,9 @@ isActive page route =
             True
 
         ( Editor, Route.NewRecipe ) ->
+            True
+
+        ( MyProfile, Route.MyProfile) ->
             True
 
         _ ->
