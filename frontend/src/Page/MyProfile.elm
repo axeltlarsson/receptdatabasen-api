@@ -27,7 +27,9 @@ import Form exposing (errorBorder, onEnter, viewValidationError)
 import Http
 import Json.Decode as Decode exposing (field, string)
 import Json.Encode as Encode
+import Loading
 import Palette
+import Profile exposing (Profile, fetch)
 import Route
 import Session exposing (Session)
 import String.Verify
@@ -36,18 +38,22 @@ import Verify
 
 
 
-
 -- TODO show /me: {"me":{"user_name":"familjen","role":"customer","email":null,"id":3}}
--- VIEW
 
 
 type alias Model =
-    { session : Session }
+    { session : Session, profile : Status Profile }
+
+
+type Status profile
+    = Loading
+    | Loaded Profile
+    | Failed Api.ServerError
 
 
 init : Session -> ( Model, Cmd Msg )
 init session =
-    ( { session = session }, Cmd.none )
+    ( { session = session, profile = Loading }, fetch LoadedProfile )
 
 
 view : Model -> { title : String, stickyContent : Element msg, content : Element Msg }
@@ -55,27 +61,47 @@ view model =
     { title = "Min profil"
     , stickyContent = Element.none
     , content =
-        column
-            [ Region.mainContent
-            , width (fill |> Element.maximum 400)
-            , centerX
-            , spacing 10
-            , padding 10
-            ]
-            [ row [ Font.heavy, Font.size Palette.xxLarge ] [ text "Min profil" ]
-            , row [width fill, spacing 30 ] [el [Font.heavy] (text "Användarnamn"), el [] (text "axel")]
-            , row [width fill, spacing 30 ] [el [Font.heavy] (text "Email"), el [] (text "axl.larsson@gmail.com")]
-            ]
+        case model.profile of
+            Loading ->
+                Element.html Loading.animation
+
+            Failed err ->
+                Api.viewServerError "Något gick fel när profilen skulle laddas" err
+
+            Loaded profile ->
+                viewProfile profile
     }
 
 
+viewProfile : Profile -> Element msg
+viewProfile profile =
+    column
+        [ Region.mainContent
+        , width (fill |> Element.maximum 400)
+        , centerX
+        , spacing 10
+        , padding 10
+        ]
+        [ row [ Font.heavy, Font.size Palette.xxLarge ] [ text "Min profil" ]
+        , row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "Användarnamn"), el [] (text profile.userName) ]
+        , row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "Email"), el [] (text (Maybe.withDefault "ej satt" profile.email)) ]
+        , row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "Roll"), el [] (text profile.role) ]
+        , row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "ID"), el [] (profile.id |> String.fromInt |> text) ]
+        ]
+
+
 type Msg
-    = Noop
+    = LoadedProfile (Result Api.ServerError Profile)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg ({ session } as model) =
-    ( model, Cmd.none )
+update msg model =
+    case msg of
+        LoadedProfile (Ok profile) ->
+            ( { model | profile = Loaded profile }, Cmd.none )
+
+        LoadedProfile (Err error) ->
+            ( { model | profile = Failed error }, Cmd.none )
 
 
 toSession : Model -> Session

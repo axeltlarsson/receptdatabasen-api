@@ -22,6 +22,13 @@ Build a prod version of the frontend with `npm run build` in the `frontend` dire
 
 ### API
 
+
+```shell
+curl -c cookie.txt -H 'content-type: application/json' -d '{"user_name": "xxx", "password": "yyy"}' localhost:1234/rest/login
+curl -b cookie.txt -H 'content-type: application/json' localhost:1234/rest/rpc/me
+```
+
+
 Using [httpie](https://httpie.org/doc) it's very easy to interact with the API:
 
 - `http POST :8080/rest/recipes < data/cheese_cake.json` - to create a recipe

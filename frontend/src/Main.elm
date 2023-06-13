@@ -10,11 +10,11 @@ import Json.Encode as Encode
 import Page
 import Page.Blank
 import Page.Login as Login
+import Page.MyProfile as MyProfile
 import Page.NotFound
 import Page.Recipe as Recipe
 import Page.Recipe.Editor as Editor
 import Page.RecipeList as RecipeList
-import Page.MyProfile as MyProfile
 import Recipe.Slug exposing (Slug)
 import Route exposing (Route)
 import Session exposing (Session)
@@ -104,6 +104,7 @@ view model =
 
         Login login ->
             viewPageWithoutHeader Page.Login GotLoginMsg (Login.view login)
+
         MyProfile profile ->
             viewPage Page.MyProfile GotMyProfileMsg (MyProfile.view profile)
 
@@ -144,6 +145,7 @@ toSession page =
 
         Login login ->
             Login.toSession login
+
         MyProfile profile ->
             MyProfile.toSession profile
 
@@ -209,6 +211,7 @@ update msg model =
 
                 Login login ->
                     Login { login | session = newSession }
+
                 MyProfile profile ->
                     MyProfile { profile | session = newSession }
     in
@@ -248,6 +251,10 @@ update msg model =
         ( GotLoginMsg subMsg, Login login ) ->
             Login.update subMsg login
                 |> updateWith Login GotLoginMsg
+
+        ( GotMyProfileMsg subMsg, MyProfile profile ) ->
+            MyProfile.update subMsg profile
+                |> updateWith MyProfile GotMyProfileMsg
 
         ( GotWindowResize window, page ) ->
             let
@@ -298,6 +305,7 @@ subscriptions model =
 
                 Login _ ->
                     Sub.none
+
                 MyProfile _ ->
                     Sub.none
 
