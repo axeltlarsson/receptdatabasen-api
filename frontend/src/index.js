@@ -11,6 +11,37 @@ const app = Elm.Main.init({
   flags,
 });
 
+const passkeySupport = () => {
+  // https://web.dev/passkey-registration/#feature-detection
+  // Availability of `window.PublicKeyCredential` means WebAuthn is usable.
+  // `isUserVerifyingPlatformAuthenticatorAvailable` means the feature detection is usable.
+  // `isConditionalMediationAvailable` means the feature detection is usable.
+  const pubkey = window.PublicKeyCredential;
+  if (pubkey
+    && pubkey.isUserVerifyingPlatformAuthenticatorAvailable
+    && pubkey.isConditionalMediationAvailable) {
+    // Check if user verifying platform authenticator is available.
+    return Promise.all([
+      pubkey.isUserVerifyingPlatformAuthenticatorAvailable(),
+      pubkey.isConditionalMediationAvailable(),
+    ]).then((results) => results.every((r) => r === true));
+  }
+  return Promise.resolve(false);
+};
+
+app.ports.passkeyPortSender.subscribe((message) => {
+  console.log(message);
+  switch (message.type) {
+    case 'checkPasskeySupport':
+      passkeySupport().then((passkeySupported) => {
+        app.ports.passkeyPortReceiver.send({ type: 'passkeySupported', passkeySupport: passkeySupported });
+      });
+      break;
+    default:
+      console.error('Unexpected message type %o', message.type);
+  }
+});
+
 class EasyMDEditor extends HTMLElement {
   connectedCallback() {
     const textArea = document.createElement('textarea');

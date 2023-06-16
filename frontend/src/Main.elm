@@ -306,8 +306,8 @@ subscriptions model =
                 Login _ ->
                     Sub.none
 
-                MyProfile _ ->
-                    Sub.none
+                MyProfile profile ->
+                    Sub.map GotMyProfileMsg (MyProfile.subscriptions profile)
 
         windowResizeSub =
             Browser.Events.onResize (\w h -> GotWindowResize { width = w, height = h })

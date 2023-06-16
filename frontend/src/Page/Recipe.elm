@@ -323,6 +323,7 @@ viewIngredients ingredients scaledPortions originalPortions =
         ]
 
 
+wrapIcon : FeatherIcons.Icon -> Element msg
 wrapIcon icon =
     el [ Element.centerX ]
         (icon |> FeatherIcons.withSize 26 |> FeatherIcons.withStrokeWidth 1 |> FeatherIcons.toHtml [] |> Element.html)
@@ -380,14 +381,14 @@ portionsScaler scale str =
 
 
 viewMarkdown : Float -> Bool -> String -> Dict Int Bool -> Element Msg
-viewMarkdown scale alwaysTaskList instructions checkboxStatus =
+viewMarkdown scale alwaysTaskList contents checkboxStatus =
     let
         rendered =
             if alwaysTaskList then
-                Markdown.renderWithTaskList instructions checkboxStatus ClickedCheckbox
+                Markdown.renderWithTaskList contents checkboxStatus ClickedCheckbox
 
             else
-                Markdown.renderWithMapping instructions (portionsScaler scale) ClickedCheckbox
+                Markdown.renderWithMapping contents (portionsScaler scale) ClickedCheckbox
     in
     case rendered of
         Ok md ->
