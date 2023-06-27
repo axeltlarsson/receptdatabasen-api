@@ -29,12 +29,44 @@ const passkeySupport = () => {
   return Promise.resolve(false);
 };
 
+const createPasskey = (options) => navigator.credentials.create({
+  publicKey: options,
+});
+
 app.ports.passkeyPortSender.subscribe((message) => {
   console.log('port message recevied in js land', message);
   switch (message.type) {
     case 'checkPasskeySupport':
       passkeySupport().then((passkeySupported) => {
         app.ports.passkeyPortReceiver.send({ type: 'passkeySupported', passkeySupport: passkeySupported });
+      });
+      break;
+    case 'createPasskey':
+      const options = {
+        challenge: Uint8Array.from('MWoGDvsJpbAkI5s459o-rv_VKE3wN47tIqNqYaNAp1Ecghk7Myv0pGjd-BReBkucQdCxA0gJ8TyeUVyBfdx4RQ', (c) => c.charCodeAt(0)),
+        rp: {
+          name: 'localhost',
+          id: 'localhost',
+        },
+        user: {
+          id: Uint8Array.from('123', (c) => c.charCodeAt(0)),
+          name: 'john78',
+          displayName: 'John',
+        },
+        pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
+        excludeCredentials: [{
+          id: Uint8Array.from('923', (c) => c.charCodeAt(0)),
+          type: 'public-key',
+          transports: ['internal'],
+        }],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          requireResidentKey: true,
+        },
+      };
+      createPasskey(options).then((credential) => {
+        console.log('passkeyCreated', credential);
+        app.ports.passkeyPortReceiver.send({ type: 'passkeyCreated', credential });
       });
       break;
     default:

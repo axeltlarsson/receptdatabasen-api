@@ -139,7 +139,7 @@ viewRegisteredPasskeys passkeyStatus =
                 }
 
 
-viewPasskeyCreation : PasskeySupport -> Element msg
+viewPasskeyCreation : PasskeySupport -> Element Msg
 viewPasskeyCreation passkeySupport =
     case passkeySupport of
         CheckingSupport ->
@@ -149,13 +149,19 @@ viewPasskeyCreation passkeySupport =
             text "passkeys cannot be created on this device"
 
         Supported ->
-            text "You Can Create Passkeys on this Device!"
+            Input.button
+                [ width fill, Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
+                { onPress = Just CreatePasskeyPressed
+                , label = el [ centerX ] (text "Skapa en ny passkey")
+                }
+
 
 
 type Msg
     = LoadedProfile (Result Api.ServerError Profile)
     | PortMsg Decode.Value
     | LoadedPasskeys (Result Api.ServerError (List Passkey))
+    | CreatePasskeyPressed
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -184,6 +190,8 @@ update msg model =
 
         LoadedPasskeys (Err err) ->
             ( { model | registeredPasskeys = (Failed err) }, Cmd.none )
+        CreatePasskeyPressed ->
+            (model, passkeyPortSender createPasskeyMsg)
 
 
 port passkeyPortSender : Encode.Value -> Cmd msg
@@ -196,6 +204,9 @@ checkPasskeySupport : Encode.Value
 checkPasskeySupport =
     Encode.object [ ( "type", Encode.string "checkPasskeySupport" ) ]
 
+createPasskeyMsg : Encode.Value
+createPasskeyMsg  =
+    Encode.object [ ( "type", Encode.string "createPasskey" ) ]
 
 type PasskeyPortMsg
     = PasskeySupported Bool
