@@ -156,7 +156,6 @@ viewPasskeyCreation passkeySupport =
                 }
 
 
-
 type Msg
     = LoadedProfile (Result Api.ServerError Profile)
     | PortMsg Decode.Value
@@ -185,13 +184,17 @@ update msg model =
                     else
                         ( { model | passkeySupport = NotSupported }, Cmd.none )
 
+                Ok (PasskeyCreated credential) ->
+                    Debug.log (Debug.toString credential) ( model, Cmd.none )
+
         LoadedPasskeys (Ok ps) ->
-            ( { model | registeredPasskeys = (Loaded ps) }, Cmd.none )
+            ( { model | registeredPasskeys = Loaded ps }, Cmd.none )
 
         LoadedPasskeys (Err err) ->
-            ( { model | registeredPasskeys = (Failed err) }, Cmd.none )
+            ( { model | registeredPasskeys = Failed err }, Cmd.none )
+
         CreatePasskeyPressed ->
-            (model, passkeyPortSender createPasskeyMsg)
+            ( model, passkeyPortSender createPasskeyMsg )
 
 
 port passkeyPortSender : Encode.Value -> Cmd msg
@@ -204,12 +207,56 @@ checkPasskeySupport : Encode.Value
 checkPasskeySupport =
     Encode.object [ ( "type", Encode.string "checkPasskeySupport" ) ]
 
+
 createPasskeyMsg : Encode.Value
-createPasskeyMsg  =
+createPasskeyMsg =
     Encode.object [ ( "type", Encode.string "createPasskey" ) ]
+
 
 type PasskeyPortMsg
     = PasskeySupported Bool
+    | PasskeyCreated Credential
+
+
+
+-- {
+-- id: String,
+-- type: 'public-key',
+-- rawId: String,
+-- response: {
+-- clientDataJSON: String,
+-- attestationObject: String,
+-- signature: String,
+-- userHandle: String
+-- }
+
+
+type alias Credential =
+    { id : String
+    , response : Response
+    }
+
+
+type alias Response =
+    { attestationObject : String
+    , clientDataJSON : String
+    }
+
+
+
+-- TODO: can I use Decode.value here? https://package.elm-lang.org/packages/elm/json/latest/Json-Decode#value
+
+
+credentialDecoder : Decode.Decoder Credential
+credentialDecoder =
+    Decode.map2 Credential
+        (field "id" string)
+        (field "response"
+            (Decode.map2 Response
+                (field "attestationObject" string)
+                (field "clientDataJSON" string)
+            )
+        )
 
 
 passkeyPortMsgDecoder : Decode.Decoder PasskeyPortMsg
@@ -220,6 +267,9 @@ passkeyPortMsgDecoder =
                 case t of
                     "passkeySupported" ->
                         Decode.map PasskeySupported (Decode.field "passkeySupport" Decode.bool)
+
+                    "passkeyCreated" ->
+                        Decode.map PasskeyCreated (Decode.field "passkey" credentialDecoder)
 
                     _ ->
                         Decode.fail ("trying to decode port passkeyPortMsg but " ++ t ++ " is not supported")

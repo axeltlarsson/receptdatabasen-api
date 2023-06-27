@@ -33,6 +33,28 @@ const createPasskey = (options) => navigator.credentials.create({
   publicKey: options,
 });
 
+const bufferToBase64url = (buffer) => {
+  // modified from https://github.com/github/webauthn-json/blob/main/src/webauthn-json/base64url.ts
+
+  const byteView = new Uint8Array(buffer);
+  let str = '';
+  for (const charCode of byteView) {
+    str += String.fromCharCode(charCode);
+  }
+
+  // Binary string to base64
+  const base64String = btoa(str);
+
+  // Base64 to base64url
+  // We assume that the base64url string is well-formed.
+  const base64urlString = base64String.replace(/\+/g, '-').replace(
+    /\//g,
+    '_',
+  ).replace(/=/g, '');
+
+  return base64urlString;
+};
+
 app.ports.passkeyPortSender.subscribe((message) => {
   console.log('port message recevied in js land', message);
   switch (message.type) {
@@ -65,8 +87,20 @@ app.ports.passkeyPortSender.subscribe((message) => {
         },
       };
       createPasskey(options).then((credential) => {
-        console.log('passkeyCreated', credential);
-        app.ports.passkeyPortReceiver.send({ type: 'passkeyCreated', credential });
+        const serialized = {
+          authenticatorAttachment: credential.authenticatorAttachment,
+          id: credential.id,
+          rawId: bufferToBase64url(credential.rawId),
+          response: {
+            attestationObject: bufferToBase64url(credential.response.attestationObject),
+            clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+          },
+          type: credential.type,
+        };
+
+        console.log(serialized);
+
+        app.ports.passkeyPortReceiver.send({ type: 'passkeyCreated', passkey: serialized });
       });
       break;
     default:
