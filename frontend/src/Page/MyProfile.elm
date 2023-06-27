@@ -30,7 +30,7 @@ import Json.Decode as Decode exposing (field, string)
 import Json.Encode as Encode
 import Loading
 import Palette
-import Profile exposing (Profile, fetch)
+import Profile exposing (Passkey, Profile)
 import Route
 import Session exposing (Session)
 import String.Verify
@@ -39,7 +39,17 @@ import Verify
 
 
 type alias Model =
-    { session : Session, profile : Status Profile }
+    { session : Session
+    , profile : Status Profile
+    , registeredPasskeys : Status (List Passkey)
+    , passkeySupport : PasskeySupport
+    }
+
+
+type PasskeySupport
+    = CheckingSupport
+    | Supported
+    | NotSupported
 
 
 type Status a
@@ -50,17 +60,13 @@ type Status a
 
 init : Session -> ( Model, Cmd Msg )
 init session =
-    ( { session = session, profile = Loading }
+    ( { session = session, profile = Loading, registeredPasskeys = Loading, passkeySupport = CheckingSupport }
     , Cmd.batch
-        [ fetch LoadedProfile
+        [ Profile.fetch LoadedProfile
+        , Profile.fetchPasskeys LoadedPasskeys
         , passkeyPortSender checkPasskeySupport
         ]
     )
-
-
-checkPasskeySupport : Encode.Value
-checkPasskeySupport =
-    Encode.object [ ( "type", Encode.string "checkPasskeySupport" ) ]
 
 
 view : Model -> { title : String, stickyContent : Element msg, content : Element Msg }
@@ -68,77 +74,88 @@ view model =
     { title = "Min profil"
     , stickyContent = Element.none
     , content =
-        case model.profile of
-            Loading ->
-                Element.html Loading.animation
-
-            Failed err ->
-                Api.viewServerError "Något gick fel när profilen skulle laddas" err
-
-            Loaded profile ->
-                column
-                    [ Region.mainContent
-                    , width (fill |> Element.maximum 600)
-                    , centerX
-                    , spacing 10
-                    , padding 10
-                    ]
-                    [ row [ Font.light, Font.size Palette.xxLarge ] [ text "Min profil" ]
-                    , row [] [ viewProfile profile ]
-                    , row [ Font.light, Font.size Palette.large ] [ text "Passkeys" ]
-                    , row [] [ viewPasskeys ]
-                    ]
+        column []
+            [ viewProfile model.profile
+            , viewRegisteredPasskeys model.registeredPasskeys
+            , viewPasskeyCreation model.passkeySupport
+            ]
     }
 
 
-viewProfile : Profile -> Element msg
-viewProfile profile =
-    column
-        []
-        [ row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "Användarnamn"), el [] (text profile.userName) ]
-        , row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "Email"), el [] (text (Maybe.withDefault "ej satt" profile.email)) ]
-        , row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "Roll"), el [] (text profile.role) ]
-        , row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "ID"), el [] (profile.id |> String.fromInt |> text) ]
-        ]
+viewProfile : Status Profile -> Element msg
+viewProfile profileStatus =
+    case profileStatus of
+        Loading ->
+            Element.html Loading.animation
+
+        Failed err ->
+            Api.viewServerError "Något gick fel när profilen skulle laddas" err
+
+        Loaded profile ->
+            column
+                [ Region.mainContent
+                , width (fill |> Element.maximum 600)
+                , centerX
+                , spacing 10
+                , padding 10
+                ]
+                [ row [ Font.light, Font.size Palette.xxLarge ] [ text "Min profil" ]
+                , column
+                    []
+                    [ row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "Användarnamn"), el [] (text profile.userName) ]
+                    , row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "Email"), el [] (text (Maybe.withDefault "ej satt" profile.email)) ]
+                    , row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "Roll"), el [] (text profile.role) ]
+                    , row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "ID"), el [] (profile.id |> String.fromInt |> text) ]
+                    ]
+                ]
 
 
-port passkeyPortSender : Encode.Value -> Cmd msg
+viewRegisteredPasskeys : Status (List Passkey) -> Element Msg
+viewRegisteredPasskeys passkeyStatus =
+    case passkeyStatus of
+        Loading ->
+            Element.html Loading.animation
+
+        Failed err ->
+            Api.viewServerError "Något gick fel när passkeys skulle laddas" err
+
+        Loaded ps ->
+            Element.table [ width fill, spacingXY 10 0 ]
+                { data = ps
+                , columns =
+                    [ { header = el [ Font.bold ] (text "public key")
+                      , width = fill
+                      , view = .device >> text
+                      }
+                    , { header = el [ Font.bold ] (text "device")
+                      , width = fill
+                      , view = .device >> text
+                      }
+                    , { header = el [ Font.bold ] (text "remove")
+                      , width = fill
+                      , view = \_ -> text "Ta bort"
+                      }
+                    ]
+                }
 
 
-port passkeyPortReceiver : (Decode.Value -> msg) -> Sub msg
+viewPasskeyCreation : PasskeySupport -> Element msg
+viewPasskeyCreation passkeySupport =
+    case passkeySupport of
+        CheckingSupport ->
+            Element.none
 
+        NotSupported ->
+            text "passkeys cannot be created on this device"
 
-passkeys : List { publicKey : String, device : String }
-passkeys =
-    [ { publicKey = "131321", device = "my Mac" }
-    , { publicKey = "789712", device = "my phone" }
-    ]
-
-
-viewPasskeys : Element Msg
-viewPasskeys =
-    Element.table [ width fill, spacingXY 10 0 ]
-        { data = passkeys
-        , columns =
-            [ { header = el [ Font.bold ] (text "public key")
-              , width = fill
-              , view = .device >> text
-              }
-            , { header = el [ Font.bold ] (text "device")
-              , width = fill
-              , view = .device >> text
-              }
-            , { header = el [ Font.bold ] (text "remove")
-              , width = fill
-              , view = \_ -> text "Ta bort"
-              }
-            ]
-        }
+        Supported ->
+            text "You Can Create Passkeys on this Device!"
 
 
 type Msg
     = LoadedProfile (Result Api.ServerError Profile)
     | PortMsg Decode.Value
+    | LoadedPasskeys (Result Api.ServerError (List Passkey))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -147,16 +164,37 @@ update msg model =
         LoadedProfile (Ok profile) ->
             ( { model | profile = Loaded profile }, Cmd.none )
 
-        LoadedProfile (Err error) ->
-            ( { model | profile = Failed error }, Cmd.none )
+        LoadedProfile (Err err) ->
+            ( { model | profile = Failed err }, Cmd.none )
 
         PortMsg m ->
             case Decode.decodeValue passkeyPortMsgDecoder m of
                 Err err ->
-                    Debug.log (Debug.toString err) ( model, Cmd.none )
+                    Debug.log (Debug.toString err ++ " error decodeValue") ( model, Cmd.none )
 
                 Ok (PasskeySupported supported) ->
-                    Debug.log (Debug.toString supported) ( model, Cmd.none )
+                    if supported then
+                        ( { model | passkeySupport = Supported }, Cmd.none )
+
+                    else
+                        ( { model | passkeySupport = NotSupported }, Cmd.none )
+
+        LoadedPasskeys (Ok ps) ->
+            ( { model | registeredPasskeys = (Loaded ps) }, Cmd.none )
+
+        LoadedPasskeys (Err err) ->
+            ( { model | registeredPasskeys = (Failed err) }, Cmd.none )
+
+
+port passkeyPortSender : Encode.Value -> Cmd msg
+
+
+port passkeyPortReceiver : (Decode.Value -> msg) -> Sub msg
+
+
+checkPasskeySupport : Encode.Value
+checkPasskeySupport =
+    Encode.object [ ( "type", Encode.string "checkPasskeySupport" ) ]
 
 
 type PasskeyPortMsg
@@ -183,5 +221,5 @@ toSession model =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions _ =
     passkeyPortReceiver PortMsg

@@ -1,4 +1,4 @@
-module Profile exposing (Profile, fetch)
+module Profile exposing (Passkey, Profile, fetch, fetchPasskeys)
 
 import Api exposing (ServerError, expectJsonWithBody)
 import Http
@@ -11,6 +11,13 @@ type alias Profile =
     , role : String
     , email : Maybe String
     , id : Int
+    }
+
+
+type alias Passkey =
+    { id : String
+    , publicKey : String
+    , device : String
     }
 
 
@@ -37,3 +44,29 @@ profileDecoder =
         (field "role" string)
         (field "email" <| nullable string)
         (field "id" int)
+
+
+fetchPasskeys : (Result ServerError (List Passkey) -> msg) -> Cmd msg
+fetchPasskeys toMsg =
+    Http.request
+        { method = "GET"
+        , headers =
+            [ Http.header "Accept" "application/vnd.pgrst.object+json"
+            , Http.header "Content-type" "application/json"
+            ]
+        , url = Url.Builder.crossOrigin "/rest" [ "rpc", "passkeys" ] []
+        , body = Http.emptyBody
+        , expect = expectJsonWithBody toMsg passkeyDecoder
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+passkeyDecoder : Decode.Decoder (List Passkey)
+passkeyDecoder =
+    Decode.list
+        (Decode.map3 Passkey
+            (field "id" string)
+            (field "publicKey" string)
+            (field "device" string)
+        )

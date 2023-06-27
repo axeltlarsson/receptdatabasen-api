@@ -30,7 +30,7 @@ const passkeySupport = () => {
 };
 
 app.ports.passkeyPortSender.subscribe((message) => {
-  console.log(message);
+  console.log('port message recevied in js land', message);
   switch (message.type) {
     case 'checkPasskeySupport':
       passkeySupport().then((passkeySupported) => {
