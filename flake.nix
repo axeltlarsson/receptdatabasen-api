@@ -14,11 +14,17 @@
           runtimeInputs = [ pkgs.docker pkgs.docker-compose ];
           text = pkgs.lib.strings.fileContents ./scripts/import_prod_db.sh;
         };
-      in {
+      in
+      {
 
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = [ pkgs.bashInteractive ];
-          buildInputs = [ import_prod pkgs.shellcheck ];
+          buildInputs = [
+            import_prod
+            pkgs.shellcheck
+            pkgs.sqitchPg
+            pkgs.postgresql_12
+          ];
 
           # source the .env file
           shellHook = ''

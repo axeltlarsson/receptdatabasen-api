@@ -16,3 +16,4 @@ grant api to current_user; -- this is a workaround for RDS where the master user
 \ir me.sql
 \ir recipes.sql
 \ir search.sql
+\ir passkeys.sql

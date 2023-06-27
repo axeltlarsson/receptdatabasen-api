@@ -80,6 +80,10 @@ Add the production host as a bare git repo, and set up the post-recieve hook, th
 
 ## Migrations 🗃
 
+```sh
+sqitch --chdir db/migrations add <name_of_migration> --note "<note of migration>"
+```
+
 I use subzero for hot code reload when developing the schema.
 Every time something is changed in db/src the database is rebuilt from scratch by subzero (provided it is running).
 To then write a migration, you use

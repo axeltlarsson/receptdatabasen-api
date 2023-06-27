@@ -12,9 +12,9 @@ grant execute on function api.login(text,text) to anonymous;
 grant execute on function api.me() to webuser;
 grant execute on function api.login(text,text) to webuser;
 
--- define the who can access recipe model data
--- give access to the view owner to this table
+-- grants for the view owner of underlying data tables
 grant select, insert, update, delete on data.recipe to api;
+grant select, insert, update, delete on data.passkey to api;
 grant usage on data.recipe_id_seq to webuser;
 
 
@@ -24,6 +24,7 @@ grant usage on data.recipe_id_seq to webuser;
 
 -- authenticated users can request/change all the columns for this view
 grant select, insert, update, delete on api.recipes to webuser;
+grant select, insert, update, delete on api.passkeys to webuser;
 
 -------------------------------------------------------------------------------
 
