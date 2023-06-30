@@ -15,9 +15,9 @@ type alias Profile =
 
 
 type alias Passkey =
-    { id : String
+    { id : Int
     , publicKey : String
-    , device : String
+    , createdAt: String -- TODO: handle DATES?
     }
 
 
@@ -51,10 +51,14 @@ fetchPasskeys toMsg =
     Http.request
         { method = "GET"
         , headers =
-            [ Http.header "Accept" "application/vnd.pgrst.object+json"
+            [ Http.header "Accept" "application/json"
             , Http.header "Content-type" "application/json"
             ]
-        , url = Url.Builder.crossOrigin "/rest" [ "rpc", "passkeys" ] []
+        , url =
+            Url.Builder.crossOrigin "/rest"
+                [ "passkeys" ]
+                [ Url.Builder.string "select" "id,public_key,created_at"
+                ]
         , body = Http.emptyBody
         , expect = expectJsonWithBody toMsg passkeyDecoder
         , timeout = Nothing
@@ -66,7 +70,7 @@ passkeyDecoder : Decode.Decoder (List Passkey)
 passkeyDecoder =
     Decode.list
         (Decode.map3 Passkey
-            (field "id" string)
-            (field "publicKey" string)
-            (field "device" string)
+            (field "id" int)
+            (field "public_key" string)
+            (field "created_at" string)
         )

@@ -87,6 +87,7 @@ app.ports.passkeyPortSender.subscribe((message) => {
         },
       };
       createPasskey(options).then((credential) => {
+        console.log(credential);
         const serialized = {
           authenticatorAttachment: credential.authenticatorAttachment,
           id: credential.id,

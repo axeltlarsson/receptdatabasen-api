@@ -42,13 +42,15 @@ type alias Model =
     { session : Session
     , profile : Status Profile
     , registeredPasskeys : Status (List Passkey)
-    , passkeySupport : PasskeySupport
+    , passkeyCreation : PasskeyCreation
     }
 
 
-type PasskeySupport
+type PasskeyCreation
     = CheckingSupport
     | Supported
+    | Creating
+    | Created Credential
     | NotSupported
 
 
@@ -60,7 +62,7 @@ type Status a
 
 init : Session -> ( Model, Cmd Msg )
 init session =
-    ( { session = session, profile = Loading, registeredPasskeys = Loading, passkeySupport = CheckingSupport }
+    ( { session = session, profile = Loading, registeredPasskeys = Loading, passkeyCreation = CheckingSupport }
     , Cmd.batch
         [ Profile.fetch LoadedProfile
         , Profile.fetchPasskeys LoadedPasskeys
@@ -74,10 +76,10 @@ view model =
     { title = "Min profil"
     , stickyContent = Element.none
     , content =
-        column []
+        column [ centerX ]
             [ viewProfile model.profile
             , viewRegisteredPasskeys model.registeredPasskeys
-            , viewPasskeyCreation model.passkeySupport
+            , viewPasskeyCreation model.passkeyCreation
             ]
     }
 
@@ -110,6 +112,11 @@ viewProfile profileStatus =
                 ]
 
 
+shortenPublicKey : String -> String
+shortenPublicKey key =
+    String.left 20 key ++ "..." ++ String.right 10 key
+
+
 viewRegisteredPasskeys : Status (List Passkey) -> Element Msg
 viewRegisteredPasskeys passkeyStatus =
     case passkeyStatus of
@@ -123,13 +130,17 @@ viewRegisteredPasskeys passkeyStatus =
             Element.table [ width fill, spacingXY 10 0 ]
                 { data = ps
                 , columns =
-                    [ { header = el [ Font.bold ] (text "public key")
+                    [ { header = el [ Font.bold ] (text "id")
                       , width = fill
-                      , view = .device >> text
+                      , view = .id >> String.fromInt >> text
                       }
-                    , { header = el [ Font.bold ] (text "device")
+                    , { header = el [ Font.bold ] (text "public key")
                       , width = fill
-                      , view = .device >> text
+                      , view = .publicKey >> shortenPublicKey >> text
+                      }
+                    , { header = el [ Font.bold ] (text "created at")
+                      , width = fill
+                      , view = .createdAt >> text
                       }
                     , { header = el [ Font.bold ] (text "remove")
                       , width = fill
@@ -139,7 +150,7 @@ viewRegisteredPasskeys passkeyStatus =
                 }
 
 
-viewPasskeyCreation : PasskeySupport -> Element Msg
+viewPasskeyCreation : PasskeyCreation -> Element Msg
 viewPasskeyCreation passkeySupport =
     case passkeySupport of
         CheckingSupport ->
@@ -149,11 +160,21 @@ viewPasskeyCreation passkeySupport =
             text "passkeys cannot be created on this device"
 
         Supported ->
-            Input.button
-                [ width fill, Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
-                { onPress = Just CreatePasskeyPressed
-                , label = el [ centerX ] (text "Skapa en ny passkey")
-                }
+            row [ centerX, width (Element.px 200) ]
+                [ Input.button
+                    [ width fill, Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
+                    { onPress = Just CreatePasskeyPressed
+                    , label = el [ centerX ] (text "Skapa en ny passkey")
+                    }
+                ]
+
+        Creating ->
+            row [ centerX ]
+                [ text "Skapar passkey..."
+                ]
+
+        Created credential ->
+            viewCredential credential
 
 
 type Msg
@@ -179,13 +200,13 @@ update msg model =
 
                 Ok (PasskeySupported supported) ->
                     if supported then
-                        ( { model | passkeySupport = Supported }, Cmd.none )
+                        ( { model | passkeyCreation = Supported }, Cmd.none )
 
                     else
-                        ( { model | passkeySupport = NotSupported }, Cmd.none )
+                        ( { model | passkeyCreation = NotSupported }, Cmd.none )
 
                 Ok (PasskeyCreated credential) ->
-                    Debug.log (Debug.toString credential) ( model, Cmd.none )
+                    Debug.log (Debug.toString credential) ( { model | passkeyCreation = Created credential }, Cmd.none )
 
         LoadedPasskeys (Ok ps) ->
             ( { model | registeredPasskeys = Loaded ps }, Cmd.none )
@@ -194,7 +215,7 @@ update msg model =
             ( { model | registeredPasskeys = Failed err }, Cmd.none )
 
         CreatePasskeyPressed ->
-            ( model, passkeyPortSender createPasskeyMsg )
+            ( { model | passkeyCreation = Creating }, passkeyPortSender createPasskeyMsg )
 
 
 port passkeyPortSender : Encode.Value -> Cmd msg
@@ -218,19 +239,6 @@ type PasskeyPortMsg
     | PasskeyCreated Credential
 
 
-
--- {
--- id: String,
--- type: 'public-key',
--- rawId: String,
--- response: {
--- clientDataJSON: String,
--- attestationObject: String,
--- signature: String,
--- userHandle: String
--- }
-
-
 type alias Credential =
     { id : String
     , response : Response
@@ -241,6 +249,22 @@ type alias Response =
     { attestationObject : String
     , clientDataJSON : String
     }
+
+
+viewCredential : Credential -> Element msg
+viewCredential cred =
+    column []
+        [ row []
+            [ text "id"
+            , text "response.attestationObject"
+            , text "response.clientDataJSON"
+            ]
+        , row []
+            [ text cred.id
+            , cred.response.attestationObject |> shortenPublicKey >> text
+            , cred.response.clientDataJSON |> shortenPublicKey >> text
+            ]
+        ]
 
 
 
