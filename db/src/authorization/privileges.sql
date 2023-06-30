@@ -11,6 +11,7 @@ grant usage on schema api to anonymous, webuser;
 grant execute on function api.login(text,text) to anonymous;
 grant execute on function api.me() to webuser;
 grant execute on function api.login(text,text) to webuser;
+grant execute on function api.passkeyRegisterRequst() to webuser;
 
 -- grants for the view owner of underlying data tables
 grant select, insert, update, delete on data.recipe to api;

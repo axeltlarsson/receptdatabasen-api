@@ -7,6 +7,7 @@ SET search_path = data;
 \ir ../../src/api/passkeys.sql;
 grant select, insert, update, delete on data.passkey to api;
 grant select, insert, update, delete on api.passkeys to webuser;
+grant execute on function api.passkeyRegisterRequest() to webuser;
 
 COMMIT;
 
