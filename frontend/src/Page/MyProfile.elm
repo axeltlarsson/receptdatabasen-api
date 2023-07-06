@@ -19,23 +19,15 @@ import Element
         )
 import Element.Background as Background
 import Element.Border as Border
-import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
-import FeatherIcons
-import Form exposing (errorBorder, onEnter, viewValidationError)
-import Http
 import Json.Decode as Decode exposing (field, string)
 import Json.Encode as Encode
 import Loading
 import Palette
 import Profile exposing (Passkey, Profile)
-import Route
 import Session exposing (Session)
-import String.Verify
-import Url.Builder
-import Verify
 
 
 type alias Model =
@@ -49,9 +41,20 @@ type alias Model =
 type PasskeyCreation
     = CheckingSupport
     | Supported
-    | Creating
+      -- RegistrationOptions from /rest/rpc/passkey_register_request
+    | RegistrationOptionsStatus (Status RegistrationOptions)
+    | CreatingCredential
     | Created Credential
+    | FailedCreatingPasskey String
     | NotSupported
+
+
+
+-- Passed directly to Port - no need to further decode value
+
+
+type alias RegistrationOptions =
+    Encode.Value
 
 
 type Status a
@@ -168,9 +171,24 @@ viewPasskeyCreation passkeySupport =
                     }
                 ]
 
-        Creating ->
+        RegistrationOptionsStatus Loading ->
+            text "🚧 laddar options från server"
+
+        RegistrationOptionsStatus (Loaded options) ->
+            text "✅ loaded options från server"
+
+        RegistrationOptionsStatus (Failed err) ->
+            viewServerError "" err
+
+        CreatingCredential ->
             row [ centerX ]
                 [ text "Skapar passkey..."
+                ]
+
+        FailedCreatingPasskey err ->
+            column [ centerX ]
+                [ paragraph [] [ text "💥 Något gick fel när passkey skulle skapas: " ]
+                , paragraph [ Font.family [ Font.typeface "Courier New", Font.monospace ] ] [ text err ]
                 ]
 
         Created credential ->
@@ -182,6 +200,7 @@ type Msg
     | PortMsg Decode.Value
     | LoadedPasskeys (Result Api.ServerError (List Passkey))
     | CreatePasskeyPressed
+    | LoadedRegistrationOptions (Result Api.ServerError RegistrationOptions)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -205,6 +224,9 @@ update msg model =
                     else
                         ( { model | passkeyCreation = NotSupported }, Cmd.none )
 
+                Ok (PasskeyCreationFailed errStr) ->
+                    ( { model | passkeyCreation = FailedCreatingPasskey errStr }, Cmd.none )
+
                 Ok (PasskeyCreated credential) ->
                     Debug.log (Debug.toString credential) ( { model | passkeyCreation = Created credential }, Cmd.none )
 
@@ -215,7 +237,13 @@ update msg model =
             ( { model | registeredPasskeys = Failed err }, Cmd.none )
 
         CreatePasskeyPressed ->
-            ( { model | passkeyCreation = Creating }, passkeyPortSender createPasskeyMsg )
+            ( { model | passkeyCreation = RegistrationOptionsStatus Loading }, Profile.fetchRegistrationOptions LoadedRegistrationOptions )
+
+        LoadedRegistrationOptions (Ok options) ->
+            ( { model | passkeyCreation = RegistrationOptionsStatus (Loaded options) }, passkeyPortSender (createPasskeyMsg options) )
+
+        LoadedRegistrationOptions (Err err) ->
+            ( { model | passkeyCreation = RegistrationOptionsStatus (Failed err) }, Cmd.none )
 
 
 port passkeyPortSender : Encode.Value -> Cmd msg
@@ -229,14 +257,15 @@ checkPasskeySupport =
     Encode.object [ ( "type", Encode.string "checkPasskeySupport" ) ]
 
 
-createPasskeyMsg : Encode.Value
-createPasskeyMsg =
-    Encode.object [ ( "type", Encode.string "createPasskey" ) ]
+createPasskeyMsg : RegistrationOptions -> Encode.Value
+createPasskeyMsg options =
+    Encode.object [ ( "type", Encode.string "createPasskey" ), ( "options", options ) ]
 
 
 type PasskeyPortMsg
     = PasskeySupported Bool
     | PasskeyCreated Credential
+    | PasskeyCreationFailed String
 
 
 type alias Credential =
@@ -294,6 +323,9 @@ passkeyPortMsgDecoder =
 
                     "passkeyCreated" ->
                         Decode.map PasskeyCreated (Decode.field "passkey" credentialDecoder)
+
+                    "error" ->
+                        Decode.map PasskeyCreationFailed (Decode.field "error" Decode.string)
 
                     _ ->
                         Decode.fail ("trying to decode port passkeyPortMsg but " ++ t ++ " is not supported")

@@ -1,8 +1,9 @@
-module Profile exposing (Passkey, Profile, fetch, fetchPasskeys)
+module Profile exposing (Passkey, Profile, fetch, fetchPasskeys, fetchRegistrationOptions)
 
 import Api exposing (ServerError, expectJsonWithBody)
 import Http
 import Json.Decode as Decode exposing (field, int, nullable, string)
+import Json.Encode as Encode
 import Url.Builder
 
 
@@ -17,7 +18,7 @@ type alias Profile =
 type alias Passkey =
     { id : Int
     , publicKey : String
-    , createdAt: String -- TODO: handle DATES?
+    , createdAt : String -- TODO: handle DATES?
     }
 
 
@@ -74,3 +75,21 @@ passkeyDecoder =
             (field "public_key" string)
             (field "created_at" string)
         )
+
+
+fetchRegistrationOptions : (Result ServerError Encode.Value -> msg) -> Cmd msg
+fetchRegistrationOptions toMsg =
+    Http.request
+        { method = "GET"
+        , headers =
+            [ Http.header "Accept" "application/json"
+            , Http.header "Content-type" "application/json"
+            ]
+        , url =
+            Url.Builder.crossOrigin "/rest"
+                [ "rpc", "passkey_register_request" ] [ ]
+        , body = Http.emptyBody
+        , expect = expectJsonWithBody toMsg Decode.value
+        , timeout = Nothing
+        , tracker = Nothing
+        }

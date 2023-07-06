@@ -55,6 +55,23 @@ const bufferToBase64url = (buffer) => {
   return base64urlString;
 };
 
+const base64urlToBuffer = (baseurl64String) => {
+  // Base64url to Base64
+  const padding = '=='.slice(0, (4 - (baseurl64String.length % 4)) % 4);
+  const base64String = baseurl64String.replace(/-/g, '+').replace(/_/g, '/') + padding;
+
+  // Base64 to binary string
+  const str = atob(base64String);
+
+  // Binary string to buffer
+  const buffer = new ArrayBuffer(str.length);
+  const byteView = new Uint8Array(buffer);
+  for (let i = 0; i < str.length; i++) {
+    byteView[i] = str.charCodeAt(i);
+  }
+  return buffer;
+};
+
 app.ports.passkeyPortSender.subscribe((message) => {
   console.log('port message recevied in js land', message);
   switch (message.type) {
@@ -64,28 +81,20 @@ app.ports.passkeyPortSender.subscribe((message) => {
       });
       break;
     case 'createPasskey':
-      const options = {
-        challenge: Uint8Array.from('MWoGDvsJpbAkI5s459o-rv_VKE3wN47tIqNqYaNAp1Ecghk7Myv0pGjd-BReBkucQdCxA0gJ8TyeUVyBfdx4RQ', (c) => c.charCodeAt(0)),
-        rp: {
-          name: 'localhost',
-          id: 'localhost',
-        },
-        user: {
-          id: Uint8Array.from('123', (c) => c.charCodeAt(0)),
-          name: 'john78',
-          displayName: 'John',
-        },
-        pubKeyCredParams: [{ alg: -7, type: 'public-key' }, { alg: -257, type: 'public-key' }],
-        excludeCredentials: [{
-          id: Uint8Array.from('923', (c) => c.charCodeAt(0)),
-          type: 'public-key',
-          transports: ['internal'],
-        }],
-        authenticatorSelection: {
-          authenticatorAttachment: 'platform',
-          requireResidentKey: true,
-        },
-      };
+      const { options } = message;
+
+      // passkeycreation requires user.id and challenge to be in buffers
+      // the server base64url encodes the user.id and challenge
+      options.user.id = base64urlToBuffer(options.user.id);
+      options.challenge = base64urlToBuffer(options.challenge);
+      console.log('options decoded:', options);
+
+      // TODO: exclude credentials already existing on the server
+      // if (options.excludeCredentials) {
+      // for (let cred of options.excludeCredentials) {
+      // cred.id = base64url.decode(cred.id);
+      // }
+      // }
       createPasskey(options).then((credential) => {
         console.log(credential);
         const serialized = {
@@ -102,6 +111,9 @@ app.ports.passkeyPortSender.subscribe((message) => {
         console.log(serialized);
 
         app.ports.passkeyPortReceiver.send({ type: 'passkeyCreated', passkey: serialized });
+      }).catch((err) => {
+        console.error(err);
+        app.ports.passkeyPortReceiver.send({ type: 'error', error: err.toString() });
       });
       break;
     default:
