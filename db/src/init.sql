@@ -17,6 +17,7 @@ set client_min_messages to warning;
 \echo # Loading database definition
 begin;
 create extension if not exists pgcrypto;
+create extension if not exists plpython3u;
 
 \echo # Loading dependencies
 

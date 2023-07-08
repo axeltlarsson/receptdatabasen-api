@@ -1,7 +1,10 @@
 version: '3.7'
 services:
   db:
-    image: postgres:${PG_VERSION}
+    build:
+      context: ./db
+      args:
+        - PG_VERSION=${PG_VERSION}
     ports:
       - "5432:5432"
     volumes:
