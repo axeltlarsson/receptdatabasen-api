@@ -46,3 +46,4 @@ openresty/html
 # End of https://www.toptal.com/developers/gitignore/api/direnv
 
 pg_db/
+cookie.txt
