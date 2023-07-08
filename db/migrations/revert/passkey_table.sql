@@ -8,5 +8,6 @@ BEGIN;
   drop function api.passkey_register_request();
   drop function api.disabled();
   drop function api.base64url(bytea);
+  drop function api.passkey_register_response();
 
 COMMIT;

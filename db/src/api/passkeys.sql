@@ -101,3 +101,22 @@ end
 $$ security definer language plpgsql;
 
 revoke all privileges on function api.passkey_register_request() from public;
+
+create function api.passkey_register_response() returns json as $$
+/**
+ * Register user credential.
+ * Input format:
+ * ```{
+     id: String,
+     type: 'public-key',
+     rawId: String,
+     response: {
+       clientDataJSON: String,
+       attestationObject: String,
+       signature: String,
+       userHandle: String
+     }
+ * }```
+ **/
+$$ security definer language plpqsql;
+revoke all privileges on function api.passkey_register_response() from public;

@@ -8,6 +8,7 @@ SET search_path = data;
 grant select, insert, update, delete on data.passkey to api;
 grant select, insert, update, delete on api.passkeys to webuser;
 grant execute on function api.passkey_register_request() to webuser;
+grant execute on function api.passkey_register_response() to webuser;
 
 COMMIT;
 
