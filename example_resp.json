@@ -1,0 +1,9 @@
+{
+  "id": "tFTubiKy2MG8mf864I7EzprDG3H9RGRwp3hntwo9eUs",
+  "rawId": "tFTubiKy2MG8mf864I7EzprDG3H9RGRwp3hntwo9eUs",
+  "response": {
+    "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVikSZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2NFAAAAAK3OAAI1vMYKZIsLJfHwVQMAILRU7m4istjBvJn_OuCOxM6awxtx_URkcKd4Z7cKPXlLpQECAyYgASFYIL4B4Wl41tIic_aUl0CcvKHwVIMIV3V26cEVfVBanek3IlggPGOz_2khW0LISh1RLYhe6agNCD8EVbeod_vfVOW4ixc",
+    "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiYkZaX1BkMFJyTGRVQlhXRSIsIm9yaWdpbiI6Imh0dHA6Ly9sb2NhbGhvc3Q6MTIzNCIsImNyb3NzT3JpZ2luIjpmYWxzZX0"
+  },
+  "type": "public-key"
+}

@@ -12,7 +12,8 @@ grant execute on function api.login(text,text) to anonymous;
 grant execute on function api.me() to webuser;
 grant execute on function api.login(text,text) to webuser;
 grant execute on function api.passkey_register_request() to webuser;
-grant execute on function api.passkey_register_response() to webuser;
+-- TODO: why dis no work?
+--  grant execute on function api.passkey_register_response() to webuser;
 
 -- grants for the view owner of underlying data tables
 grant select, insert, update, delete on data.recipe to api;

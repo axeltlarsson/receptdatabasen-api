@@ -102,11 +102,11 @@ $$ security definer language plpgsql;
 
 revoke all privileges on function api.passkey_register_request() from public;
 
-create function api.passkey_register_response() returns json as $$
-/**
- * Register user credential.
- * Input format:
- * ```{
+/*
+  Register user credential.
+  Call this with the header `Prefer: params=single-object`
+  Input format taken as single json object:
+  ```{
      id: String,
      type: 'public-key',
      rawId: String,
@@ -116,7 +116,51 @@ create function api.passkey_register_response() returns json as $$
        signature: String,
        userHandle: String
      }
- * }```
- **/
-$$ security definer language plpqsql;
-revoke all privileges on function api.passkey_register_response() from public;
+  }```
+*/
+
+create or replace function api.python_fn(raw_credential json) returns text as $$
+  from webauthn import (
+      verify_registration_response,
+      base64url_to_bytes
+  )
+  from webauthn.helpers.structs import RegistrationCredential
+
+  credential = RegistrationCredential.parse_raw(raw_credential)
+
+  registration_verification = verify_registration_response(
+      credential=credential,
+      expected_challenge=base64url_to_bytes(
+          "bFZ_Pd0RrLdUBXWE" # TODO read from session
+      ),
+      expected_origin="http://localhost:1234", # TODO read from env
+      expected_rp_id="localhost", # TODO read from env
+      require_user_verification=True
+  )
+  plpy.info(registration_verification)
+  return registration_verification.json()
+$$
+language 'plpython3u';
+
+create or replace function api.passkey_register_response(param json) returns json as $$
+/*
+TODO: swagger docs
+  API route /rpc/passkey_register_request
+  Responds with required information to call navigator.credential.create() on the client
+*/
+declare usr record;
+declare t json;
+begin
+  select id, user_name from data.user
+  where id = request.user_id()
+  into usr;
+  select api.python_fn(param::json) into t;
+
+  if usr is NULL then
+    raise "insufficient_privilege";
+  else
+    return t;
+  end if;
+end
+$$ security definer language plpgsql;
+revoke all privileges on function api.passkey_register_response(json) from public;
