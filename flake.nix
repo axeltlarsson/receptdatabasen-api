@@ -14,6 +14,15 @@
           runtimeInputs = [ pkgs.docker pkgs.docker-compose ];
           text = pkgs.lib.strings.fileContents ./scripts/import_prod_db.sh;
         };
+
+        db = pkgs.writeShellApplication {
+          name = "db";
+          # TODO: isolate pgcli config file? e.g. pspg dep...
+          runtimeInputs = [ pkgs.pgcli pkgs.pspg ];
+          text = ''
+            pgcli "postgresql://$SUPER_USER:$SUPER_USER_PASSWORD@localhost:$DB_PORT/$DB_NAME"
+          '';
+        };
       in
       {
 
@@ -21,6 +30,7 @@
           nativeBuildInputs = [ pkgs.bashInteractive ];
           buildInputs = [
             import_prod
+            db
             pkgs.shellcheck
             pkgs.sqitchPg
             pkgs.postgresql_12
