@@ -2,7 +2,7 @@ local cjson = require 'cjson'
 local utils = require 'utils'
 local resty_session = require 'resty.session'
 
--- This little lua modules is called from /login, to "capture" a requst
+-- This little lua module is called from /login, to "capture" a requst
 -- to the Postgrest /rest/rpc/login, and then it strips out the jwt token
 -- in the response, and instead adds it to a session cookie
 

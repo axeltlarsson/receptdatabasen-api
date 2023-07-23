@@ -26,6 +26,7 @@ for each row execute procedure api.disabled();
 
 
 -- TODO: move to lib/helpers
+-- TODO: no need with Python right
 create or replace function api.base64url(bytes bytea)
 returns text as $$
 /*
@@ -65,6 +66,9 @@ begin
   if usr is NULL then
     raise "insufficient_privilege";
   else
+    -- send info to openresty
+    perform set_config('response.headers',
+      '[{"X-Postgrest": "challenge=xyz"}]', true);
     return json_build_object(
       'rp', json_build_object(
         -- TODO: fetch values from env

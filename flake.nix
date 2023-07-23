@@ -8,6 +8,12 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
 
+        python = pkgs.python311;
+        pythonEnv = pkgs.python311.withPackages (ps: [
+          ps.requests
+          ps.pytest
+        ]);
+
         pg = pkgs.postgresql_12;
         import_prod = pkgs.writeShellApplication {
           name = "import-prod";
@@ -34,6 +40,10 @@
             pkgs.shellcheck
             pkgs.sqitchPg
             pkgs.postgresql_12
+
+            pythonEnv
+            pkgs.ruff
+            pkgs.pyright
           ];
 
           # source the .env file
