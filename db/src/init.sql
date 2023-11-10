@@ -13,6 +13,8 @@ set client_min_messages to warning;
 \set quoted_jwt_secret '\'' :jwt_secret '\''
 \set jwt_lifetime `echo $JWT_LIFETIME`
 \set quoted_jwt_lifetime '\'' :jwt_lifetime '\''
+\set rp_id `echo $RP_ID`
+\set origin `echo $origin`
 
 \echo # Loading database definition
 begin;
@@ -36,6 +38,8 @@ create extension if not exists plpython3u;
 -- save app settings (they are stored in the settings.secrets table)
 select settings.set('jwt_secret', :quoted_jwt_secret);
 select settings.set('jwt_lifetime', :quoted_jwt_lifetime);
+select settings.set('rp_id', :rp_id);
+select settings.set('origin', :origin);
 
 
 \echo # Loading application definitions

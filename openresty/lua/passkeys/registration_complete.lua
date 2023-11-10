@@ -10,10 +10,10 @@ if present and session.data.challenge then
     ngx.req.read_body()
     local body = ngx.req.get_body_data()
     -- ...and inject the challenge into it from session
-    local b = cjson.decode(body)
-    b.challenge = session.data.challenge
-    local new_body = cjson.encode(b)
-    print("new_body " .. new_body)
+    local new_body = cjson.encode({
+        challenge = session.data.challenge,
+        raw_credential = cjson.decode(body)
+    })
 
     -- make the request to Postgrest with the new_body
     ngx.req.set_header("Prefer", "params=single-object")
@@ -23,8 +23,7 @@ if present and session.data.challenge then
         )
 
     if res.status ~= 200 then
-        -- in case of error, just forward it as is
-        print("No!")
+        -- in case of error, just forward it as is with http status from postgrest
         ngx.status = res.status
         return ngx.say(res.body)
     else

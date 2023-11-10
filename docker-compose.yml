@@ -35,6 +35,8 @@ services:
       - PGRST_JWT_SECRET=${JWT_SECRET}
       - PGRST_MAX_ROWS=${MAX_ROWS}
       - PGRST_PRE_REQUEST=${PRE_REQUEST}
+      - PGRST_RP_ID=${RP_ID}
+      - PGRST_ORIGIN=${ORIGIN}
     depends_on:
       - db
 

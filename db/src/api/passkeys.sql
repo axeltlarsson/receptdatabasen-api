@@ -28,14 +28,14 @@ for each row execute procedure api.disabled();
   passkeys/registration/begin
 */
 
-create or replace function api.generate_registration_options(user_id text, user_name text) returns json as $$
+create or replace function api.generate_registration_options(user_id text, user_name text, rp_id text) returns json as $$
   from webauthn import (
       generate_registration_options,
       options_to_json
   )
 
   registration_options = generate_registration_options(
-    rp_id="receptdatabasen.axellarsson.nu",
+    rp_id=rp_id,
     rp_name="receptdatabasen", 
     user_id=user_id,
     user_name=user_name,
@@ -63,7 +63,7 @@ begin
   if usr is NULL then
     raise "insufficient_privilege";
   else
-    select api.generate_registration_options(usr.id::text, usr.user_name) into registration_options;
+    select api.generate_registration_options(usr.id::text, usr.user_name, settings.get('rp_id')) into registration_options;
     return registration_options;
   end if;
 end
@@ -75,31 +75,37 @@ revoke all privileges on function api.passkey_registration_begin() from public;
 /*
   passkeys/registration/complete
 */
-create or replace function api.verify_registration_response(raw_credential json) returns text as $$
-  plpy.info("verify registration response")
+create or replace function api.verify_registration_response(raw_credential text, challenge text) returns text as $$
   from webauthn import (
       verify_registration_response,
       base64url_to_bytes
   )
   from webauthn.helpers.structs import RegistrationCredential
+  from webauthn.helpers.exceptions import InvalidRegistrationResponse
 
   credential = RegistrationCredential.parse_raw(raw_credential)
 
-  registration_verification = verify_registration_response(
-      credential=credential,
-      expected_challenge=base64url_to_bytes(
-          "bFZ_Pd0RrLdUBXWE" # TODO read from session
-      ),
-      expected_origin="http://localhost:1234", # TODO read from env
-      expected_rp_id="localhost", # TODO read from env
-      require_user_verification=True
-  )
-  plpy.info(registration_verification)
+
+  expected_origin = plpy.execute("select settings.get('origin')")[0]["get"]
+  expected_rp_id = plpy.execute("select settings.get('rp_id')")[0]["get"]
+
+  try:
+    registration_verification = verify_registration_response(
+        credential=credential,
+        expected_challenge=base64url_to_bytes(challenge),
+        expected_origin=expected_origin,
+        expected_rp_id=expected_rp_id,
+        require_user_verification=True
+    )
+  except InvalidRegistrationResponse as e:
+    plpy.warning(e)
+    return None
+
   return registration_verification.json()
 $$
 language 'plpython3u';
 
-revoke all privileges on function api.verify_registration_response(json) from public;
+revoke all privileges on function api.verify_registration_response(text, text) from public;
 
 /*
 API route /rpc/passkey_registration_complete
@@ -133,8 +139,12 @@ begin
   if usr is NULL then
     raise "insufficient_privilege";
   else
-    select api.verify_registration_response(param::json) into t;
-    return t;
+    select api.verify_registration_response(param::json->>'raw_credential', param::json->>'challenge') into t;
+    if t IS NULL then
+      raise "insufficient_privilege";
+    else
+      return t;
+    end if;
   end if;
 end
 $$ security definer language plpgsql;
