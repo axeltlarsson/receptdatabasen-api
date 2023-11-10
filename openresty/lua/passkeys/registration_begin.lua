@@ -7,7 +7,7 @@ local request_options = {}
 request_options["always_forward_body"] = true
 
 local res = ngx.location.capture(
-    "/internal/rest/rpc/passkey_register_request",
+    "/internal/rest/rpc/passkey_registration_begin",
     request_options
     )
 

@@ -87,7 +87,7 @@ fetchRegistrationOptions toMsg =
             ]
         , url =
             Url.Builder.crossOrigin "/rest"
-                [ "rpc", "passkey_register_request" ] [ ]
+                [ "passkeys", "registration", "begin" ] [ ]
         , body = Http.emptyBody
         , expect = expectJsonWithBody toMsg Decode.value
         , timeout = Nothing

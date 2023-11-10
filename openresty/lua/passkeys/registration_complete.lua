@@ -18,7 +18,7 @@ if present and session.data.challenge then
     -- make the request to Postgrest with the new_body
     ngx.req.set_header("Prefer", "params=single-object")
     local res = ngx.location.capture(
-        "/internal/rest/rpc/passkey_register_response",
+        "/internal/rest/rpc/passkey_registration_complete",
             { method = ngx.HTTP_POST, body = new_body }
         )
 
@@ -32,7 +32,7 @@ if present and session.data.challenge then
         return ngx.say(res.body)
     end
 else
-    return_error("Could not forward challenge from session, make sure to call /rest/rpc/passkey_register_request to get the challenge first.", ngx.HTTP_BAD_REQUEST)
+    utils.return_error("Could not forward challenge from session, make sure to call /rest/rpc/passkey_registration_begin to get the challenge first.", ngx.HTTP_BAD_REQUEST)
 end
 
 

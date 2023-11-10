@@ -16,7 +16,7 @@ CREATE OR REPLACE FUNCTION api.disabled() RETURNS trigger
 BEGIN
   RAISE EXCEPTION 'Uploading raw passkeys is not allowed'
     USING DETAIL = 'Passkeys need to be registered in a two step process - first to obtain the configuration/challenge for the client - then to register the passkey',
-          HINT = 'Use /rpc/passkey_register_request and /rpc/passkey_register_response to add a new passkey';
+          HINT = 'Use /rpc/passkey_registration_begin and /rpc/passkey_registration_complete to add a new passkey';
 END
 $$;
 
@@ -24,40 +24,37 @@ create trigger forbid_passkey_insertion
 instead of insert or update on api.passkeys
 for each row execute procedure api.disabled();
 
-
--- TODO: move to lib/helpers
--- TODO: no need with Python right
-create or replace function api.base64url(bytes bytea)
-returns text as $$
 /*
-   Function: base64url
-
-   Description: base64url encodes the input
-
-   Parameters:
-     - bytes: The bytes to generate.
-
-   Returns: Base64url-encoded value as TEXT.
-
-   Example usage:
-     select base64url(gen_random_bytes(16)); -- Generate 16 bytes (128 bits) and base64url encode the result
+  passkeys/registration/begin
 */
-declare
-  base64url text;
-begin
-  base64url := replace(replace(encode(bytes, 'base64'), '+', '-'), '/', '_');
-  -- Remove any padding characters at the end of the base64url-encoded value
-  return substring(base64url from 1 for length(base64url) - length(base64url) % 4);
-end;
-$$ language plpgsql;
 
-create function api.passkey_register_request() returns json as $$
+create or replace function api.generate_registration_options(user_id text, user_name text) returns json as $$
+  from webauthn import (
+      generate_registration_options,
+      options_to_json
+  )
+
+  registration_options = generate_registration_options(
+    rp_id="receptdatabasen.axellarsson.nu",
+    rp_name="receptdatabasen", 
+    user_id=user_id,
+    user_name=user_name,
+    user_display_name=user_name,
+  )
+  plpy.info(options_to_json(registration_options))
+
+  return options_to_json(registration_options)
+
+$$
+language 'plpython3u';
+
 /*
-TODO: swagger docs
-  API route /rpc/passkey_register_request
-  Responds with required information to call navigator.credential.create() on the client
+API route /rpc/passkey_registration_begin
+Responds with required information to call navigator.credential.create() on the client
 */
+create function api.passkey_registration_begin() returns json as $$
 declare usr record;
+declare registration_options json;
 begin
   select id, user_name from data.user
   where id = request.user_id()
@@ -66,64 +63,20 @@ begin
   if usr is NULL then
     raise "insufficient_privilege";
   else
-    -- send info to openresty
-    perform set_config('response.headers',
-      '[{"X-Postgrest": "challenge=xyz"}]', true);
-    return json_build_object(
-      'rp', json_build_object(
-        -- TODO: fetch values from env
-        'name', 'receptdatabasen',
-        'id', 'localhost'
-      ),
-      'user', json_build_object(
-        'id', api.base64url(int4send(usr.id)),
-        'name', usr.user_name,
-        'displayName', usr.user_name
-      ),
-      'challenge', api.base64url(gen_random_bytes(12)),
-      'pubKeyCredParams', jsonb_build_array(
-        json_build_object(
-          'type', 'public-key',
-          'alg', -7
-        ),
-        json_build_object(
-          'type', 'public-key',
-          'alg', -257
-        )
-      ),
-      'timeout', 1800000,
-      'attestation', 'none',
-      -- TODO: list of existing credentials
-      'excludeCredentials', json_build_array(),
-      'authenticatorSelection', jsonb_build_object(
-        'authenticatorAttachment', 'platform',
-        'userVerification', 'required'
-      )
-    );
+    select api.generate_registration_options(usr.id::text, usr.user_name) into registration_options;
+    return registration_options;
   end if;
 end
 $$ security definer language plpgsql;
 
-revoke all privileges on function api.passkey_register_request() from public;
+revoke all privileges on function api.passkey_registration_begin() from public;
+
 
 /*
-  Register user credential.
-  Call this with the header `Prefer: params=single-object`
-  Input format taken as single json object:
-  ```{
-     id: String,
-     type: 'public-key',
-     rawId: String,
-     response: {
-       clientDataJSON: String,
-       attestationObject: String,
-       signature: String,
-       userHandle: String
-     }
-  }```
+  passkeys/registration/complete
 */
-
-create or replace function api.python_fn(raw_credential json) returns text as $$
+create or replace function api.verify_registration_response(raw_credential json) returns text as $$
+  plpy.info("verify registration response")
   from webauthn import (
       verify_registration_response,
       base64url_to_bytes
@@ -146,11 +99,29 @@ create or replace function api.python_fn(raw_credential json) returns text as $$
 $$
 language 'plpython3u';
 
-create or replace function api.passkey_register_response(param json) returns json as $$
+revoke all privileges on function api.verify_registration_response(json) from public;
+
 /*
-TODO: swagger docs
-  API route /rpc/passkey_register_request
-  Responds with required information to call navigator.credential.create() on the client
+API route /rpc/passkey_registration_complete
+TODO: Responds with verified user?
+*/
+create or replace function api.passkey_registration_complete(param json) returns json as $$
+/*
+  Register user credential.
+  Call this with the header `Prefer: params=single-object`
+  Input format taken as single json object:
+  ```{
+     id: String,
+     type: 'public-key',
+     rawId: String,
+     response: {
+       clientDataJSON: String,
+       attestationObject: String,
+       signature: String,
+       userHandle: String
+     }
+  }```
+  Uses py_webauthn python lib to do the heavy lifting in api.generate_registration_options
 */
 declare usr record;
 declare t json;
@@ -158,13 +129,13 @@ begin
   select id, user_name from data.user
   where id = request.user_id()
   into usr;
-  select api.python_fn(param::json) into t;
 
   if usr is NULL then
     raise "insufficient_privilege";
   else
+    select api.verify_registration_response(param::json) into t;
     return t;
   end if;
 end
 $$ security definer language plpgsql;
-revoke all privileges on function api.passkey_register_response(json) from public;
+revoke all privileges on function api.passkey_registration_complete(json) from public;

@@ -7,9 +7,9 @@ SET search_path = data;
 \ir ../../src/data/passkey.sql;
 \ir ../../src/api/passkeys.sql;
 grant select, insert, update, delete on data.passkey to api;
-grant select, insert, update, delete on api.passkeys to webuser;
-grant execute on function api.passkey_register_request() to webuser;
-grant execute on function api.passkey_register_response(json) to webuser;
+grant select, delete on api.passkeys to webuser;
+grant execute on function api.passkey_registration_begin() to webuser;
+grant execute on function api.passkey_registration_complete(json) to webuser;
 
 COMMIT;
 

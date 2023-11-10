@@ -41,7 +41,7 @@ type alias Model =
 type PasskeyCreation
     = CheckingSupport
     | Supported
-      -- RegistrationOptions from /rest/rpc/passkey_register_request
+      -- RegistrationOptions from /rest/rpc/passkeys/registration/begin
     | RegistrationOptionsStatus (Status RegistrationOptions)
     | CreatingCredential
     | Created Credential

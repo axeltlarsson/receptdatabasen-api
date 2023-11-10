@@ -5,10 +5,10 @@ BEGIN;
   set search_path = data;
   drop view if exists api.passkeys;
   drop table if exists data.passkey;
-  drop function api.passkey_register_request();
   drop function api.disabled();
-  drop function api.base64url(bytea);
-  drop function api.passkey_register_response(json);
-  drop function api.python_fn(json);
+  drop function api.passkey_registration_begin();
+  drop function api.passkey_registration_complete(json);
+  drop function api.generate_registration_options(user_id text, user_name text);
+  drop function api.verify_registration_response(raw_credential json);
 
 COMMIT;

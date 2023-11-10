@@ -1,17 +1,14 @@
 import pytest
 import requests
 import json
-from urllib.parse import parse_qs
 
 
 BASE_URL = "http://localhost:1234/rest"
 
-# The login endpoint path (modify if needed)
 LOGIN_ENDPOINT = "/login"
 
-# Replace these with valid test credentials for your API
-VALID_USERNAME = "familjen"
-VALID_PASSWORD = "utbud-sirap-ryss-plank"
+VALID_USERNAME = "username"
+VALID_PASSWORD = "password-password"
 
 
 @pytest.fixture
@@ -76,26 +73,31 @@ expected_register_request_response = json.loads(
 )
 
 
-@pytest.fixture
-def register_request(session):
+def test_registration_begin(session):
     """
-    Save stuff
+    Get passkey registration options from server by calling registration/begin
     """
-    response = session.get(BASE_URL + "/passkey_register_request")
+    response = session.get(BASE_URL + "/passkeys/registration/begin")
     assert response.status_code == 200
     res_json = response.json()
     assert "rp" in res_json
     assert "challenge" in res_json
+    assert "user" in res_json
 
-    # TODO: create "real" passkey?
 
+@pytest.fixture
+def registration_options():
+    """
+    Fixture to get a prerecorded credential to verify
+    """
     with open("example_resp.json") as resp:
         return json.loads(resp.read())
 
 
-def test_passkey_register_response(session, register_request):
+def test_registration_complete(session, registration_options):
+    # first need to POST to /passkeys/registration/begin to get the challenge in our session
+    test_registration_begin(session)
     response = session.post(
-        BASE_URL + "/passkey_register_response", json=register_request
+        BASE_URL + "/passkeys/registration/complete", json=registration_options
     )
-    print(response.text)
     assert response.status_code == 200

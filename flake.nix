@@ -12,6 +12,7 @@
         pythonEnv = pkgs.python311.withPackages (ps: [
           ps.requests
           ps.pytest
+          ps.webauthn
         ]);
 
         pg = pkgs.postgresql_12;
@@ -43,6 +44,7 @@
 
             pythonEnv
             pkgs.ruff
+            pkgs.ruff-lsp
             pkgs.pyright
           ];
 
