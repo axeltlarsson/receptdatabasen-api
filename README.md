@@ -41,7 +41,7 @@ Using [httpie](https://httpie.org/doc) it's very easy to interact with the API:
 
 The starter kit comes with a testing infrastructure setup.
 You can write pgTAP tests that run directly in your database, useful for testing the logic that resides in your database (user privileges, Row Level Security, stored procedures).
-Integration tests are written in JavaScript.
+Integration tests are written in JavaScript (in process of migration to Python - e.g. for passkeys).
 
 Here is how you run them
 
@@ -67,7 +67,7 @@ Testing:
 npm run test_image_server
 ```
 
-## Import production database
+## Importing production database
 
 `import_prod_db.sh` or with Nix devShell `import-prod`.
 
@@ -84,27 +84,8 @@ Add the production host as a bare git repo, and set up the post-recieve hook, th
 sqitch --chdir db/migrations add <name_of_migration> --note "<note of migration>"
 ```
 
-I use subzero for hot code reload when developing the schema.
-Every time something is changed in db/src the database is rebuilt from scratch by subzero (provided it is running).
-To then write a migration, you use
-
-```bash
-subzero migrations add <name-of-migration> --note 'Describe the change with a short note'
-```
-
-Whereby subzero will automatically generate a migration, however; you must:
-
-- i 👮 manually audit the generated migration so that it doesn't cause data loss
-- ii 🧪 run the migration to check that it actually works
-
-For step ii, you would ideally just do:
-
-```bash
-sqitch --cd db/migrations deploy
-```
-
-However, at this point, your dev db is already "migrated", so you need to test the migration by first resetting your dev db, or setting up another database for testing the migation.
-For example, you could test it on a production database dump by first running `./import_prod.sh`.
+Run the `hot-reload` script for hot reloading openresty and db.
+Whenever any source files changes in db/ the last migration is first rolled back, then re-applied.
 
 ## Authentication and Authorization flow
 
@@ -160,11 +141,3 @@ PostgREST enables a different way of building data driven API backends. It does 
 └── .env                      # Project configurations
 
 ```
-
-## Development workflow and debugging
-
-Execute `subzero dashboard` in the root of your project.<br /> (Install [subzero-cli](https://github.com/subzerocloud/subzero-cli))
-After this step you can view the logs of all the stack components (SQL queries will also be logged) and
-if you edit a sql/conf/lua file in your project, the changes will immediately be applied.
-
-Refresh schema by force: `docker-compose kill -s "SIGUSR1" server`

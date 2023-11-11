@@ -30,6 +30,12 @@
             pgcli "postgresql://$SUPER_USER:$SUPER_USER_PASSWORD@localhost:$DB_PORT/$DB_NAME"
           '';
         };
+
+        hot-reload = pkgs.writeShellApplication {
+          name = "hot-reload";
+          runtimeInputs = [ pkgs.fswatch ];
+          text = pkgs.lib.strings.fileContents ./scripts/hot-reload.sh;
+        };
       in
       {
 
@@ -38,6 +44,7 @@
           buildInputs = [
             import_prod
             db
+            hot-reload
             pkgs.shellcheck
             pkgs.sqitchPg
             pkgs.postgresql_12
