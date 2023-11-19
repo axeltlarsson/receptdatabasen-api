@@ -34,26 +34,44 @@ type alias Model =
     { session : Session
     , profile : Status Profile
     , registeredPasskeys : Status (List Passkey)
-    , passkeyCreation : PasskeyCreation
+    , passkeyRegistration : PasskeyRegistration
     }
 
 
-type PasskeyCreation
+
+{-
+   Passkey registration requires a number of steps
+
+   1. Check for client support -> `CheckingSupport` | `Supported` | `NotSupported`
+   2. Call the BE /passkeys/registration/begin to get the registration options -> RegistrationBeginStatus (Status RegistrationOptions)
+   3. Create the public key with provided resgirationOptions in js-land: navigator.credentials.create() -> CreatingCredential | FailedCreatingPasskey String
+      No Created status as we immediately go into next step:
+   4. Call the BE /passkeys/registration/complete to verify and save the public key in the database -> RegistrationCompleteStatus (Status x)
+-}
+
+
+type PasskeyRegistration
     = CheckingSupport
     | Supported
-      -- RegistrationOptions from /rest/rpc/passkeys/registration/begin
-    | RegistrationOptionsStatus (Status RegistrationOptions)
-    | CreatingCredential
-    | Created Credential
-    | FailedCreatingPasskey String
     | NotSupported
+      -- /rest/passkeys/registration/begin TODO: don't need to have Loaded status (goes directly to creating credential
+    | RegistrationBeginStatus (Status RegistrationOptions)
+      -- creating passkey in js-land
+    | CreatingCredential
+    | FailedCreatingPasskey String
+      -- /rest/passkeys/registration/complete
+    | RegistrationCompleteStatus (Status VerificationResponse)
 
 
 
--- Passed directly to Port - no need to further decode value
 
 
 type alias RegistrationOptions =
+    -- Passed directly to Port - no need to further decode value
+    Encode.Value
+
+
+type alias VerificationResponse =
     Encode.Value
 
 
@@ -65,7 +83,7 @@ type Status a
 
 init : Session -> ( Model, Cmd Msg )
 init session =
-    ( { session = session, profile = Loading, registeredPasskeys = Loading, passkeyCreation = CheckingSupport }
+    ( { session = session, profile = Loading, registeredPasskeys = Loading, passkeyRegistration = CheckingSupport }
     , Cmd.batch
         [ Profile.fetch LoadedProfile
         , Profile.fetchPasskeys LoadedPasskeys
@@ -82,7 +100,7 @@ view model =
         column [ centerX ]
             [ viewProfile model.profile
             , viewRegisteredPasskeys model.registeredPasskeys
-            , viewPasskeyCreation model.passkeyCreation
+            , viewPasskeyCreation model.passkeyRegistration
             ]
     }
 
@@ -139,7 +157,7 @@ viewRegisteredPasskeys passkeyStatus =
                       }
                     , { header = el [ Font.bold ] (text "public key")
                       , width = fill
-                      , view = .publicKey >> shortenPublicKey >> text
+                      , view = .data >> shortenPublicKey >> text
                       }
                     , { header = el [ Font.bold ] (text "created at")
                       , width = fill
@@ -153,7 +171,7 @@ viewRegisteredPasskeys passkeyStatus =
                 }
 
 
-viewPasskeyCreation : PasskeyCreation -> Element Msg
+viewPasskeyCreation : PasskeyRegistration -> Element Msg
 viewPasskeyCreation passkeySupport =
     case passkeySupport of
         CheckingSupport ->
@@ -171,13 +189,14 @@ viewPasskeyCreation passkeySupport =
                     }
                 ]
 
-        RegistrationOptionsStatus Loading ->
+        RegistrationBeginStatus Loading ->
             text "🚧 laddar options från server"
 
-        RegistrationOptionsStatus (Loaded options) ->
-            text "✅ loaded options från server"
+        RegistrationBeginStatus (Loaded _) ->
+            -- TODO: not needed
+            Element.none
 
-        RegistrationOptionsStatus (Failed err) ->
+        RegistrationBeginStatus (Failed err) ->
             viewServerError "" err
 
         CreatingCredential ->
@@ -191,8 +210,14 @@ viewPasskeyCreation passkeySupport =
                 , paragraph [ Font.family [ Font.typeface "Courier New", Font.monospace ] ] [ text err ]
                 ]
 
-        Created credential ->
-            viewCredential credential
+        RegistrationCompleteStatus Loading ->
+            text "posting to /complete"
+
+        RegistrationCompleteStatus (Loaded json) ->
+            text "posting to /complete done!"
+
+        RegistrationCompleteStatus (Failed err) ->
+            viewServerError "posting to /complete failed" err
 
 
 type Msg
@@ -200,7 +225,8 @@ type Msg
     | PortMsg Decode.Value
     | LoadedPasskeys (Result Api.ServerError (List Passkey))
     | CreatePasskeyPressed
-    | LoadedRegistrationOptions (Result Api.ServerError RegistrationOptions)
+    | LoadedRegistrationBegin (Result Api.ServerError RegistrationOptions)
+    | LoadedRegistrationComplete (Result Api.ServerError Encode.Value)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -219,16 +245,16 @@ update msg model =
 
                 Ok (PasskeySupported supported) ->
                     if supported then
-                        ( { model | passkeyCreation = Supported }, Cmd.none )
+                        ( { model | passkeyRegistration = Supported }, Cmd.none )
 
                     else
-                        ( { model | passkeyCreation = NotSupported }, Cmd.none )
+                        ( { model | passkeyRegistration = NotSupported }, Cmd.none )
 
                 Ok (PasskeyCreationFailed errStr) ->
-                    ( { model | passkeyCreation = FailedCreatingPasskey errStr }, Cmd.none )
+                    ( { model | passkeyRegistration = FailedCreatingPasskey errStr }, Cmd.none )
 
                 Ok (PasskeyCreated credential) ->
-                    Debug.log (Debug.toString credential) ( { model | passkeyCreation = Created credential }, Cmd.none )
+                    Debug.log (Debug.toString credential) ( { model | passkeyRegistration = RegistrationCompleteStatus Loading }, Profile.passkeyRegistrationComplete credential LoadedRegistrationComplete )
 
         LoadedPasskeys (Ok ps) ->
             ( { model | registeredPasskeys = Loaded ps }, Cmd.none )
@@ -237,13 +263,19 @@ update msg model =
             ( { model | registeredPasskeys = Failed err }, Cmd.none )
 
         CreatePasskeyPressed ->
-            ( { model | passkeyCreation = RegistrationOptionsStatus Loading }, Profile.fetchRegistrationOptions LoadedRegistrationOptions )
+            ( { model | passkeyRegistration = RegistrationBeginStatus Loading }, Profile.passkeyRegistrationBegin LoadedRegistrationBegin )
 
-        LoadedRegistrationOptions (Ok options) ->
-            ( { model | passkeyCreation = RegistrationOptionsStatus (Loaded options) }, passkeyPortSender (createPasskeyMsg options) )
+        LoadedRegistrationBegin (Ok options) ->
+            ( { model | passkeyRegistration = RegistrationBeginStatus (Loaded options) }, passkeyPortSender (createPasskeyMsg options) )
 
-        LoadedRegistrationOptions (Err err) ->
-            ( { model | passkeyCreation = RegistrationOptionsStatus (Failed err) }, Cmd.none )
+        LoadedRegistrationBegin (Err err) ->
+            ( { model | passkeyRegistration = RegistrationBeginStatus (Failed err) }, Cmd.none )
+
+        LoadedRegistrationComplete (Ok response) ->
+            ( { model | passkeyRegistration = RegistrationCompleteStatus (Loaded response) }, Cmd.none )
+
+        LoadedRegistrationComplete (Err err) ->
+            ( { model | passkeyRegistration = RegistrationCompleteStatus (Failed err) }, Cmd.none )
 
 
 port passkeyPortSender : Encode.Value -> Cmd msg
@@ -264,7 +296,7 @@ createPasskeyMsg options =
 
 type PasskeyPortMsg
     = PasskeySupported Bool
-    | PasskeyCreated Credential
+    | PasskeyCreated Decode.Value
     | PasskeyCreationFailed String
 
 
@@ -322,7 +354,7 @@ passkeyPortMsgDecoder =
                         Decode.map PasskeySupported (Decode.field "passkeySupport" Decode.bool)
 
                     "passkeyCreated" ->
-                        Decode.map PasskeyCreated (Decode.field "passkey" credentialDecoder)
+                        Decode.map PasskeyCreated (Decode.field "passkey" Decode.value)
 
                     "error" ->
                         Decode.map PasskeyCreationFailed (Decode.field "error" Decode.string)

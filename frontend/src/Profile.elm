@@ -1,4 +1,4 @@
-module Profile exposing (Passkey, Profile, fetch, fetchPasskeys, fetchRegistrationOptions)
+module Profile exposing (Passkey, Profile, fetch, fetchPasskeys, passkeyRegistrationBegin, passkeyRegistrationComplete)
 
 import Api exposing (ServerError, expectJsonWithBody)
 import Http
@@ -17,7 +17,7 @@ type alias Profile =
 
 type alias Passkey =
     { id : Int
-    , publicKey : String
+    , data : String
     , createdAt : String -- TODO: handle DATES?
     }
 
@@ -58,7 +58,7 @@ fetchPasskeys toMsg =
         , url =
             Url.Builder.crossOrigin "/rest"
                 [ "passkeys" ]
-                [ Url.Builder.string "select" "id,public_key,created_at"
+                [ Url.Builder.string "select" "id,data,created_at"
                 ]
         , body = Http.emptyBody
         , expect = expectJsonWithBody toMsg passkeyDecoder
@@ -72,13 +72,13 @@ passkeyDecoder =
     Decode.list
         (Decode.map3 Passkey
             (field "id" int)
-            (field "public_key" string)
+            (field "data" string)
             (field "created_at" string)
         )
 
 
-fetchRegistrationOptions : (Result ServerError Encode.Value -> msg) -> Cmd msg
-fetchRegistrationOptions toMsg =
+passkeyRegistrationBegin : (Result ServerError Encode.Value -> msg) -> Cmd msg
+passkeyRegistrationBegin toMsg =
     Http.request
         { method = "GET"
         , headers =
@@ -87,8 +87,27 @@ fetchRegistrationOptions toMsg =
             ]
         , url =
             Url.Builder.crossOrigin "/rest"
-                [ "passkeys", "registration", "begin" ] [ ]
+                [ "passkeys", "registration", "begin" ]
+                []
         , body = Http.emptyBody
+        , expect = expectJsonWithBody toMsg Decode.value
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+passkeyRegistrationComplete : Encode.Value -> (Result ServerError Encode.Value -> msg) -> Cmd msg
+passkeyRegistrationComplete body toMsg =
+    Http.request
+        { method = "POST"
+        , headers =
+            [ Http.header "Accept" "application/json"
+            ]
+        , url =
+            Url.Builder.crossOrigin "/rest"
+                [ "passkeys", "registration", "complete" ]
+                []
+        , body = Http.jsonBody body
         , expect = expectJsonWithBody toMsg Decode.value
         , timeout = Nothing
         , tracker = Nothing

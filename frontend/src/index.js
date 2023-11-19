@@ -87,6 +87,12 @@ app.ports.passkeyPortSender.subscribe((message) => {
       // the server base64url encodes the user.id and challenge
       options.user.id = base64urlToBuffer(options.user.id);
       options.challenge = base64urlToBuffer(options.challenge);
+      if (options.excludeCredentials) {
+        console.log('hej');
+        for (let i = 0; i < options.excludeCredentials.length; i++) {
+          options.excludeCredentials[i].id = base64urlToBuffer(options.excludeCredentials[i].id);
+        }
+      }
       console.log('options decoded:', options);
 
       // TODO: exclude credentials already existing on the server

@@ -1,7 +1,7 @@
 CREATE TABLE passkey (
     id SERIAL PRIMARY KEY,
     user_id INTEGER not null REFERENCES data.user(id),
-    public_key TEXT not null,
+    data json not null,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

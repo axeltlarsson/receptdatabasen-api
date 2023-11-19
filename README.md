@@ -20,13 +20,27 @@ And then see [frontend](./frontend/) for spinning up the Elm frontend.
 
 Build a prod version of the frontend with `npm run build` in the `frontend` directory, then simply visit `localhost:8080` instead of `localhost:3000` as for the elm-app _dev_ server.
 
-### API
+## API
 
 
-```shell
+### Authentication with Username/Password
+
+```sh
 curl -c cookie.txt -H 'content-type: application/json' -d '{"user_name": "xxx", "password": "yyy"}' localhost:1234/rest/login
 curl -b cookie.txt -H 'content-type: application/json' localhost:1234/rest/rpc/me
 ```
+
+### Authentication with Passkeys
+
+Passkey support on the BE side is implemented with the help of the Python [webauthn lib](https://github.com/duo-labs/py_webauthn/tree/master).
+
+1. The client with a valid session calls `GET /rest/passkeys/registration/begin` to get the "registration options" including a random challenge.
+    - options are generated with `webauthn.generate_registration_options()`
+1. The client creates a passkey with `navigator.credentials.create` using the options from step 1.
+1. The client calls `POST /rest/passkeys/registration/complete` with the serialised passkey (the public key).
+    - the server verifies that the public key is valid and contains the right challenge with `webauth.verify_registration_response()`
+    - the server stores the public key in the passkeys table
+
 
 
 Using [httpie](https://httpie.org/doc) it's very easy to interact with the API:

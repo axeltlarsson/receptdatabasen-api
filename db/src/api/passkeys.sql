@@ -2,7 +2,7 @@ create or replace view api.passkeys as (
   select
     id,
     user_id,
-    public_key,
+    data,
     updated_at,
     created_at
   from data.passkey
@@ -28,11 +28,17 @@ for each row execute procedure api.disabled();
   passkeys/registration/begin
 */
 
-create or replace function api.generate_registration_options(user_id text, user_name text, rp_id text) returns json as $$
+create or replace function api.generate_registration_options(user_id text, user_name text, rp_id text, exclude_credentials text[]) returns json as $$
   from webauthn import (
       generate_registration_options,
-      options_to_json
+      options_to_json,
   )
+  from webauthn.helpers.structs import PublicKeyCredentialDescriptor
+
+  if exclude_credentials is None:
+    exclude_creds = []
+  else:
+    exclude_creds = exclude_credentials
 
   registration_options = generate_registration_options(
     rp_id=rp_id,
@@ -40,6 +46,7 @@ create or replace function api.generate_registration_options(user_id text, user_
     user_id=user_id,
     user_name=user_name,
     user_display_name=user_name,
+    exclude_credentials=[PublicKeyCredentialDescriptor(id=bytes(cred, 'utf-8')) for cred in exclude_creds]
   )
   plpy.info(options_to_json(registration_options))
 
@@ -55,15 +62,22 @@ Responds with required information to call navigator.credential.create() on the 
 create function api.passkey_registration_begin() returns json as $$
 declare usr record;
 declare registration_options json;
+declare exclude_credentials text[] := ARRAY[]::text[];
 begin
   select id, user_name from data.user
   where id = request.user_id()
   into usr;
 
+  -- fetch existing passkeys for exclusion
+  select array_agg(data->>'credential_id')
+  from data.passkey
+  where user_id = usr.id
+  into exclude_credentials;
+
   if usr is NULL then
     raise "insufficient_privilege";
   else
-    select api.generate_registration_options(usr.id::text, usr.user_name, settings.get('rp_id')) into registration_options;
+    select api.generate_registration_options(usr.id::text, usr.user_name, settings.get('rp_id'), exclude_credentials) into registration_options;
     return registration_options;
   end if;
 end
@@ -130,7 +144,7 @@ create or replace function api.passkey_registration_complete(param json) returns
   Uses py_webauthn python lib to do the heavy lifting in api.generate_registration_options
 */
 declare usr record;
-declare t json;
+declare registration json;
 begin
   select id, user_name from data.user
   where id = request.user_id()
@@ -139,11 +153,12 @@ begin
   if usr is NULL then
     raise "insufficient_privilege";
   else
-    select api.verify_registration_response(param::json->>'raw_credential', param::json->>'challenge') into t;
-    if t IS NULL then
+    select api.verify_registration_response(param::json->>'raw_credential', param::json->>'challenge') into registration;
+    if registration IS NULL then
       raise "insufficient_privilege";
     else
-      return t;
+      insert into data.passkey (user_id, data) values (usr.id, registration); 
+      return registration;
     end if;
   end if;
 end
