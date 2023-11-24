@@ -96,4 +96,39 @@ def test_registration_complete(passkey_with_session):
     body = response.json()
     assert response.status_code == 200
     assert "credential_id" in body
-    assert body["user_verified"] is False # soft webauthn performs no user verification
+    assert body["user_verified"] is False  # soft webauthn performs no user verification
+
+
+@pytest.fixture
+def authentication_options():
+    """
+    Fixture to get authentication options from the server from /passkeys/authentication/begin
+    """
+    # the server needs to know the username in order to fetch allowed credentials
+    payload = {"user_name": VALID_USERNAME}
+    session = requests.Session()
+    response = session.post(f"{BASE_URL}/passkeys/authentication/begin", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+
+    # Decode the challenge from base64-url and convert to bytes
+    challenge = base64.urlsafe_b64decode(body["challenge"] + "==")
+
+    # Update the body with the byte-encoded challenge
+    body["challenge"] = challenge
+
+    assert "challenge" in body
+    assert body["rpId"] == "localhost"
+    assert "allowCredentials" in body
+
+    return {"publicKey": body}
+
+def test_authentication_begin(authentication_options):
+    device = SoftWebauthnDevice()
+    device.cred_init("localhost", b"random_handle")
+    passkey = device.get(authentication_options, "localhost")
+    assert passkey["type"] == "public-key"
+
+def test_authentication_complete():
+    pass

@@ -1,29 +1,3 @@
-create or replace view api.passkeys as (
-  select
-    id,
-    user_id,
-    data,
-    updated_at,
-    created_at
-  from data.passkey
-);
-
-alter view api.passkeys owner to api;
-
-CREATE OR REPLACE FUNCTION api.disabled() RETURNS trigger
-  LANGUAGE plpgsql
-  AS $$
-BEGIN
-  RAISE EXCEPTION 'Uploading raw passkeys is not allowed'
-    USING DETAIL = 'Passkeys need to be registered in a two step process - first to obtain the configuration/challenge for the client - then to register the passkey',
-          HINT = 'Use /rpc/passkey_registration_begin and /rpc/passkey_registration_complete to add a new passkey';
-END
-$$;
-
-create trigger forbid_passkey_insertion
-instead of insert or update on api.passkeys
-for each row execute procedure api.disabled();
-
 /*
   passkeys/registration/begin
 */
@@ -54,6 +28,7 @@ create or replace function api.generate_registration_options(user_id text, user_
 
 $$
 language 'plpython3u';
+revoke all privileges on function api.generate_registration_options(text, text, text, text[]) from public;
 
 /*
 API route /rpc/passkey_registration_begin
@@ -84,7 +59,7 @@ end
 $$ security definer language plpgsql;
 
 revoke all privileges on function api.passkey_registration_begin() from public;
-
+grant execute on function api.passkey_registration_begin() to webuser;
 
 /*
   passkeys/registration/complete
@@ -125,7 +100,6 @@ revoke all privileges on function api.verify_registration_response(text, text) f
 
 /*
 API route /rpc/passkey_registration_complete
-TODO: Responds with verified user?
 */
 create or replace function api.passkey_registration_complete(param json) returns json as $$
 /*
@@ -167,3 +141,4 @@ begin
 end
 $$ security definer language plpgsql;
 revoke all privileges on function api.passkey_registration_complete(json) from public;
+grant execute on function api.passkey_registration_complete(json) to webuser;
