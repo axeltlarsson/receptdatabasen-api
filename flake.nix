@@ -9,10 +9,31 @@
         pkgs = nixpkgs.legacyPackages.${system};
 
         python = pkgs.python311;
+        pyPkgs = pkgs.python311Packages;
+
+        soft-webauthn = (
+          pyPkgs.buildPythonPackage rec {
+            pname = "soft-webauthn";
+            version = "0.1.4";
+            src = pkgs.fetchPypi {
+              inherit pname version;
+              sha256 = "sha256-6WUTNC5pu/3lpgrcsDqw1WLXDV0uIO5yA/z7308bBtA=";
+            };
+            doCheck = false;
+            # format = "pyproject";
+            propagatedBuildInputs = with pyPkgs; [
+              cryptography
+              fido2
+            ];
+
+            pythonImportsCheck = [ "soft_webauthn" ];
+          }
+        );
         pythonEnv = pkgs.python311.withPackages (ps: [
           ps.requests
           ps.pytest
           ps.webauthn
+          soft-webauthn
         ]);
 
         pg = pkgs.postgresql_12;

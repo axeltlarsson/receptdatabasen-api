@@ -33,6 +33,3 @@ if present and session.data.challenge then
 else
     utils.return_error("Could not forward challenge from session, make sure to call /rest/rpc/passkey_registration_begin to get the challenge first.", ngx.HTTP_BAD_REQUEST)
 end
-
-
-

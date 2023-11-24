@@ -15,6 +15,7 @@ set client_min_messages to warning;
 \set quoted_jwt_lifetime '\'' :jwt_lifetime '\''
 \set rp_id `echo $RP_ID`
 \set origin `echo $origin`
+\set req_usr_verification `echo $DISABLE_USR_VERIFICATION`
 
 \echo # Loading database definition
 begin;
@@ -40,6 +41,7 @@ select settings.set('jwt_secret', :quoted_jwt_secret);
 select settings.set('jwt_lifetime', :quoted_jwt_lifetime);
 select settings.set('rp_id', :rp_id);
 select settings.set('origin', :origin);
+select settings.set('disable_usr_verification', :disable_usr_verification);
 
 
 \echo # Loading application definitions

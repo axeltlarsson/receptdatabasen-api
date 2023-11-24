@@ -1,7 +1,10 @@
+import base64
+import json
+from base64 import urlsafe_b64encode
+
 import pytest
 import requests
-import json
-
+from soft_webauthn import SoftWebauthnDevice
 
 BASE_URL = "http://localhost:1234/rest"
 
@@ -38,41 +41,6 @@ def test_login_required_for_recipes():
     assert response.status_code == 401
 
 
-expected_register_request_response = json.loads(
-    """
-{
-  "rp": {
-    "name": "receptdatabasen",
-    "id": "localhost"
-  },
-  "user": {
-    "id": "AAAAAw==",
-    "name": "familjen",
-    "displayName": "familjen"
-  },
-  "challenge": "vGlIST2cUHChzmDh",
-  "pubKeyCredParams": [
-    {
-      "alg": -7,
-      "type": "public-key"
-    },
-    {
-      "alg": -257,
-      "type": "public-key"
-    }
-  ],
-  "timeout": 1800000,
-  "attestation": "none",
-  "excludeCredentials": [],
-  "authenticatorSelection": {
-    "userVerification": "required",
-    "authenticatorAttachment": "platform"
-  }
-}
-"""
-)
-
-
 def test_registration_begin(session):
     """
     Get passkey registration options from server by calling registration/begin
@@ -85,21 +53,47 @@ def test_registration_begin(session):
     assert "user" in res_json
 
 
+def serialize_passkey(key):
+    serialized = key.copy()
+    serialized["id"] = key["id"].decode("utf-8").rstrip("=")
+    serialized["rawId"] = urlsafe_b64encode(key["rawId"]).decode("utf-8").rstrip("=")
+    serialized["response"]["clientDataJSON"] = base64.b64encode(
+        key["response"]["clientDataJSON"]
+    ).decode("utf-8")
+    serialized["response"]["attestationObject"] = base64.b64encode(
+        key["response"]["attestationObject"]
+    ).decode("utf-8")
+
+    return json.dumps(serialized)
+
+
 @pytest.fixture
-def registration_options():
+def passkey_with_session(session):
     """
-    Fixture to get a prerecorded credential to verify
+    Fixture that creates a passkey using registration options from the server.
+    Returns (passkey, session)
     """
-    with open("example_resp.json") as resp:
-        return json.loads(resp.read())
+    response = session.get(BASE_URL + "/passkeys/registration/begin")
+    assert response.status_code == 200
+
+    # decode response
+    res_json = response.json()
+    options = {"publicKey": res_json}
+    challenge = options["publicKey"]["challenge"]
+    options["publicKey"]["challenge"] = base64.urlsafe_b64decode(challenge + "==")
+
+    # create a passkey akin to `navigator.credentials.create()`
+    device = SoftWebauthnDevice()
+    passkey = device.create(options, "http://localhost:1234")
+    passkey_serialized = serialize_passkey(passkey)
+
+    return passkey_serialized, session
 
 
-def test_registration_complete(session, registration_options):
-    # first need to POST to /passkeys/registration/begin to get the challenge in our session
-    test_registration_begin(session)
-    response = session.post(
-        BASE_URL + "/passkeys/registration/complete", json=registration_options
-    )
-    assert (
-        response.status_code == 403
-    )  # TODO: 403 since challenge is not going to match
+def test_registration_complete(passkey_with_session):
+    passkey, session = passkey_with_session
+    response = session.post(BASE_URL + "/passkeys/registration/complete", json=passkey)
+    body = response.json()
+    assert response.status_code == 200
+    assert "credential_id" in body
+    assert body["user_verified"] is False # soft webauthn performs no user verification

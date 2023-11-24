@@ -37,6 +37,7 @@ services:
       - PGRST_PRE_REQUEST=${PRE_REQUEST}
       - PGRST_RP_ID=${RP_ID}
       - PGRST_ORIGIN=${ORIGIN}
+      - PGRST_DISABLE_USER_VERIFICATION=${DISABLE_USER_VERIFICATION}
     depends_on:
       - db
 

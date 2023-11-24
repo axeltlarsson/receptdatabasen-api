@@ -102,6 +102,8 @@ create or replace function api.verify_registration_response(raw_credential text,
 
   expected_origin = plpy.execute("select settings.get('origin')")[0]["get"]
   expected_rp_id = plpy.execute("select settings.get('rp_id')")[0]["get"]
+  disable_user_verification = plpy.execute("select settings.get('disable_user_verification')::bool")[0]["get"]
+  require_user_verification = not bool(disable_user_verification)
 
   try:
     registration_verification = verify_registration_response(
@@ -109,7 +111,7 @@ create or replace function api.verify_registration_response(raw_credential text,
         expected_challenge=base64url_to_bytes(challenge),
         expected_origin=expected_origin,
         expected_rp_id=expected_rp_id,
-        require_user_verification=True
+        require_user_verification=require_user_verification
     )
   except InvalidRegistrationResponse as e:
     plpy.warning(e)
@@ -145,6 +147,7 @@ create or replace function api.passkey_registration_complete(param json) returns
 */
 declare usr record;
 declare registration json;
+
 begin
   select id, user_name from data.user
   where id = request.user_id()
