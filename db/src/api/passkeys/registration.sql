@@ -22,7 +22,6 @@ create or replace function api.generate_registration_options(user_id text, user_
     user_display_name=user_name,
     exclude_credentials=[PublicKeyCredentialDescriptor(id=bytes(cred, 'utf-8')) for cred in exclude_creds]
   )
-  plpy.info(options_to_json(registration_options))
 
   return options_to_json(registration_options)
 
@@ -100,25 +99,11 @@ revoke all privileges on function api.verify_registration_response(text, text) f
 
 /*
 API route /rpc/passkey_registration_complete
+Call this with the header `Prefer: params=single-object`
 */
 create or replace function api.passkey_registration_complete(param json) returns json as $$
-/*
-  Register user credential.
-  Call this with the header `Prefer: params=single-object`
-  Input format taken as single json object:
-  ```{
-     id: String,
-     type: 'public-key',
-     rawId: String,
-     response: {
-       clientDataJSON: String,
-       attestationObject: String,
-       signature: String,
-       userHandle: String
-     }
-  }```
-  Uses py_webauthn python lib to do the heavy lifting in api.generate_registration_options
-*/
+-- param->>'expected_challenge" can be trusted as it's injected into the body from the session cookie by openresty
+-- passkeys/registration_complete.lua
 declare usr record;
 declare registration json;
 
@@ -130,7 +115,7 @@ begin
   if usr is NULL then
     raise "insufficient_privilege";
   else
-    select api.verify_registration_response(param::json->>'raw_credential', param::json->>'challenge') into registration;
+    select api.verify_registration_response(param::json->>'raw_credential', param::json->>'expected_challenge') into registration;
     if registration IS NULL then
       raise "insufficient_privilege";
     else

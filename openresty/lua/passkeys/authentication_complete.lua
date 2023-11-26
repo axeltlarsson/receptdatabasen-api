@@ -2,6 +2,9 @@ local cjson = require 'cjson'
 local utils = require "utils"
 local resty_session = require "resty.session"
 
+-- passkey_authentication_complete lua code to relay POST request to PostgREST
+-- but to read the expected challange from the session and relay it in the body
+
 local session, present, reason = resty_session.open()
 
 -- Read the challenge from the session and inject into request for the Postgrest endpoint
@@ -18,7 +21,7 @@ if present and session.data.challenge then
     -- make the request to Postgrest with the new_body
     ngx.req.set_header("Prefer", "params=single-object")
     local res = ngx.location.capture(
-        "/internal/rest/rpc/passkey_registration_complete",
+        "/internal/rest/rpc/passkey_authentication_complete",
             { method = ngx.HTTP_POST, body = new_body }
         )
 
@@ -31,5 +34,5 @@ if present and session.data.challenge then
         return ngx.say(res.body)
     end
 else
-    utils.return_error("Could not forward challenge from session, make sure to call /rest/rpc/passkey_registration_begin to get the challenge first.", ngx.HTTP_BAD_REQUEST)
+    utils.return_error("Could not forward challenge from session, make sure to call /rest/rpc/passkey_authentication_begin to get the challenge first.", ngx.HTTP_BAD_REQUEST)
 end

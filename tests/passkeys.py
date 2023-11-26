@@ -8,25 +8,18 @@ from soft_webauthn import SoftWebauthnDevice
 
 BASE_URL = "http://localhost:1234/rest"
 
-LOGIN_ENDPOINT = "/login"
-
 VALID_USERNAME = "username"
 VALID_PASSWORD = "password-password"
 
 
 @pytest.fixture
-def api_url():
-    return BASE_URL + LOGIN_ENDPOINT
-
-
-@pytest.fixture
-def session(api_url):
+def session():
     session = requests.Session()
     login_data = {
         "user_name": VALID_USERNAME,
         "password": VALID_PASSWORD,
     }
-    response = session.post(api_url + LOGIN_ENDPOINT, json=login_data)
+    response = session.post(f"{BASE_URL}/login", json=login_data)
     assert response.status_code == 200, "Login failed"
     return session
 
@@ -41,6 +34,9 @@ def test_login_required_for_recipes():
     assert response.status_code == 401
 
 
+# ----------------------|
+# Passkey registration |
+# ----------------------|
 def test_registration_begin(session):
     """
     Get passkey registration options from server by calling registration/begin
@@ -48,6 +44,7 @@ def test_registration_begin(session):
     response = session.get(BASE_URL + "/passkeys/registration/begin")
     assert response.status_code == 200
     res_json = response.json()
+
     assert "rp" in res_json
     assert "challenge" in res_json
     assert "user" in res_json
@@ -60,9 +57,23 @@ def serialize_passkey(key):
     serialized["response"]["clientDataJSON"] = base64.b64encode(
         key["response"]["clientDataJSON"]
     ).decode("utf-8")
-    serialized["response"]["attestationObject"] = base64.b64encode(
-        key["response"]["attestationObject"]
-    ).decode("utf-8")
+    if "attestationObject" in key["response"]:
+        serialized["response"]["attestationObject"] = base64.b64encode(
+            key["response"]["attestationObject"]
+        ).decode("utf-8")
+
+    if "signature" in key["response"]:
+        serialized["response"]["signature"] = base64.b64encode(
+            key["response"]["signature"]
+        ).decode("utf-8")
+    if "authenticatorData" in key["response"]:
+        serialized["response"]["authenticatorData"] = base64.b64encode(
+            key["response"]["authenticatorData"]
+        ).decode("utf-8")
+    if "userHandle" in key["response"]:
+        serialized["response"]["userHandle"] = base64.b64encode(
+            key["response"]["userHandle"]
+        ).decode("utf-8")
 
     return json.dumps(serialized)
 
@@ -99,10 +110,23 @@ def test_registration_complete(passkey_with_session):
     assert body["user_verified"] is False  # soft webauthn performs no user verification
 
 
+def test_passkey_endpoint(passkey_with_session):
+    passkey, session = passkey_with_session
+
+    res = session.get(f"{BASE_URL}/passkeys")
+    assert res.status_code == 200
+
+    # TODO: test that the actual passkey is in here (how to check equality?)
+
+
+# ------------------------|
+# Passkey authentication |
+# ------------------------|
 @pytest.fixture
-def authentication_options():
+def auth_options_w_session():
     """
     Fixture to get authentication options from the server from /passkeys/authentication/begin
+    Returns the authentication options as well as the session associated (needed for the challenge)
     """
     # the server needs to know the username in order to fetch allowed credentials
     payload = {"user_name": VALID_USERNAME}
@@ -122,13 +146,41 @@ def authentication_options():
     assert body["rpId"] == "localhost"
     assert "allowCredentials" in body
 
-    return {"publicKey": body}
+    return {"publicKey": body}, session
 
-def test_authentication_begin(authentication_options):
+
+@pytest.fixture
+def get_passkey_w_session(auth_options_w_session):
+    """
+    Fixture to get the passkey from soft_webauthn device, also returns the session
+    """
+    auth_options, session = auth_options_w_session
     device = SoftWebauthnDevice()
-    device.cred_init("localhost", b"random_handle")
-    passkey = device.get(authentication_options, "localhost")
-    assert passkey["type"] == "public-key"
+    device.cred_init(rp_id="localhost", user_handle=bytes(VALID_USERNAME, "utf-8"))
+    passkey = device.get(options=auth_options, origin="http://localhost:1234")
+    assert passkey["type"] == "public-key", session
 
-def test_authentication_complete():
-    pass
+    return serialize_passkey(passkey), session
+
+
+def test_incomplete_passkey_auth(auth_options_w_session):
+    """
+    The session we get from passkeys/begin should only allow us to call passkeys/complete, no other endpoints.
+    """
+
+    _, session = auth_options_w_session
+    res = session.get(f"{BASE_URL}/recipes")
+    assert res.status_code == 401
+
+
+def test_authentication_complete(get_passkey_w_session):
+    passkey, session = get_passkey_w_session
+
+    payload = passkey
+    response = session.post(
+        f"{BASE_URL}/passkeys/authentication/complete", json=payload
+    )
+    print("auth/complete response", response.json())
+    assert response.status_code == 200
+
+    # TODO: test session with passkey only, no regular login

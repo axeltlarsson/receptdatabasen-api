@@ -1,6 +1,7 @@
 #!/bin/bash
 
-CUSTOM_CONFIG=$(cat <<EOF
+CUSTOM_CONFIG=$(
+	cat <<EOF
 #------------------------------------------------------------------------------
 # CUSTOM SETTINGS (they override the values set above in the config)
 #------------------------------------------------------------------------------
@@ -12,11 +13,12 @@ log_statement = 'all'
 fsync = off
 synchronous_commit = off
 full_page_writes = off
+client_min_messages = 'debug';
 EOF
 )
 
 set -e
 
 if [ "$DEVELOPMENT" = '1' ]; then
-  echo "${CUSTOM_CONFIG}" >> /var/lib/postgresql/data/postgresql.conf
+	echo "${CUSTOM_CONFIG}" >>/var/lib/postgresql/data/postgresql.conf
 fi

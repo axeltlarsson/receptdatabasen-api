@@ -12,7 +12,8 @@ BEGIN;
   drop function api.verify_registration_response(raw_credential text, challenge text);
   drop function api.passkey_authentication_begin(json);
   drop function api.generate_authentication_options(user_name text);
-  --  drop function api.passkey_authentication_complete(json);
-  --  drop function api.verify_authentication_response(raw_credential text, challenge text);
+  drop function api.passkey_authentication_complete(json);
+  drop function api.verify_authentication_response(raw_credential text, challenge text, public_key text);
+  drop function api.user_handle_from_credential(raw_credential text);
 
 COMMIT;
