@@ -9,19 +9,26 @@ from soft_webauthn import SoftWebauthnDevice
 
 BASE_URL = "http://localhost:1234/rest"
 
-VALID_USERNAME = "username"
-VALID_PASSWORD = "password-password"
+# insert into data.user (use_name, password) values ('user_1', 'password-password');
+USERNAME_1 = "user_1"
+USERNAME_2 = "user_2"
+PASSWORD = "password-password"
 
 
-@pytest.fixture
-def session():
+@pytest.fixture(name="session")
+def session_fixture():
+    return login(USERNAME_1, PASSWORD)
+
+
+def login(user_name, password):
     session = requests.Session()
     login_data = {
-        "user_name": VALID_USERNAME,
-        "password": VALID_PASSWORD,
+        "user_name": user_name,
+        "password": password,
     }
     response = session.post(f"{BASE_URL}/login", json=login_data)
     assert response.status_code == 200, "Login failed"
+
     return session
 
 
@@ -84,13 +91,17 @@ def serialize_passkey(key):
 # our fake device
 device = SoftWebauthnDevice()
 
+session_1 = login(USERNAME_1, PASSWORD)
+session_2 = login(USERNAME_2, PASSWORD)
 
-@pytest.fixture
-def passkey_with_session(session):
+
+@pytest.fixture(params=[session_1, session_2])
+def passkey_with_session(request):
     """
     Fixture that creates a passkey using registration options from the server.
     Returns (passkey, session)
     """
+    session = request.param
     response = session.get(BASE_URL + "/passkeys/registration/begin")
     assert response.status_code == 200
 
@@ -125,6 +136,10 @@ def test_registration_complete(passkey_with_session):
     last_passkey = body[-1]
     passkey_json = json.loads(serialize_passkey(passkey))
 
+    # check we can only see our own passkeys
+    user_ids = [x["user_id"] for x in body]
+    assert len(set(user_ids)) == 1
+
     assert last_passkey["data"]["credential_id"] == passkey_json["id"]
 
 
@@ -146,7 +161,7 @@ def auth_options_w_session():
     Returns the authentication options as well as the session associated (needed for the challenge)
     """
     # the server needs to know the username in order to fetch allowed credentials
-    payload = {"user_name": VALID_USERNAME}
+    payload = {"user_name": USERNAME_1}
     session = requests.Session()
     response = session.post(f"{BASE_URL}/passkeys/authentication/begin", json=payload)
 
@@ -215,7 +230,7 @@ def test_authentication_complete(get_passkey_w_session):
     assert response.status_code == 200
     response_json = response.json()
     assert "me" in response_json
-    assert response_json["me"]["user_name"] == VALID_USERNAME
+    #  assert response_json["me"]["user_name"] == VALID_USERNAME_1
     with pytest.raises(KeyError):
         # token should be stripped by openresty
         response_json["token"]

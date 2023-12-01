@@ -24,4 +24,4 @@ create trigger forbid_passkey_insertion
 instead of insert or update on api.passkeys
 for each row execute procedure api.disabled();
 
-grant select, delete on api.passkeys to webuser;
+grant select, update, delete on api.passkeys to webuser;
