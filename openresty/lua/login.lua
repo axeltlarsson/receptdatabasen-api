@@ -8,14 +8,11 @@ local resty_session = require 'resty.session'
 
 -- Tell nginx to read body, in order to pass it onto auth endpoint
 ngx.req.read_body()
-local request_options = {}
-request_options["method"] = ngx.HTTP_POST
-request_options["always_forward_body"] = true
 -- "Issues a synchronous but still non-blocking Nginx Subrequest using uri"
 -- https://openresty-reference.readthedocs.io/en/latest/Lua_Nginx_API/#ngxlocationcapture
 local res = ngx.location.capture(
   "/internal/rest/rpc/login",
-  request_options
+  { method = ngx.HTTP_POST, always_forward_body = true }
   )
 
 if res.status ~= 200 then

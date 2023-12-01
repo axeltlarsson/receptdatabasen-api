@@ -30,8 +30,14 @@ if present and session.data.challenge then
         ngx.status = res.status
         return ngx.say(res.body)
     else
-        -- also just forward as is
-        return ngx.say(res.body)
+        -- decode response and strip token and save into session
+        local resp_data = cjson.decode(res.body)
+        -- Only keep the "me" and "authentication" keys in the resonse, strip jwt
+        local response = { me = resp_data.me, authentication = resp_data.authentication }
+        session.data.jwt = resp_data.token
+        session.cookie.samesite = 'Strict'
+        session:save()
+        return ngx.say(cjson.encode(response))
     end
 else
     utils.return_error("Could not forward challenge from session, make sure to call /rest/rpc/passkey_authentication_begin to get the challenge first.", ngx.HTTP_BAD_REQUEST)

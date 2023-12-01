@@ -16,7 +16,6 @@ create or replace function api.generate_authentication_options(user_name text) r
   auth_options = generate_authentication_options(
     rp_id=rp_id,
   )
-  plpy.info(options_to_json(auth_options))
 
   return options_to_json(auth_options)
 $$
@@ -34,11 +33,13 @@ begin
   into usr;
 
   if usr is NULL then
-    raise "insufficient_privilege";
+    raise exception
+      using detail = 'Cannot find provided user_name, if any, in database.',
+      hint = 'Provide an existing user id in the body of the POST request: { "user_name": "valid_user" }';
   else
     select api.generate_authentication_options(usr.user_name) into options;
     if options IS NULL then
-      raise "insufficient_privilege";
+      raise insufficient_privilege;
     else
       return options;
     end if;
@@ -68,8 +69,6 @@ create or replace function api.verify_authentication_response(raw_credential tex
   expected_rp_id = plpy.execute("select settings.get('rp_id')")[0]["get"]
   disable_user_verification = plpy.execute("select settings.get('disable_user_verification')::bool")[0]["get"]
   require_user_verification = not bool(disable_user_verification)
-  plpy.info("credential_public_key base64_url_to_bytes", base64url_to_bytes(public_key))
-  plpy.info("credential_public_key", public_key)
 
   try:
     auth_verification = verify_authentication_response(
@@ -96,10 +95,11 @@ revoke all privileges on function api.verify_authentication_response(text, text,
 create or replace function api.user_handle_from_credential(raw_credential text) returns text as $$
   from webauthn.helpers.structs import AuthenticationCredential
 
-  credential = AuthenticationCredential.parse_raw(raw_credential)
-  plpy.info(credential)
-
-  return credential.response.user_handle.decode("utf-8")
+  try:
+    credential = AuthenticationCredential.parse_raw(raw_credential)
+    return credential.response.user_handle.decode("utf-8")
+  except Exception:
+    return None
 $$
 language 'plpython3u';
 
@@ -115,18 +115,19 @@ begin
     select api.user_handle_from_credential(param->>'raw_credential') into user_handle;
 
     if user_handle is null then
-        raise exception 'insufficient_privilege';
+      raise exception
+        using detail = 'Cannot parse user_handle from credential payload.',
+            hint = 'Check your payload';
     end if;
 
-    -- fetch user and passkey by
-    select id, user_name into usr
+    select * into usr
     from data.user
-    where user_name = user_handle;
+    where id = user_handle::int;
 
-    --  RAISE EXCEPTION 'cannot find reading user handle ID --> %', user_id
-    --  USING HINT = 'Please check your user_handle';
     if usr is null then
-        raise exception 'insufficient_privilege';
+      raise insufficient_privilege
+        using detail = ('Cannot find user with id:', user_handle),
+            hint = 'Check your user_handle';
     end if;
 
     select data->>'credential_public_key' into public_key
@@ -136,19 +137,35 @@ begin
     limit 1;
 
     if public_key is null then
-      RAISE EXCEPTION 'cannot find passkey for use_id --> %', usr.id
-      USING HINT = 'Please check your user_handle';
+      raise exception 'Cannot find passkey for user_id'
+      using detail = ('User_id', usr.id),
+      hint = 'Check your user_handle payload';
     end if;
 
-    -- you need to ensure that public_key is assigned a value before this point
     select api.verify_authentication_response(param->>'raw_credential', param->>'expected_challenge', public_key)
     into authentication;
 
     if authentication is null then
-        raise exception 'insufficient_privilege';
+        raise insufficient_privilege
+        using hint = 'Authentication of credential failed';
     else
-        -- todo: return me object with jwt token
-        return authentication;
+        return json_build_object(
+          'me', json_build_object(
+            'id', usr.id,
+            'user_name', usr.user_name,
+            'email', usr.email,
+            'role', 'customer'
+          ),
+          'authentication', authentication,
+          'token', pgjwt.sign(
+            json_build_object(
+              'role', usr.role,
+              'user_id', usr.id,
+              'exp', extract(epoch from now())::integer + settings.get('jwt_lifetime')::int
+            ),
+            settings.get('jwt_secret')
+          )
+        );
     end if;
 end
 $$ security definer language plpgsql;
