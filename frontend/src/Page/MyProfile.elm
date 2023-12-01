@@ -35,6 +35,7 @@ type alias Model =
     , profile : Status Profile
     , registeredPasskeys : Status (List Passkey)
     , passkeyRegistration : PasskeyRegistration
+    , passkeyAuthentication : PasskeyAuthentication
     }
 
 
@@ -63,9 +64,6 @@ type PasskeyRegistration
     | RegistrationCompleteStatus (Status VerificationResponse)
 
 
-
-
-
 type alias RegistrationOptions =
     -- Passed directly to Port - no need to further decode value
     Encode.Value
@@ -73,6 +71,20 @@ type alias RegistrationOptions =
 
 type alias VerificationResponse =
     Encode.Value
+
+
+type alias AuthOptions =
+    Encode.Value
+
+
+type alias AuthVerification =
+    Encode.Value
+
+
+type PasskeyAuthentication
+    = NotRequested
+    | AuthenticationBeginStatus (Status AuthOptions)
+    | AuthenticationCompleteStatus (Status AuthVerification)
 
 
 type Status a
@@ -83,7 +95,12 @@ type Status a
 
 init : Session -> ( Model, Cmd Msg )
 init session =
-    ( { session = session, profile = Loading, registeredPasskeys = Loading, passkeyRegistration = CheckingSupport }
+    ( { session = session
+      , profile = Loading
+      , registeredPasskeys = Loading
+      , passkeyRegistration = CheckingSupport
+      , passkeyAuthentication = NotRequested
+      }
     , Cmd.batch
         [ Profile.fetch LoadedProfile
         , Profile.fetchPasskeys LoadedPasskeys
@@ -97,10 +114,11 @@ view model =
     { title = "Min profil"
     , stickyContent = Element.none
     , content =
-        column [ centerX ]
+        column [ centerX, spacing 20 ]
             [ viewProfile model.profile
             , viewRegisteredPasskeys model.registeredPasskeys
             , viewPasskeyCreation model.passkeyRegistration
+            , viewPasskeyAuthentication model.passkeyAuthentication
             ]
     }
 
@@ -133,11 +151,6 @@ viewProfile profileStatus =
                 ]
 
 
-shortenPublicKey : String -> String
-shortenPublicKey key =
-    String.left 20 key ++ "..." ++ String.right 10 key
-
-
 viewRegisteredPasskeys : Status (List Passkey) -> Element Msg
 viewRegisteredPasskeys passkeyStatus =
     case passkeyStatus of
@@ -148,27 +161,30 @@ viewRegisteredPasskeys passkeyStatus =
             Api.viewServerError "Något gick fel när passkeys skulle laddas" err
 
         Loaded ps ->
-            Element.table [ width fill, spacingXY 10 0 ]
-                { data = ps
-                , columns =
-                    [ { header = el [ Font.bold ] (text "id")
-                      , width = fill
-                      , view = .id >> String.fromInt >> text
-                      }
-                    , { header = el [ Font.bold ] (text "public key")
-                      , width = fill
-                      , view = .data >> shortenPublicKey >> text
-                      }
-                    , { header = el [ Font.bold ] (text "created at")
-                      , width = fill
-                      , view = .createdAt >> text
-                      }
-                    , { header = el [ Font.bold ] (text "remove")
-                      , width = fill
-                      , view = \_ -> text "Ta bort"
-                      }
-                    ]
-                }
+            column [ spacing 10 ]
+                [ el [ Font.light, Font.size Palette.large ] (text "Registrerade passkeys")
+                , Element.table [ width fill, spacingXY 10 0 ]
+                    { data = ps
+                    , columns =
+                        [ { header = el [ Font.bold ] (text "ID")
+                          , width = fill
+                          , view = .credentialId >> text
+                          }
+                        , { header = el [ Font.bold ] (text "Signeringar")
+                          , width = fill
+                          , view = .signCount >> String.fromInt >> text
+                          }
+                        , { header = el [ Font.bold ] (text "Datum skapad")
+                          , width = fill
+                          , view = .createdAt >> text
+                          }
+                        , { header = el [ Font.bold ] (text "Ta bort")
+                          , width = fill
+                          , view = \_ -> text "Ta bort"
+                          }
+                        ]
+                    }
+                ]
 
 
 viewPasskeyCreation : PasskeyRegistration -> Element Msg
@@ -220,6 +236,22 @@ viewPasskeyCreation passkeySupport =
             viewServerError "posting to /complete failed" err
 
 
+viewPasskeyAuthentication : PasskeyAuthentication -> Element Msg
+viewPasskeyAuthentication auth =
+    case auth of
+        NotRequested ->
+            row [ centerX, width (Element.px 200) ]
+                [ Input.button
+                    [ width fill, Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
+                    { onPress = Just AuthPasskeyPressed
+                    , label = el [ centerX ] (text "Autentisera med passkey")
+                    }
+                ]
+
+        _ ->
+            text "hej"
+
+
 type Msg
     = LoadedProfile (Result Api.ServerError Profile)
     | PortMsg Decode.Value
@@ -227,6 +259,9 @@ type Msg
     | CreatePasskeyPressed
     | LoadedRegistrationBegin (Result Api.ServerError RegistrationOptions)
     | LoadedRegistrationComplete (Result Api.ServerError Encode.Value)
+    | AuthPasskeyPressed
+    | LoadedAuthenticationBegin (Result Api.ServerError AuthOptions)
+    | LoadedAuthenticationComplete (Result Api.ServerError Encode.Value)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -277,6 +312,24 @@ update msg model =
         LoadedRegistrationComplete (Err err) ->
             ( { model | passkeyRegistration = RegistrationCompleteStatus (Failed err) }, Cmd.none )
 
+        AuthPasskeyPressed ->
+            case model.profile of
+                Loaded profile ->
+                    ( { model | passkeyAuthentication = AuthenticationBeginStatus Loading }, Profile.passkeyAuthenticationBegin profile.userName LoadedAuthenticationBegin )
+                _ -> (model, Cmd.none)
+
+        LoadedAuthenticationBegin (Ok options) ->
+            ( { model | passkeyAuthentication = AuthenticationBeginStatus (Loaded options) }, Cmd.none )
+
+        LoadedAuthenticationBegin (Err err) ->
+            ( { model | passkeyAuthentication = AuthenticationBeginStatus (Failed err) }, Cmd.none )
+
+        LoadedAuthenticationComplete (Ok response) ->
+            ( { model | passkeyAuthentication = AuthenticationCompleteStatus (Loaded response) }, Cmd.none )
+
+        LoadedAuthenticationComplete (Err err) ->
+            ( { model | passkeyAuthentication = AuthenticationCompleteStatus (Failed err) }, Cmd.none )
+
 
 port passkeyPortSender : Encode.Value -> Cmd msg
 
@@ -310,22 +363,6 @@ type alias Response =
     { attestationObject : String
     , clientDataJSON : String
     }
-
-
-viewCredential : Credential -> Element msg
-viewCredential cred =
-    column []
-        [ row []
-            [ text "id"
-            , text "response.attestationObject"
-            , text "response.clientDataJSON"
-            ]
-        , row []
-            [ text cred.id
-            , cred.response.attestationObject |> shortenPublicKey >> text
-            , cred.response.clientDataJSON |> shortenPublicKey >> text
-            ]
-        ]
 
 
 
