@@ -105,18 +105,41 @@ language 'plpython3u';
 
 revoke all privileges on function api.user_handle_from_credential(text) from public;
 
+-- helper function to get credential_id from credential
+create or replace function api.id_from_credential(raw_credential text) returns text as $$
+  from webauthn.helpers.structs import AuthenticationCredential
+
+  try:
+    credential = AuthenticationCredential.parse_raw(raw_credential)
+    plpy.warning(credential)
+    return credential.id
+  except Exception:
+    return None
+$$
+language 'plpython3u';
+
+revoke all privileges on function api.id_from_credential(text) from public;
+
 create or replace function api.passkey_authentication_complete(param json) returns json as $$
 declare
     usr record;
     authentication json;
     user_handle text;
     public_key text;
+    credential_id text;
 begin
     select api.user_handle_from_credential(param->>'raw_credential') into user_handle;
+    select api.id_from_credential(param->>'raw_credential') into credential_id;
 
     if user_handle is null then
       raise exception
         using detail = 'Cannot parse user_handle from credential payload.',
+            hint = 'Check your payload';
+    end if;
+
+    if credential_id is null then
+      raise exception
+        using detail = 'Cannot parse credential_id from credential payload.',
             hint = 'Check your payload';
     end if;
 
@@ -132,13 +155,15 @@ begin
 
     select data->>'credential_public_key' into public_key
     from data.passkey
-    where user_id = usr.id
+    where
+      user_id = usr.id
+      and data.passkey.data->>'credential_id' = credential_id
     order by created_at desc
     limit 1;
 
     if public_key is null then
-      raise exception 'Cannot find passkey for user_id'
-      using detail = ('User_id', usr.id),
+      raise exception 'Cannot find matching passkey for user_id and credential_id'
+      using detail = ('User_id: ', usr.id, 'credential_id: ', credential_id),
       hint = 'Check your user_handle payload';
     end if;
 
@@ -153,8 +178,7 @@ begin
           'me', json_build_object(
             'id', usr.id,
             'user_name', usr.user_name,
-            'email', usr.email,
-            'role', 'customer'
+            'email', usr.email
           ),
           'authentication', authentication,
           'token', pgjwt.sign(

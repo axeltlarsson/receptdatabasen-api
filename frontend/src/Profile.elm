@@ -18,7 +18,6 @@ import Url.Builder
 
 type alias Profile =
     { userName : String
-    , role : String
     , email : Maybe String
     , id : Int
     }
@@ -49,9 +48,8 @@ fetch toMsg =
 
 profileDecoder : Decode.Decoder Profile
 profileDecoder =
-    Decode.map4 Profile
+    Decode.map3 Profile
         (field "user_name" string)
-        (field "role" string)
         (field "email" <| nullable string)
         (field "id" int)
 

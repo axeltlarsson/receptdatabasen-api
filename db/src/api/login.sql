@@ -16,8 +16,7 @@ begin
       'me', json_build_object(
         'id', usr.id,
         'user_name', usr.user_name,
-        'email', usr.email,
-        'role', 'customer'
+        'email', usr.email
       ),
       'token', pgjwt.sign(
         json_build_object(

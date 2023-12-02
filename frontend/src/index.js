@@ -98,12 +98,6 @@ app.ports.passkeyPortSender.subscribe((message) => {
         }
       }
 
-      // TODO: exclude credentials already existing on the server
-      // if (options.excludeCredentials) {
-      // for (let cred of options.excludeCredentials) {
-      // cred.id = base64url.decode(cred.id);
-      // }
-      // }
       createPasskey(options).then((credential) => {
         const serialized = {
           authenticatorAttachment: credential.authenticatorAttachment,

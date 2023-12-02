@@ -155,7 +155,6 @@ viewProfile profileStatus =
                     []
                     [ row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "Användarnamn"), el [] (text profile.userName) ]
                     , row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "Email"), el [] (text (Maybe.withDefault "ej satt" profile.email)) ]
-                    , row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "Roll"), el [] (text profile.role) ]
                     , row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "ID"), el [] (profile.id |> String.fromInt |> text) ]
                     ]
                 ]
@@ -290,7 +289,14 @@ viewPasskeyAuthentication auth =
             el [ padding 10 ] <| viewServerError "Har du valt rätt passkey att autentisera med?" err
 
         AuthCompleteLoaded _ ->
-            row [ padding 10 ] [ FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html, text "Autentisering lyckades!" ]
+            el [ padding 10 ] <|
+                row
+                    [ Border.width 1
+                    , Border.rounded 2
+                    , Border.color Palette.darkGrey
+                    , padding 10
+                    ]
+                    [ FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html, text " Autentisering lyckades!" ]
 
 
 type Msg

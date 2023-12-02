@@ -324,10 +324,11 @@ submitForm form =
 
 meDecoder : Decode.Decoder Me
 meDecoder =
-    Decode.map2 Me
+    Decode.map3 Me
         (field "me" (field "user_name" string))
-        (field "me" (field "role" string))
+        (field "me" (field "email" string))
+        (field "me" (field "id" string))
 
 
 type alias Me =
-    { userName : String, role : String }
+    { userName : String, email: String, id: String }
