@@ -45,10 +45,10 @@ type alias Model =
    Passkey registration requires a number of steps
 
    1. Check for client support -> `CheckingSupport` | `Supported` | `NotSupported`
-   2. Call the BE /passkeys/registration/begin to get the registration options -> RegistrationBeginStatus (Status RegistrationOptions)
+   2. Call the BE /passkeys/registration/begin to get the registration options -> RegistrationBeginLoading
    3. Create the public key with provided resgirationOptions in js-land: navigator.credentials.create() -> CreatingCredential | FailedCreatingPasskey String
       No Created status as we immediately go into next step:
-   4. Call the BE /passkeys/registration/complete to verify and save the public key in the database -> RegistrationCompleteStatus (Status x)
+   4. Call the BE /passkeys/registration/complete to verify and save the public key in the database -> RegistrationComplete{Loading,Failed,Loaded}
 -}
 
 
@@ -56,21 +56,23 @@ type PasskeyRegistration
     = CheckingSupport
     | Supported
     | NotSupported
-      -- /rest/passkeys/registration/begin TODO: don't need to have Loaded status (goes directly to creating credential
-    | RegistrationBeginStatus (Status RegistrationOptions)
+      -- GET /rest/passkeys/registration/begin
+    | RegistrationBeginFailed Api.ServerError
+    | RegistrationBeginLoading
       -- creating passkey in js-land
     | CreatingCredential
     | FailedCreatingPasskey String
-      -- /rest/passkeys/registration/complete
-    | RegistrationCompleteStatus (Status VerificationResponse)
+      -- POST /rest/passkeys/registration/complete
+    | RegistrationCompleteLoading
+    | RegistrationCompleteFailed Api.ServerError
+    | RegistrationCompleteLoaded RegistrationVerification
 
 
 type alias RegistrationOptions =
-    -- Passed directly to Port - no need to further decode value
     Encode.Value
 
 
-type alias VerificationResponse =
+type alias RegistrationVerification =
     Encode.Value
 
 
@@ -169,7 +171,7 @@ viewRegisteredPasskeys passkeyStatus =
             Api.viewServerError "Något gick fel när passkeys skulle laddas" err
 
         Loaded ps ->
-            column [ spacing 10 ]
+            column [ padding 10, spacing 10 ]
                 [ el [ Font.light, Font.size Palette.large ] (text "Registrerade passkeys")
                 , Element.table [ width fill, spacingXY 10 0 ]
                     { data = ps
@@ -203,13 +205,13 @@ viewPasskeyCreation passkeySupport =
     in
     case passkeySupport of
         CheckingSupport ->
-            Element.none
+            el [ padding 10 ] Element.none
 
         NotSupported ->
-            text "passkeys cannot be created on this device"
+            text "Passkeys stöds inte på denna enhet. 😢"
 
         Supported ->
-            row [ width (Element.px 200) ]
+            row [ padding 10 ]
                 [ Input.button
                     [ width fill, Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
                     { onPress = Just CreatePasskeyPressed
@@ -217,46 +219,48 @@ viewPasskeyCreation passkeySupport =
                     }
                 ]
 
-        RegistrationBeginStatus Loading ->
-            text "🚧 laddar options från server"
+        RegistrationBeginLoading ->
+            el [ padding 10 ] (Element.html Loading.animation)
 
-        RegistrationBeginStatus (Loaded _) ->
-            -- TODO: not needed
-            Element.none
-
-        RegistrationBeginStatus (Failed err) ->
-            viewServerError "" err
+        RegistrationBeginFailed err ->
+            el [ padding 10 ] (viewServerError "" err)
 
         CreatingCredential ->
-            row []
-                [ text "Skapar passkey..."
-                ]
+            el [ padding 10 ] Element.none
 
         FailedCreatingPasskey err ->
-            column []
+            column [ padding 10 ]
                 [ paragraph [] [ text "💥 Något gick fel när passkey skulle skapas: " ]
                 , paragraph [ Font.family [ Font.typeface "Courier New", Font.monospace ] ] [ text err ]
                 ]
 
-        RegistrationCompleteStatus Loading ->
-            text "posting to /complete"
+        RegistrationCompleteLoading ->
+            el [ padding 10 ] (Element.html Loading.animation)
 
-        RegistrationCompleteStatus (Loaded json) ->
-            text "posting to /complete done!"
+        RegistrationCompleteLoaded _ ->
+            el [ padding 10 ] <|
+                row
+                    [ Border.width 1
+                    , Border.rounded 2
+                    , Border.color Palette.darkGrey
+                    , padding 10
+                    ]
+                    [ FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html, text " Passkey skapad!" ]
 
-        RegistrationCompleteStatus (Failed err) ->
+        RegistrationCompleteFailed err ->
             viewServerError "posting to /complete failed" err
+
+
+authIcon : Element Msg
+authIcon =
+    FeatherIcons.key |> FeatherIcons.toHtml [] |> Element.html
 
 
 viewPasskeyAuthentication : PasskeyAuthentication -> Element Msg
 viewPasskeyAuthentication auth =
-    let
-        authIcon =
-            FeatherIcons.key |> FeatherIcons.toHtml [] |> Element.html
-    in
     case auth of
         NotRequested ->
-            row [ width (Element.px 200) ]
+            row [ padding 10 ]
                 [ Input.button
                     [ width fill, Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
                     { onPress = Just AuthPasskeyPressed
@@ -265,25 +269,28 @@ viewPasskeyAuthentication auth =
                 ]
 
         AuthBeginLoading ->
-            text "awaiting POST /passkeys/begin"
+            el [ padding 10 ] Element.none
 
         AuthBeginFailed err ->
-            viewServerError "Något gick fel" err
+            el [padding 10] <| viewServerError "Har du valt rätt passkey att autentisera med?" err
 
         GettingCredential ->
-            text "Hämtar passkey från enheten"
+            el [ padding 10 ] Element.none
 
         FailedGettingCredential err ->
-            text <| "Något gick när passkey skulle hämtas: " ++ err
+            column [ padding 10 ]
+                [ paragraph [] [ text "💥 Något gick fel när passkey skulle hämtas: " ]
+                , paragraph [ Font.family [ Font.typeface "Courier New", Font.monospace ] ] [ text err ]
+                ]
 
         AuthCompleteLoading ->
-            text "awaiting POST /passkeys/complete"
+            el [ padding 10 ] (Element.html Loading.animation)
 
         AuthCompleteFailed err ->
-            viewServerError "Något gick fel" err
+            el [ padding 10 ] <| viewServerError "Har du valt rätt passkey att autentisera med?" err
 
-        AuthCompleteLoaded authVerification ->
-            row [] [ text "auth options yay", text <| Encode.encode 2 authVerification ]
+        AuthCompleteLoaded _ ->
+            row [ padding 10 ] [ FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html, text "Autentisering lyckades!" ]
 
 
 type Msg
@@ -323,7 +330,7 @@ update msg model =
                     ( { model | passkeyRegistration = FailedCreatingPasskey errStr }, Cmd.none )
 
                 Ok (PasskeyCreated credential) ->
-                    ( { model | passkeyRegistration = RegistrationCompleteStatus Loading }, Profile.passkeyRegistrationComplete credential LoadedRegistrationComplete )
+                    ( { model | passkeyRegistration = RegistrationCompleteLoading }, Profile.passkeyRegistrationComplete credential LoadedRegistrationComplete )
 
                 Ok (PasskeyRetrieved passkey) ->
                     ( { model | passkeyAuthentication = GettingCredential }, Profile.passkeyAuthenticationComplete passkey LoadedAuthenticationComplete )
@@ -338,19 +345,19 @@ update msg model =
             ( { model | registeredPasskeys = Failed err }, Cmd.none )
 
         CreatePasskeyPressed ->
-            ( { model | passkeyRegistration = RegistrationBeginStatus Loading }, Profile.passkeyRegistrationBegin LoadedRegistrationBegin )
+            ( { model | passkeyRegistration = RegistrationBeginLoading }, Profile.passkeyRegistrationBegin LoadedRegistrationBegin )
 
         LoadedRegistrationBegin (Ok options) ->
-            ( { model | passkeyRegistration = RegistrationBeginStatus (Loaded options) }, passkeyPortSender (createPasskeyMsg options) )
+            ( { model | passkeyRegistration = CreatingCredential }, passkeyPortSender (createPasskeyMsg options) )
 
         LoadedRegistrationBegin (Err err) ->
-            ( { model | passkeyRegistration = RegistrationBeginStatus (Failed err) }, Cmd.none )
+            ( { model | passkeyRegistration = RegistrationBeginFailed err }, Cmd.none )
 
         LoadedRegistrationComplete (Ok response) ->
-            ( { model | passkeyRegistration = RegistrationCompleteStatus (Loaded response) }, Profile.fetchPasskeys LoadedPasskeys )
+            ( { model | passkeyRegistration = RegistrationCompleteLoaded response }, Profile.fetchPasskeys LoadedPasskeys )
 
         LoadedRegistrationComplete (Err err) ->
-            ( { model | passkeyRegistration = RegistrationCompleteStatus (Failed err) }, Cmd.none )
+            ( { model | passkeyRegistration = RegistrationCompleteFailed err }, Cmd.none )
 
         AuthPasskeyPressed ->
             case model.profile of
