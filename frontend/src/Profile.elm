@@ -1,4 +1,13 @@
-module Profile exposing (Passkey, Profile, fetch, fetchPasskeys, passkeyAuthenticationBegin, passkeyRegistrationBegin, passkeyRegistrationComplete)
+module Profile exposing
+    ( Passkey
+    , Profile
+    , fetch
+    , fetchPasskeys
+    , passkeyAuthenticationBegin
+    , passkeyAuthenticationComplete
+    , passkeyRegistrationBegin
+    , passkeyRegistrationComplete
+    )
 
 import Api exposing (ServerError, expectJsonWithBody)
 import Http
@@ -132,6 +141,24 @@ passkeyAuthenticationBegin userName toMsg =
                 [ "passkeys", "authentication", "begin" ]
                 []
         , body = Http.jsonBody body
+        , expect = expectJsonWithBody toMsg Decode.value
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+passkeyAuthenticationComplete : Encode.Value -> (Result ServerError Encode.Value -> msg) -> Cmd msg
+passkeyAuthenticationComplete options toMsg =
+    Http.request
+        { method = "POST"
+        , headers =
+            [ Http.header "Accept" "application/json"
+            ]
+        , url =
+            Url.Builder.crossOrigin "/rest"
+                [ "passkeys", "authentication", "complete" ]
+                []
+        , body = Http.jsonBody options
         , expect = expectJsonWithBody toMsg Decode.value
         , timeout = Nothing
         , tracker = Nothing

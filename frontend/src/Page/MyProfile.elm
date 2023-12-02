@@ -22,6 +22,7 @@ import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
+import FeatherIcons
 import Json.Decode as Decode exposing (field, string)
 import Json.Encode as Encode
 import Loading
@@ -83,8 +84,15 @@ type alias AuthVerification =
 
 type PasskeyAuthentication
     = NotRequested
-    | AuthenticationBeginStatus (Status AuthOptions)
-    | AuthenticationCompleteStatus (Status AuthVerification)
+      -- POST /passkeys/authentication/begin with username from profile
+    | AuthBeginLoading
+    | AuthBeginFailed Api.ServerError
+      -- Get passkey in js-land
+    | GettingCredential
+    | FailedGettingCredential String
+    | AuthCompleteLoading
+    | AuthCompleteFailed Api.ServerError
+    | AuthCompleteLoaded AuthVerification
 
 
 type Status a
@@ -189,6 +197,10 @@ viewRegisteredPasskeys passkeyStatus =
 
 viewPasskeyCreation : PasskeyRegistration -> Element Msg
 viewPasskeyCreation passkeySupport =
+    let
+        createIcon =
+            FeatherIcons.plus |> FeatherIcons.toHtml [] |> Element.html
+    in
     case passkeySupport of
         CheckingSupport ->
             Element.none
@@ -197,11 +209,11 @@ viewPasskeyCreation passkeySupport =
             text "passkeys cannot be created on this device"
 
         Supported ->
-            row [ centerX, width (Element.px 200) ]
+            row [ width (Element.px 200) ]
                 [ Input.button
                     [ width fill, Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
                     { onPress = Just CreatePasskeyPressed
-                    , label = el [ centerX ] (text "Skapa en ny passkey")
+                    , label = row [] [ createIcon, text "Skapa en ny passkey" ]
                     }
                 ]
 
@@ -216,12 +228,12 @@ viewPasskeyCreation passkeySupport =
             viewServerError "" err
 
         CreatingCredential ->
-            row [ centerX ]
+            row []
                 [ text "Skapar passkey..."
                 ]
 
         FailedCreatingPasskey err ->
-            column [ centerX ]
+            column []
                 [ paragraph [] [ text "💥 Något gick fel när passkey skulle skapas: " ]
                 , paragraph [ Font.family [ Font.typeface "Courier New", Font.monospace ] ] [ text err ]
                 ]
@@ -238,18 +250,40 @@ viewPasskeyCreation passkeySupport =
 
 viewPasskeyAuthentication : PasskeyAuthentication -> Element Msg
 viewPasskeyAuthentication auth =
+    let
+        authIcon =
+            FeatherIcons.key |> FeatherIcons.toHtml [] |> Element.html
+    in
     case auth of
         NotRequested ->
-            row [ centerX, width (Element.px 200) ]
+            row [ width (Element.px 200) ]
                 [ Input.button
                     [ width fill, Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
                     { onPress = Just AuthPasskeyPressed
-                    , label = el [ centerX ] (text "Autentisera med passkey")
+                    , label = row [] [ authIcon, text "Autentisera med passkey" ]
                     }
                 ]
 
-        _ ->
-            text "hej"
+        AuthBeginLoading ->
+            text "awaiting POST /passkeys/begin"
+
+        AuthBeginFailed err ->
+            viewServerError "Något gick fel" err
+
+        GettingCredential ->
+            text "Hämtar passkey från enheten"
+
+        FailedGettingCredential err ->
+            text <| "Något gick när passkey skulle hämtas: " ++ err
+
+        AuthCompleteLoading ->
+            text "awaiting POST /passkeys/complete"
+
+        AuthCompleteFailed err ->
+            viewServerError "Något gick fel" err
+
+        AuthCompleteLoaded authVerification ->
+            row [] [ text "auth options yay", text <| Encode.encode 2 authVerification ]
 
 
 type Msg
@@ -289,7 +323,13 @@ update msg model =
                     ( { model | passkeyRegistration = FailedCreatingPasskey errStr }, Cmd.none )
 
                 Ok (PasskeyCreated credential) ->
-                    Debug.log (Debug.toString credential) ( { model | passkeyRegistration = RegistrationCompleteStatus Loading }, Profile.passkeyRegistrationComplete credential LoadedRegistrationComplete )
+                    ( { model | passkeyRegistration = RegistrationCompleteStatus Loading }, Profile.passkeyRegistrationComplete credential LoadedRegistrationComplete )
+
+                Ok (PasskeyRetrieved passkey) ->
+                    ( { model | passkeyAuthentication = GettingCredential }, Profile.passkeyAuthenticationComplete passkey LoadedAuthenticationComplete )
+
+                Ok (PasskeyRetrievalFailed err) ->
+                    ( { model | passkeyAuthentication = FailedGettingCredential err }, Cmd.none )
 
         LoadedPasskeys (Ok ps) ->
             ( { model | registeredPasskeys = Loaded ps }, Cmd.none )
@@ -307,7 +347,7 @@ update msg model =
             ( { model | passkeyRegistration = RegistrationBeginStatus (Failed err) }, Cmd.none )
 
         LoadedRegistrationComplete (Ok response) ->
-            ( { model | passkeyRegistration = RegistrationCompleteStatus (Loaded response) }, Cmd.none )
+            ( { model | passkeyRegistration = RegistrationCompleteStatus (Loaded response) }, Profile.fetchPasskeys LoadedPasskeys )
 
         LoadedRegistrationComplete (Err err) ->
             ( { model | passkeyRegistration = RegistrationCompleteStatus (Failed err) }, Cmd.none )
@@ -315,20 +355,22 @@ update msg model =
         AuthPasskeyPressed ->
             case model.profile of
                 Loaded profile ->
-                    ( { model | passkeyAuthentication = AuthenticationBeginStatus Loading }, Profile.passkeyAuthenticationBegin profile.userName LoadedAuthenticationBegin )
-                _ -> (model, Cmd.none)
+                    ( { model | passkeyAuthentication = AuthBeginLoading }, Profile.passkeyAuthenticationBegin profile.userName LoadedAuthenticationBegin )
+
+                _ ->
+                    ( model, Cmd.none )
 
         LoadedAuthenticationBegin (Ok options) ->
-            ( { model | passkeyAuthentication = AuthenticationBeginStatus (Loaded options) }, Cmd.none )
+            ( { model | passkeyAuthentication = AuthCompleteLoading }, passkeyPortSender (getPasskeyMsg options) )
 
         LoadedAuthenticationBegin (Err err) ->
-            ( { model | passkeyAuthentication = AuthenticationBeginStatus (Failed err) }, Cmd.none )
+            ( { model | passkeyAuthentication = AuthCompleteFailed err }, Cmd.none )
 
         LoadedAuthenticationComplete (Ok response) ->
-            ( { model | passkeyAuthentication = AuthenticationCompleteStatus (Loaded response) }, Cmd.none )
+            ( { model | passkeyAuthentication = AuthCompleteLoaded response }, Cmd.none )
 
         LoadedAuthenticationComplete (Err err) ->
-            ( { model | passkeyAuthentication = AuthenticationCompleteStatus (Failed err) }, Cmd.none )
+            ( { model | passkeyAuthentication = AuthCompleteFailed err }, Cmd.none )
 
 
 port passkeyPortSender : Encode.Value -> Cmd msg
@@ -347,38 +389,17 @@ createPasskeyMsg options =
     Encode.object [ ( "type", Encode.string "createPasskey" ), ( "options", options ) ]
 
 
+getPasskeyMsg : AuthOptions -> Encode.Value
+getPasskeyMsg options =
+    Encode.object [ ( "type", Encode.string "getPasskey" ), ( "options", options ) ]
+
+
 type PasskeyPortMsg
     = PasskeySupported Bool
     | PasskeyCreated Decode.Value
     | PasskeyCreationFailed String
-
-
-type alias Credential =
-    { id : String
-    , response : Response
-    }
-
-
-type alias Response =
-    { attestationObject : String
-    , clientDataJSON : String
-    }
-
-
-
--- TODO: can I use Decode.value here? https://package.elm-lang.org/packages/elm/json/latest/Json-Decode#value
-
-
-credentialDecoder : Decode.Decoder Credential
-credentialDecoder =
-    Decode.map2 Credential
-        (field "id" string)
-        (field "response"
-            (Decode.map2 Response
-                (field "attestationObject" string)
-                (field "clientDataJSON" string)
-            )
-        )
+    | PasskeyRetrieved Decode.Value
+    | PasskeyRetrievalFailed String
 
 
 passkeyPortMsgDecoder : Decode.Decoder PasskeyPortMsg
@@ -393,8 +414,14 @@ passkeyPortMsgDecoder =
                     "passkeyCreated" ->
                         Decode.map PasskeyCreated (Decode.field "passkey" Decode.value)
 
-                    "error" ->
+                    "errorCreatingPasskey" ->
                         Decode.map PasskeyCreationFailed (Decode.field "error" Decode.string)
+
+                    "passkeyRetrieved" ->
+                        Decode.map PasskeyRetrieved (Decode.field "passkey" Decode.value)
+
+                    "errorRetrievingPasskey" ->
+                        Decode.map PasskeyRetrievalFailed (Decode.field "error" Decode.string)
 
                     _ ->
                         Decode.fail ("trying to decode port passkeyPortMsg but " ++ t ++ " is not supported")

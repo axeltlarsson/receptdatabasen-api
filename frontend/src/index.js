@@ -33,6 +33,10 @@ const createPasskey = (options) => navigator.credentials.create({
   publicKey: options,
 });
 
+const getPasskey = (options) => navigator.credentials.get({
+  publicKey: options,
+});
+
 const bufferToBase64url = (buffer) => {
   // modified from https://github.com/github/webauthn-json/blob/main/src/webauthn-json/base64url.ts
 
@@ -75,12 +79,13 @@ const base64urlToBuffer = (baseurl64String) => {
 app.ports.passkeyPortSender.subscribe((message) => {
   console.log('port message recevied in js land', message);
   switch (message.type) {
-    case 'checkPasskeySupport':
+    case 'checkPasskeySupport': {
       passkeySupport().then((passkeySupported) => {
         app.ports.passkeyPortReceiver.send({ type: 'passkeySupported', passkeySupport: passkeySupported });
       });
       break;
-    case 'createPasskey':
+    }
+    case 'createPasskey': {
       const { options } = message;
 
       // passkeycreation requires user.id and challenge to be in buffers
@@ -100,7 +105,6 @@ app.ports.passkeyPortSender.subscribe((message) => {
       // }
       // }
       createPasskey(options).then((credential) => {
-        console.log(credential);
         const serialized = {
           authenticatorAttachment: credential.authenticatorAttachment,
           id: credential.id,
@@ -112,14 +116,45 @@ app.ports.passkeyPortSender.subscribe((message) => {
           type: credential.type,
         };
 
-        console.log(serialized);
-
         app.ports.passkeyPortReceiver.send({ type: 'passkeyCreated', passkey: serialized });
       }).catch((err) => {
         console.error(err);
-        app.ports.passkeyPortReceiver.send({ type: 'error', error: err.toString() });
+        app.ports.passkeyPortReceiver.send({ type: 'errorCreatingPasskey', error: err.toString() });
       });
       break;
+    }
+
+    case 'getPasskey': {
+      const { options } = message;
+      // passkeycreation requires user.id and challenge to be in buffers
+      // the server base64url encodes the user.id and challenge
+      options.challenge = base64urlToBuffer(options.challenge);
+      if (options.allowCredentials) {
+        for (let i = 0; i < options.allowCredentials.length; i++) {
+          options.allowCredentials[i].id = base64urlToBuffer(options.allowCredentials[i].id);
+        }
+      }
+      getPasskey(options).then((credential) => {
+        const serialized = {
+          authenticatorAttachment: credential.authenticatorAttachment,
+          id: credential.id,
+          rawId: bufferToBase64url(credential.rawId),
+          response: {
+            authenticatorData: bufferToBase64url(credential.response.authenticatorData),
+            clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+            signature: bufferToBase64url(credential.response.signature),
+            userHandle: bufferToBase64url(credential.response.userHandle),
+          },
+          type: credential.type,
+        };
+        app.ports.passkeyPortReceiver.send({ type: 'passkeyRetrieved', passkey: serialized });
+      }).catch((err) => {
+        console.error(err);
+        app.ports.passkeyPortReceiver.send({ type: 'errorRetrievingPasskey', error: err.toString() });
+      });
+      break;
+    }
+
     default:
       console.error('Unexpected message type %o', message.type);
   }
