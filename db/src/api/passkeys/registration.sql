@@ -112,6 +112,12 @@ begin
   where id = request.user_id()
   into usr;
 
+  if param::json->>'name' is null then
+    raise exception 
+      using detail = 'A name for the passkey is required',
+      hint = 'Check your payload';
+  end if;
+
   if usr is NULL then
     raise "insufficient_privilege";
   else
@@ -119,7 +125,7 @@ begin
     if registration IS NULL then
       raise "insufficient_privilege";
     else
-      insert into data.passkey (user_id, data) values (usr.id, registration); 
+      insert into data.passkey (user_id, data, name) values (usr.id, registration, param::json->>'name'); 
       return registration;
     end if;
   end if;

@@ -12,7 +12,8 @@ if present and session.data.challenge then
     -- ...and inject the challenge into it from session
     local new_body = cjson.encode({
         expected_challenge = session.data.challenge,
-        raw_credential = cjson.decode(body)
+        raw_credential = cjson.decode(body).credential,
+        name = cjson.decode(body).name
     })
 
     -- make the request to Postgrest with the new_body

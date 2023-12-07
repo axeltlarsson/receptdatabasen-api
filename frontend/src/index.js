@@ -76,6 +76,47 @@ const base64urlToBuffer = (baseurl64String) => {
   return buffer;
 };
 
+const getBrowserInfo = () => {
+  const { userAgent, vendor } = navigator;
+  let browser = '';
+
+  // Detecting browser name
+  if (userAgent.includes('Firefox')) {
+    browser = 'Mozilla Firefox';
+  } else if (userAgent.includes('Opera') || userAgent.includes('OPR')) {
+    browser = 'Opera';
+  } else if (userAgent.includes('Chrome')) {
+    browser = vendor.includes('Google') ? 'Google Chrome' : 'Not Chrome';
+  } else if (userAgent.includes('Safari')) {
+    browser = 'Safari';
+  } else if (userAgent.includes('MSIE') || userAgent.includes('Trident/')) {
+    browser = 'Internet Explorer';
+  } else {
+    browser = 'Unknown';
+  }
+
+  // OS Detection
+  let osVersion = '';
+  let os = '';
+  if (userAgent.includes('Win')) {
+    os = 'Windows';
+    const match = userAgent.match(/Windows NT (\d+\.\d+)/);
+    osVersion = match ? ` NT ${match[1]}` : '';
+  } else if (userAgent.includes('Mac')) {
+    os = 'MacOS';
+    const match = userAgent.match(/Mac OS X (\d+[._\d]+)/);
+    osVersion = match ? ` ${match[1].replace(/_/g, '.')}` : '';
+  } else if (userAgent.includes('X11')) {
+    os = 'UNIX';
+  } else if (userAgent.includes('Linux')) {
+    os = 'Linux';
+  } else {
+    os = 'Unknown OS';
+  }
+
+  return `${browser}, ${os}${osVersion}`;
+};
+
 app.ports.passkeyPortSender.subscribe((message) => {
   console.log('port message recevied in js land', message);
   switch (message.type) {
@@ -110,7 +151,7 @@ app.ports.passkeyPortSender.subscribe((message) => {
           type: credential.type,
         };
 
-        app.ports.passkeyPortReceiver.send({ type: 'passkeyCreated', passkey: serialized });
+        app.ports.passkeyPortReceiver.send({ type: 'passkeyCreated', passkey: serialized, name: getBrowserInfo() });
       }).catch((err) => {
         console.error(err);
         app.ports.passkeyPortReceiver.send({ type: 'errorCreatingPasskey', error: err.toString() });

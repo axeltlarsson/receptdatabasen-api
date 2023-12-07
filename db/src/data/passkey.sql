@@ -2,8 +2,10 @@ CREATE TABLE passkey (
     id SERIAL PRIMARY KEY,
     user_id INTEGER not null REFERENCES data.user(id),
     data json not null,
+    name text not null,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    last_used_at TIMESTAMPTZ
 );
 
 create trigger passkey_set_updated_at_timestamp

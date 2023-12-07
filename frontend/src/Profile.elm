@@ -1,13 +1,13 @@
 module Profile exposing
     ( Passkey
     , Profile
+    , deletePasskey
     , fetch
     , fetchPasskeys
     , passkeyAuthenticationBegin
     , passkeyAuthenticationComplete
     , passkeyRegistrationBegin
     , passkeyRegistrationComplete
-    , deletePasskey
     )
 
 import Api exposing (ServerError, expectJsonWithBody)
@@ -27,8 +27,10 @@ type alias Profile =
 type alias Passkey =
     { credentialId : String
     , signCount : Int
+    , name : String
     , createdAt : String -- TODO: handle DATES?
-    , id: Int
+    , lastUsedAt : Maybe String
+    , id : Int
     }
 
 
@@ -67,7 +69,7 @@ fetchPasskeys toMsg =
         , url =
             Url.Builder.crossOrigin "/rest"
                 [ "passkeys" ]
-                [ Url.Builder.string "select" "id,data,created_at"
+                [ Url.Builder.string "select" "id,data,created_at,name,last_used_at"
                 ]
         , body = Http.emptyBody
         , expect = expectJsonWithBody toMsg passkeyDecoder
@@ -79,10 +81,12 @@ fetchPasskeys toMsg =
 passkeyDecoder : Decode.Decoder (List Passkey)
 passkeyDecoder =
     Decode.list
-        (Decode.map4 Passkey
+        (Decode.map6 Passkey
             (field "data" <| field "credential_id" string)
             (field "data" <| field "sign_count" int)
+            (field "name" string)
             (field "created_at" string)
+            (field "last_used_at" <| nullable string)
             (field "id" int)
         )
 
@@ -106,8 +110,12 @@ passkeyRegistrationBegin toMsg =
         }
 
 
-passkeyRegistrationComplete : Encode.Value -> (Result ServerError Encode.Value -> msg) -> Cmd msg
-passkeyRegistrationComplete body toMsg =
+passkeyRegistrationComplete : Encode.Value -> String -> (Result ServerError Encode.Value -> msg) -> Cmd msg
+passkeyRegistrationComplete passkey name toMsg =
+    let
+        body =
+            Encode.object [ ( "credential", passkey ), ( "name", Encode.string name ) ]
+    in
     Http.request
         { method = "POST"
         , headers =

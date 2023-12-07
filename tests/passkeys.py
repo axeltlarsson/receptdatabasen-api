@@ -120,7 +120,8 @@ def passkey_with_session(request):
 def test_registration_complete(passkey_with_session):
     passkey, session = passkey_with_session
     response = session.post(
-        f"{BASE_URL}/passkeys/registration/complete", json=serialize_passkey(passkey)
+        f"{BASE_URL}/passkeys/registration/complete",
+        json={"credential": serialize_passkey(passkey), "name": "my passkey"},
     )
     body = response.json()
     assert response.status_code == 200
@@ -141,6 +142,7 @@ def test_registration_complete(passkey_with_session):
     assert len(set(user_ids)) == 1
 
     assert last_passkey["data"]["credential_id"] == passkey_json["id"]
+    assert last_passkey["name"] == "my passkey"
 
 
 def test_bogus_authentication_complete(session):
@@ -230,7 +232,6 @@ def test_authentication_complete(get_passkey_w_session):
     assert response.status_code == 200
     response_json = response.json()
     assert "me" in response_json
-    #  assert response_json["me"]["user_name"] == VALID_USERNAME_1
     with pytest.raises(KeyError):
         # token should be stripped by openresty
         response_json["token"]
@@ -238,6 +239,14 @@ def test_authentication_complete(get_passkey_w_session):
     res = session.get(f"{BASE_URL}/recipes")
     assert res.status_code == 200
     assert res.json()
+
+    # check last_used_at has been updated
+    res = session.get(f"{BASE_URL}/passkeys")
+    assert res.status_code == 200
+
+    body = res.json()
+    assert body[0]["last_used_at"]
+    assert body[0]["data"]["sign_count"] == 1
 
 
 # Poor man's teardown

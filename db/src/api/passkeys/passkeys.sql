@@ -3,8 +3,10 @@ create or replace view api.passkeys as (
     id,
     user_id,
     data,
+    name,
     updated_at,
-    created_at
+    created_at,
+    last_used_at
   from data.passkey
 );
 

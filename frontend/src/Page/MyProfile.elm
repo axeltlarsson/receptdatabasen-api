@@ -165,6 +165,9 @@ viewRegisteredPasskeys passkeyStatus =
     let
         rmIcon =
             FeatherIcons.x |> FeatherIcons.toHtml [] |> Element.html
+
+        formatDate =
+            String.slice 0 16 >> String.replace "T" " "
     in
     case passkeyStatus of
         Loading ->
@@ -179,17 +182,21 @@ viewRegisteredPasskeys passkeyStatus =
                 , Element.table [ width fill, spacingXY 10 0 ]
                     { data = ps
                     , columns =
-                        [ { header = el [ Font.bold ] (text "ID")
+                        [ { header = el [ Font.bold ] (text "Skapad av")
+                          , width = fill
+                          , view = .name >> text
+                          }
+                        , { header = el [ Font.bold ] (text "ID")
                           , width = fill
                           , view = .credentialId >> text
                           }
-                        , { header = el [ Font.bold ] (text "Signeringar")
-                          , width = fill
-                          , view = .signCount >> String.fromInt >> text
-                          }
                         , { header = el [ Font.bold ] (text "Datum skapad")
                           , width = fill
-                          , view = .createdAt >> text
+                          , view = .createdAt >> formatDate >> text
+                          }
+                        , { header = el [ Font.bold ] (text "Senast använd")
+                          , width = fill
+                          , view = .lastUsedAt >> Maybe.withDefault "" >> formatDate >> text
                           }
                         , { header = el [ Font.bold ] (text "Ta bort")
                           , width = fill
@@ -342,8 +349,8 @@ update msg model =
                 Ok (PasskeyCreationFailed errStr) ->
                     ( { model | passkeyRegistration = FailedCreatingPasskey errStr }, Cmd.none )
 
-                Ok (PasskeyCreated credential) ->
-                    ( { model | passkeyRegistration = RegistrationCompleteLoading }, Profile.passkeyRegistrationComplete credential LoadedRegistrationComplete )
+                Ok (PasskeyCreated credential name) ->
+                    ( { model | passkeyRegistration = RegistrationCompleteLoading }, Profile.passkeyRegistrationComplete credential name LoadedRegistrationComplete )
 
                 Ok (PasskeyRetrieved passkey) ->
                     ( { model | passkeyAuthentication = GettingCredential }, Profile.passkeyAuthenticationComplete passkey LoadedAuthenticationComplete )
@@ -387,7 +394,7 @@ update msg model =
             ( { model | passkeyAuthentication = AuthCompleteFailed err }, Cmd.none )
 
         LoadedAuthenticationComplete (Ok response) ->
-            ( { model | passkeyAuthentication = AuthCompleteLoaded response }, Cmd.none )
+            ( { model | passkeyAuthentication = AuthCompleteLoaded response }, Profile.fetchPasskeys LoadedPasskeys )
 
         LoadedAuthenticationComplete (Err err) ->
             ( { model | passkeyAuthentication = AuthCompleteFailed err }, Cmd.none )
@@ -425,7 +432,7 @@ getPasskeyMsg options =
 
 type PasskeyPortMsg
     = PasskeySupported Bool
-    | PasskeyCreated Decode.Value
+    | PasskeyCreated Decode.Value String
     | PasskeyCreationFailed String
     | PasskeyRetrieved Decode.Value
     | PasskeyRetrievalFailed String
@@ -441,7 +448,7 @@ passkeyPortMsgDecoder =
                         Decode.map PasskeySupported (Decode.field "passkeySupport" Decode.bool)
 
                     "passkeyCreated" ->
-                        Decode.map PasskeyCreated (Decode.field "passkey" Decode.value)
+                        Decode.map2 PasskeyCreated (Decode.field "passkey" Decode.value) (Decode.field "name" Decode.string)
 
                     "errorCreatingPasskey" ->
                         Decode.map PasskeyCreationFailed (Decode.field "error" Decode.string)

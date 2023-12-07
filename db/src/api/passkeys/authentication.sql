@@ -4,15 +4,12 @@
 create or replace function api.generate_authentication_options(user_name text) returns text as $$
   from webauthn import (
       generate_authentication_options,
-      base64url_to_bytes,
       options_to_json,
   )
 
-  origin = plpy.execute("select settings.get('origin')")[0]["get"]
   rp_id = plpy.execute("select settings.get('rp_id')")[0]["get"]
-  disable_user_verification = plpy.execute("select settings.get('disable_user_verification')::bool")[0]["get"]
-  require_user_verification = not bool(disable_user_verification)
 
+  # TODO: allow_credentials from existing passkeys (though done later in /complete so not really necessary)
   auth_options = generate_authentication_options(
     rp_id=rp_id,
   )
@@ -54,7 +51,7 @@ grant execute on function api.passkey_authentication_begin(json) to webuser, ano
 /*
   passkeys/authentication/complete
 */
-create or replace function api.verify_authentication_response(raw_credential text, challenge text, public_key text) returns text as $$
+create or replace function api.verify_authentication_response(raw_credential text, challenge text, public_key text, sign_count int) returns text as $$
   from webauthn import (
       verify_authentication_response,
       base64url_to_bytes
@@ -77,9 +74,10 @@ create or replace function api.verify_authentication_response(raw_credential tex
         expected_origin=expected_origin,
         expected_rp_id=expected_rp_id,
         credential_public_key=base64url_to_bytes(public_key),
-        credential_current_sign_count=0,
+        credential_current_sign_count=sign_count,
         require_user_verification=require_user_verification
     )
+
   except InvalidAuthenticationResponse as e:
     plpy.warning(e)
     return None
@@ -88,7 +86,7 @@ create or replace function api.verify_authentication_response(raw_credential tex
 $$
 language 'plpython3u';
 
-revoke all privileges on function api.verify_authentication_response(text, text, text) from public;
+revoke all privileges on function api.verify_authentication_response(text, text, text, int) from public;
 
 
 -- helper function to get user_handle from credential
@@ -125,7 +123,7 @@ declare
     usr record;
     authentication json;
     user_handle text;
-    public_key text;
+    existing_passkey record;
     credential_id text;
 begin
     select api.user_handle_from_credential(param->>'raw_credential') into user_handle;
@@ -153,7 +151,7 @@ begin
             hint = 'Check your user_handle';
     end if;
 
-    select data->>'credential_public_key' into public_key
+    select * into existing_passkey
     from data.passkey
     where
       user_id = usr.id
@@ -161,35 +159,46 @@ begin
     order by created_at desc
     limit 1;
 
-    if public_key is null then
+    if existing_passkey is null then
       raise exception 'Cannot find matching passkey for user_id and credential_id'
       using detail = ('User_id: ', usr.id, 'credential_id: ', credential_id),
       hint = 'Check your user_handle payload';
     end if;
 
-    select api.verify_authentication_response(param->>'raw_credential', param->>'expected_challenge', public_key)
+    select api.verify_authentication_response(
+      param->>'raw_credential',
+      param->>'expected_challenge',
+      existing_passkey.data->>'credential_public_key',
+      (existing_passkey.data->>'sign_count')::int)
+      
     into authentication;
 
     if authentication is null then
         raise insufficient_privilege
         using hint = 'Authentication of credential failed';
     else
-        return json_build_object(
-          'me', json_build_object(
-            'id', usr.id,
-            'user_name', usr.user_name,
-            'email', usr.email
+      update data.passkey
+      set
+        last_used_at = now(),
+        data = (data::jsonb || jsonb_build_object('sign_count', (authentication->>'new_sign_count')::int))::json
+      where data.passkey.data->>'credential_id' = credential_id;
+
+      return json_build_object(
+        'me', json_build_object(
+          'id', usr.id,
+          'user_name', usr.user_name,
+          'email', usr.email
+        ),
+        'authentication', authentication,
+        'token', pgjwt.sign(
+          json_build_object(
+            'role', usr.role,
+            'user_id', usr.id,
+            'exp', extract(epoch from now())::integer + settings.get('jwt_lifetime')::int
           ),
-          'authentication', authentication,
-          'token', pgjwt.sign(
-            json_build_object(
-              'role', usr.role,
-              'user_id', usr.id,
-              'exp', extract(epoch from now())::integer + settings.get('jwt_lifetime')::int
-            ),
-            settings.get('jwt_secret')
-          )
-        );
+          settings.get('jwt_secret')
+        )
+      );
     end if;
 end
 $$ security definer language plpgsql;
