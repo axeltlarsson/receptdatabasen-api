@@ -8,11 +8,11 @@ import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
-import Html.Attributes as HtmlAttributes
 import FeatherIcons
 import Form exposing (errorBorder, onEnter, viewValidationError)
+import Html.Attributes as HtmlAttributes
 import Http
-import Json.Decode as Decode exposing (field, string, int)
+import Json.Decode as Decode exposing (field, int, string)
 import Json.Encode as Encode
 import Palette
 import Route
@@ -332,4 +332,5 @@ meDecoder =
 
 
 type alias Me =
-    { userName : String, id: Int }
+    { userName : String, id : Int }
+

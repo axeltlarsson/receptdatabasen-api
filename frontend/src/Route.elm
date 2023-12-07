@@ -68,5 +68,6 @@ toString page =
 
         Login ->
             Url.Builder.absolute [ "login" ] []
+
         MyProfile ->
             Url.Builder.absolute [ "my-profile" ] []

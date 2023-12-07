@@ -4,6 +4,7 @@ import Api exposing (ServerError, expectJsonWithBody, viewServerError)
 import Element
     exposing
         ( Element
+        , alignLeft
         , centerX
         , column
         , el
@@ -21,6 +22,7 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
+import Route
 import Element.Region as Region
 import FeatherIcons
 import Json.Decode as Decode exposing (field, string)
@@ -124,13 +126,31 @@ view model =
     { title = "Min profil"
     , stickyContent = Element.none
     , content =
-        column [ centerX, spacing 20 ]
-            [ viewProfile model.profile
-            , viewRegisteredPasskeys model.registeredPasskeys
-            , viewPasskeyCreation model.passkeyRegistration
-            , viewPasskeyAuthentication model.passkeyAuthentication
+        column [ alignLeft, spacing 20 ]
+        -- TOOD: remove profile view?
+            [ row [] [ viewProfile model.profile ]
+            , column []
+                [ viewRegisteredPasskeys model.registeredPasskeys
+                , row []
+                    [ viewPasskeyCreation model.passkeyRegistration
+                    , viewPasskeyAuthentication model.passkeyAuthentication
+                    ]
+                ]
+            , row [] [ viewLogoutButton ]
             ]
     }
+
+
+viewLogoutButton : Element Msg
+viewLogoutButton =
+    let
+        icon =
+            FeatherIcons.logOut |> FeatherIcons.toHtml [] |> Element.html
+    in
+    row [ padding 10 ]
+        [ el [ width <| Element.px 130, Background.color Palette.blush, Border.rounded 2, padding 10, Font.color Palette.white ]
+            (Input.button [] { onPress = Just LogoutBtnPressed, label = row [] [ icon, text "Logga ut" ] })
+        ]
 
 
 viewProfile : Status Profile -> Element msg
@@ -146,7 +166,6 @@ viewProfile profileStatus =
             column
                 [ Region.mainContent
                 , width (fill |> Element.maximum 600)
-                , centerX
                 , spacing 10
                 , padding 10
                 ]
@@ -323,10 +342,21 @@ type Msg
     | LoadedAuthenticationComplete (Result Api.ServerError Encode.Value)
     | RmPasskeyBtnPressed Int
     | DeletePasskeyComplete (Result Api.ServerError ())
+    | LogoutBtnPressed
+    | LogoutComplete (Result Api.ServerError ())
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        handleError err updates  =
+            case err of
+                Api.Unauthorized ->
+                    ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+
+                _ ->
+                    updates
+    in
     case msg of
         LoadedProfile (Ok profile) ->
             ( { model | profile = Loaded profile }, Cmd.none )
@@ -362,7 +392,7 @@ update msg model =
             ( { model | registeredPasskeys = Loaded ps }, Cmd.none )
 
         LoadedPasskeys (Err err) ->
-            ( { model | registeredPasskeys = Failed err }, Cmd.none )
+            handleError err ( { model | registeredPasskeys = Failed err }, Cmd.none )
 
         CreatePasskeyPressed ->
             ( { model | passkeyRegistration = RegistrationBeginLoading }, Profile.passkeyRegistrationBegin LoadedRegistrationBegin )
@@ -371,13 +401,13 @@ update msg model =
             ( { model | passkeyRegistration = CreatingCredential }, passkeyPortSender (createPasskeyMsg options) )
 
         LoadedRegistrationBegin (Err err) ->
-            ( { model | passkeyRegistration = RegistrationBeginFailed err }, Cmd.none )
+            handleError err ( { model | passkeyRegistration = RegistrationBeginFailed err }, Cmd.none )
 
         LoadedRegistrationComplete (Ok response) ->
             ( { model | passkeyRegistration = RegistrationCompleteLoaded response }, Profile.fetchPasskeys LoadedPasskeys )
 
         LoadedRegistrationComplete (Err err) ->
-            ( { model | passkeyRegistration = RegistrationCompleteFailed err }, Cmd.none )
+            handleError err ( { model | passkeyRegistration = RegistrationCompleteFailed err }, Cmd.none )
 
         AuthPasskeyPressed ->
             case model.profile of
@@ -391,13 +421,13 @@ update msg model =
             ( { model | passkeyAuthentication = AuthCompleteLoading }, passkeyPortSender (getPasskeyMsg options) )
 
         LoadedAuthenticationBegin (Err err) ->
-            ( { model | passkeyAuthentication = AuthCompleteFailed err }, Cmd.none )
+            handleError err ( { model | passkeyAuthentication = AuthCompleteFailed err }, Cmd.none )
 
         LoadedAuthenticationComplete (Ok response) ->
             ( { model | passkeyAuthentication = AuthCompleteLoaded response }, Profile.fetchPasskeys LoadedPasskeys )
 
         LoadedAuthenticationComplete (Err err) ->
-            ( { model | passkeyAuthentication = AuthCompleteFailed err }, Cmd.none )
+                handleError err ( { model | passkeyAuthentication = AuthCompleteFailed err }, Cmd.none )
 
         RmPasskeyBtnPressed id ->
             ( model, Profile.deletePasskey id DeletePasskeyComplete )
@@ -405,7 +435,16 @@ update msg model =
         DeletePasskeyComplete (Ok ()) ->
             ( model, Profile.fetchPasskeys LoadedPasskeys )
 
-        DeletePasskeyComplete (Err _) ->
+        DeletePasskeyComplete (Err err) ->
+            handleError err ( model, Cmd.none )
+
+        LogoutBtnPressed ->
+            ( model, Profile.logout LogoutComplete )
+
+        LogoutComplete (Ok _) ->
+            ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+
+        LogoutComplete (Err _) ->
             ( model, Cmd.none )
 
 

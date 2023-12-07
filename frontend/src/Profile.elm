@@ -8,6 +8,7 @@ module Profile exposing
     , passkeyAuthenticationComplete
     , passkeyRegistrationBegin
     , passkeyRegistrationComplete
+    , logout
     )
 
 import Api exposing (ServerError, expectJsonWithBody)
@@ -189,4 +190,16 @@ deletePasskey id toMsg =
         , expect = expectJsonWithBody toMsg (Decode.succeed ())
         , timeout = Nothing
         , tracker = Nothing
+        }
+
+logout : (Result ServerError () -> msg) -> Cmd msg
+logout toMsg =
+    Http.request
+        { url = Url.Builder.crossOrigin "/rest/logout" [] []
+        , method = "POST"
+        , timeout = Nothing
+        , tracker = Nothing
+        , headers = []
+        , body = Http.emptyBody
+        , expect = expectJsonWithBody toMsg (Decode.succeed ())
         }
