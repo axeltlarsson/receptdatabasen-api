@@ -7,6 +7,7 @@ module Profile exposing
     , passkeyAuthenticationComplete
     , passkeyRegistrationBegin
     , passkeyRegistrationComplete
+    , deletePasskey
     )
 
 import Api exposing (ServerError, expectJsonWithBody)
@@ -27,6 +28,7 @@ type alias Passkey =
     { credentialId : String
     , signCount : Int
     , createdAt : String -- TODO: handle DATES?
+    , id: Int
     }
 
 
@@ -77,10 +79,11 @@ fetchPasskeys toMsg =
 passkeyDecoder : Decode.Decoder (List Passkey)
 passkeyDecoder =
     Decode.list
-        (Decode.map3 Passkey
+        (Decode.map4 Passkey
             (field "data" <| field "credential_id" string)
             (field "data" <| field "sign_count" int)
             (field "created_at" string)
+            (field "id" int)
         )
 
 
@@ -158,6 +161,24 @@ passkeyAuthenticationComplete options toMsg =
                 []
         , body = Http.jsonBody options
         , expect = expectJsonWithBody toMsg Decode.value
+        , timeout = Nothing
+        , tracker = Nothing
+        }
+
+
+deletePasskey : Int -> (Result ServerError () -> msg) -> Cmd msg
+deletePasskey id toMsg =
+    Http.request
+        { method = "DELETE"
+        , headers =
+            [ Http.header "Accept" "application/json"
+            ]
+        , url =
+            Url.Builder.crossOrigin "/rest"
+                [ "passkeys" ]
+                [ Url.Builder.string "id" ("eq." ++ String.fromInt id) ]
+        , body = Http.emptyBody
+        , expect = expectJsonWithBody toMsg (Decode.succeed ())
         , timeout = Nothing
         , tracker = Nothing
         }

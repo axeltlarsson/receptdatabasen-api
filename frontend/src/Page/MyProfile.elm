@@ -162,6 +162,10 @@ viewProfile profileStatus =
 
 viewRegisteredPasskeys : Status (List Passkey) -> Element Msg
 viewRegisteredPasskeys passkeyStatus =
+    let
+        rmIcon =
+            FeatherIcons.x |> FeatherIcons.toHtml [] |> Element.html
+    in
     case passkeyStatus of
         Loading ->
             Element.html Loading.animation
@@ -189,7 +193,8 @@ viewRegisteredPasskeys passkeyStatus =
                           }
                         , { header = el [ Font.bold ] (text "Ta bort")
                           , width = fill
-                          , view = \_ -> text "Ta bort"
+                          , view =
+                                \p -> row [] [ Input.button [] { onPress = Just (RmPasskeyBtnPressed p.id), label = row [] [ rmIcon ] } ]
                           }
                         ]
                     }
@@ -271,7 +276,7 @@ viewPasskeyAuthentication auth =
             el [ padding 10 ] Element.none
 
         AuthBeginFailed err ->
-            el [padding 10] <| viewServerError "Har du valt rätt passkey att autentisera med?" err
+            el [ padding 10 ] <| viewServerError "Har du valt rätt passkey att autentisera med?" err
 
         GettingCredential ->
             el [ padding 10 ] Element.none
@@ -309,6 +314,8 @@ type Msg
     | AuthPasskeyPressed
     | LoadedAuthenticationBegin (Result Api.ServerError AuthOptions)
     | LoadedAuthenticationComplete (Result Api.ServerError Encode.Value)
+    | RmPasskeyBtnPressed Int
+    | DeletePasskeyComplete (Result Api.ServerError ())
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -384,6 +391,15 @@ update msg model =
 
         LoadedAuthenticationComplete (Err err) ->
             ( { model | passkeyAuthentication = AuthCompleteFailed err }, Cmd.none )
+
+        RmPasskeyBtnPressed id ->
+            ( model, Profile.deletePasskey id DeletePasskeyComplete )
+
+        DeletePasskeyComplete (Ok ()) ->
+            ( model, Profile.fetchPasskeys LoadedPasskeys )
+
+        DeletePasskeyComplete (Err _) ->
+            ( model, Cmd.none )
 
 
 port passkeyPortSender : Encode.Value -> Cmd msg

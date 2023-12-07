@@ -8,10 +8,11 @@ import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
+import Html.Attributes as HtmlAttributes
 import FeatherIcons
 import Form exposing (errorBorder, onEnter, viewValidationError)
 import Http
-import Json.Decode as Decode exposing (field, string)
+import Json.Decode as Decode exposing (field, string, int)
 import Json.Encode as Encode
 import Palette
 import Route
@@ -120,6 +121,7 @@ viewUserNameInput invalidCredentials active name =
             , Input.username
                 ([ Events.onLoseFocus BlurredUserName
                  , Border.rounded 2
+                 , Element.htmlAttribute (HtmlAttributes.attribute "autocomplete" "username webauthn")
                  ]
                     ++ errorBorder active name theValidator
                 )
@@ -324,11 +326,10 @@ submitForm form =
 
 meDecoder : Decode.Decoder Me
 meDecoder =
-    Decode.map3 Me
+    Decode.map2 Me
         (field "me" (field "user_name" string))
-        (field "me" (field "email" string))
-        (field "me" (field "id" string))
+        (field "me" (field "id" int))
 
 
 type alias Me =
-    { userName : String, email: String, id: String }
+    { userName : String, id: Int }
