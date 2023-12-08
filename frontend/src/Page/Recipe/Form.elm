@@ -310,7 +310,7 @@ viewImagesInput imagesDict tooManyError =
                                 }
                             )
 
-                    Done (Just base64Url) url ->
+                    Done (Just base64Url) _ ->
                         imageRect base64Url
                             (removeButton [ alignBottom, alignRight, padding 10 ]
                                 { idx = idx
@@ -342,7 +342,7 @@ viewImagesInput imagesDict tooManyError =
                                                 }
                                             )
 
-                                    Done (Just base64Url) url ->
+                                    Done (Just base64Url) _ ->
                                         smallImage base64Url
                                             i
                                             (removeButton [ alignBottom, alignRight, padding 5 ]
@@ -777,7 +777,7 @@ update msg ({ form } as model) =
             , Cmd.none
             )
 
-        ImageUploadComplete base64Url (Err _) ->
+        ImageUploadComplete _ (Err _) ->
             -- TODO: handle debug
             -- Debug.log (Debug.toString err)
             ( model, Cmd.none )

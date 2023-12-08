@@ -1,16 +1,14 @@
 port module Page.MyProfile exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
-import Api exposing (ServerError, expectJsonWithBody, viewServerError)
+import Api exposing (viewServerError)
 import Element
     exposing
         ( Element
         , alignLeft
-        , centerX
         , column
         , el
         , fill
         , padding
-        , paddingEach
         , paragraph
         , row
         , spacing
@@ -22,14 +20,14 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Element.Input as Input
-import Route
 import Element.Region as Region
 import FeatherIcons
-import Json.Decode as Decode exposing (field, string)
+import Json.Decode as Decode
 import Json.Encode as Encode
 import Loading
 import Palette
 import Profile exposing (Passkey, Profile)
+import Route
 import Session exposing (Session)
 
 
@@ -126,12 +124,14 @@ view model =
     { title = "Min profil"
     , stickyContent = Element.none
     , content =
-        column [ alignLeft, spacing 20 ]
-        -- TOOD: remove profile view?
-            [ row [] [ viewProfile model.profile ]
+        column [ alignLeft, spacing 20, padding 10, Region.mainContent ]
+            -- TOOD: remove profile view?
+            [ row [ Font.light, Font.size Palette.xxLarge ] [ text "Min profil" ]
+
+            -- , row [] [ viewProfile model.profile ]
             , column []
                 [ viewRegisteredPasskeys model.registeredPasskeys
-                , row []
+                , row [ spacing 20 ]
                     [ viewPasskeyCreation model.passkeyRegistration
                     , viewPasskeyAuthentication model.passkeyAuthentication
                     ]
@@ -147,36 +147,8 @@ viewLogoutButton =
         icon =
             FeatherIcons.logOut |> FeatherIcons.toHtml [] |> Element.html
     in
-    row [ padding 10 ]
-        [ el [ width <| Element.px 130, Background.color Palette.blush, Border.rounded 2, padding 10, Font.color Palette.white ]
-            (Input.button [] { onPress = Just LogoutBtnPressed, label = row [] [ icon, text "Logga ut" ] })
-        ]
-
-
-viewProfile : Status Profile -> Element msg
-viewProfile profileStatus =
-    case profileStatus of
-        Loading ->
-            Element.html Loading.animation
-
-        Failed err ->
-            Api.viewServerError "Något gick fel när profilen skulle laddas" err
-
-        Loaded profile ->
-            column
-                [ Region.mainContent
-                , width (fill |> Element.maximum 600)
-                , spacing 10
-                , padding 10
-                ]
-                [ row [ Font.light, Font.size Palette.xxLarge ] [ text "Min profil" ]
-                , column
-                    []
-                    [ row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "Användarnamn"), el [] (text profile.userName) ]
-                    , row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "Email"), el [] (text (Maybe.withDefault "ej satt" profile.email)) ]
-                    , row [ width fill, spacing 30 ] [ el [ Font.heavy ] (text "ID"), el [] (profile.id |> String.fromInt |> text) ]
-                    ]
-                ]
+    el [ width <| Element.px 130, Background.color Palette.blush, Border.rounded 2, padding 10, Font.color Palette.white ]
+        (Input.button [] { onPress = Just LogoutBtnPressed, label = row [] [ icon, text "Logga ut" ] })
 
 
 viewRegisteredPasskeys : Status (List Passkey) -> Element Msg
@@ -196,7 +168,7 @@ viewRegisteredPasskeys passkeyStatus =
             Api.viewServerError "Något gick fel när passkeys skulle laddas" err
 
         Loaded ps ->
-            column [ padding 10, spacing 10 ]
+            column [ spacing 10 ]
                 [ el [ Font.light, Font.size Palette.large ] (text "Registrerade passkeys")
                 , Element.table [ width fill, spacingXY 10 0 ]
                     { data = ps
@@ -235,13 +207,13 @@ viewPasskeyCreation passkeySupport =
     in
     case passkeySupport of
         CheckingSupport ->
-            el [ padding 10 ] Element.none
+            el [] Element.none
 
         NotSupported ->
             text "Passkeys stöds inte på denna enhet. 😢"
 
         Supported ->
-            row [ padding 10 ]
+            row []
                 [ Input.button
                     [ width fill, Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
                     { onPress = Just CreatePasskeyPressed
@@ -250,25 +222,25 @@ viewPasskeyCreation passkeySupport =
                 ]
 
         RegistrationBeginLoading ->
-            el [ padding 10 ] (Element.html Loading.animation)
+            el [] (Element.html Loading.animation)
 
         RegistrationBeginFailed err ->
-            el [ padding 10 ] (viewServerError "" err)
+            el [] (viewServerError "" err)
 
         CreatingCredential ->
-            el [ padding 10 ] Element.none
+            el [] Element.none
 
         FailedCreatingPasskey err ->
-            column [ padding 10 ]
+            column []
                 [ paragraph [] [ text "💥 Något gick fel när passkey skulle skapas: " ]
                 , paragraph [ Font.family [ Font.typeface "Courier New", Font.monospace ] ] [ text err ]
                 ]
 
         RegistrationCompleteLoading ->
-            el [ padding 10 ] (Element.html Loading.animation)
+            el [] (Element.html Loading.animation)
 
         RegistrationCompleteLoaded _ ->
-            el [ padding 10 ] <|
+            el [] <|
                 row
                     [ Border.width 1
                     , Border.rounded 2
@@ -290,7 +262,7 @@ viewPasskeyAuthentication : PasskeyAuthentication -> Element Msg
 viewPasskeyAuthentication auth =
     case auth of
         NotRequested ->
-            row [ padding 10 ]
+            row []
                 [ Input.button
                     [ width fill, Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
                     { onPress = Just AuthPasskeyPressed
@@ -299,33 +271,32 @@ viewPasskeyAuthentication auth =
                 ]
 
         AuthBeginLoading ->
-            el [ padding 10 ] Element.none
+            el [] Element.none
 
         AuthBeginFailed err ->
-            el [ padding 10 ] <| viewServerError "Har du valt rätt passkey att autentisera med?" err
+            el [] <| viewServerError "Har du valt rätt passkey att autentisera med?" err
 
         GettingCredential ->
-            el [ padding 10 ] Element.none
+            el [] Element.none
 
         FailedGettingCredential err ->
-            column [ padding 10 ]
+            column []
                 [ paragraph [] [ text "💥 Något gick fel när passkey skulle hämtas: " ]
                 , paragraph [ Font.family [ Font.typeface "Courier New", Font.monospace ] ] [ text err ]
                 ]
 
         AuthCompleteLoading ->
-            el [ padding 10 ] (Element.html Loading.animation)
+            el [] (Element.html Loading.animation)
 
         AuthCompleteFailed err ->
-            el [ padding 10 ] <| viewServerError "Har du valt rätt passkey att autentisera med?" err
+            el [] <| viewServerError "Har du valt rätt passkey att autentisera med?" err
 
         AuthCompleteLoaded _ ->
-            el [ padding 10 ] <|
+            el [] <|
                 row
                     [ Border.width 1
                     , Border.rounded 2
                     , Border.color Palette.darkGrey
-                    , padding 10
                     ]
                     [ FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html, text " Autentisering lyckades!" ]
 
@@ -349,7 +320,7 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
-        handleError err updates  =
+        handleError err updates =
             case err of
                 Api.Unauthorized ->
                     ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
@@ -366,8 +337,8 @@ update msg model =
 
         PortMsg m ->
             case Decode.decodeValue passkeyPortMsgDecoder m of
-                Err err ->
-                    Debug.log (Debug.toString err ++ " error decodeValue") ( model, Cmd.none )
+                Err _ ->
+                    ( model, Cmd.none )
 
                 Ok (PasskeySupported supported) ->
                     if supported then
@@ -427,7 +398,7 @@ update msg model =
             ( { model | passkeyAuthentication = AuthCompleteLoaded response }, Profile.fetchPasskeys LoadedPasskeys )
 
         LoadedAuthenticationComplete (Err err) ->
-                handleError err ( { model | passkeyAuthentication = AuthCompleteFailed err }, Cmd.none )
+            handleError err ( { model | passkeyAuthentication = AuthCompleteFailed err }, Cmd.none )
 
         RmPasskeyBtnPressed id ->
             ( model, Profile.deletePasskey id DeletePasskeyComplete )

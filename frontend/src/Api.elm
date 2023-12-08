@@ -4,7 +4,7 @@ import Element exposing (Element, column, el, fill, paddingEach, paragraph, row,
 import Element.Font as Font
 import FeatherIcons
 import Http exposing (Expect)
-import Json.Decode as Decode exposing (Decoder, value)
+import Json.Decode as Decode exposing (Decoder)
 import Palette
 
 

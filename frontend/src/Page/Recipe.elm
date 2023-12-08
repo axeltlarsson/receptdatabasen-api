@@ -17,7 +17,6 @@ import Element
         , paddingEach
         , paddingXY
         , paragraph
-        , rgb255
         , rgba255
         , row
         , spacing
@@ -38,7 +37,6 @@ import Loading
 import Page.Recipe.Ingredient as Ingredient
 import Page.Recipe.Markdown as Markdown
 import Palette exposing (edges)
-import Process
 import Recipe exposing (Full, Recipe)
 import Recipe.Slug as Slug exposing (Slug)
 import Route
@@ -483,7 +481,7 @@ update msg model =
 
         ClickedDelete ->
             case model.recipe of
-                Loaded recipe ->
+                Loaded _ ->
                     ( { model | toDelete = True }, Cmd.none )
 
                 _ ->
@@ -491,7 +489,7 @@ update msg model =
 
         ClickedConfirmedDelete ->
             case model.recipe of
-                Loaded recipe ->
+                Loaded _ ->
                     ( { model | toDelete = False }, Cmd.none )
 
                 -- Recipe.delete (Recipe.slug recipe) Deleted )

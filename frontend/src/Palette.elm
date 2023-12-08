@@ -1,7 +1,6 @@
 module Palette exposing (..)
 
 import Element exposing (rgb255, rgba255)
-import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 

@@ -123,7 +123,7 @@ view model =
                 skeleton Nothing <| Form.view form
 
             -- Editing an existing recipe
-            Loading slug ->
+            Loading _ ->
                 skeleton Nothing (Element.html Loading.animation)
 
             LoadingFailed slug ->
@@ -133,10 +133,10 @@ view model =
                 in
                 skeleton Nothing <| text (title ++ "Kunde ej ladda in receptet")
 
-            Editing slug serverError form ->
+            Editing _ serverError form ->
                 skeleton serverError <| Form.view form
 
-            Saving slug form ->
+            Saving _ form ->
                 skeleton Nothing <| Form.view form
     }
 
@@ -265,7 +265,7 @@ update msg ({ status } as model) =
             in
             ( { model | status = newStatus }, Cmd.none )
 
-        CompletedRecipeLoad slug (Err error) ->
+        CompletedRecipeLoad slug (Err _) ->
             ( { model | status = LoadingFailed slug }, Cmd.none )
 
         CompletedCreate (Ok recipe) ->
