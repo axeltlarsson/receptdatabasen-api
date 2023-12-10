@@ -1,28 +1,35 @@
 /*
   passkeys/authentication/begin
 */
-create or replace function api.generate_authentication_options(user_name text) returns text as $$
+create or replace function api.generate_authentication_options(user_name text, existing_passkeys text[]) returns text as $$
   from webauthn import (
       generate_authentication_options,
       options_to_json,
+      base64url_to_bytes,
   )
+
+  from webauthn.helpers.structs import PublicKeyCredentialDescriptor
 
   rp_id = plpy.execute("select settings.get('rp_id')")[0]["get"]
 
-  # TODO: allow_credentials from existing passkeys (though done later in /complete so not really necessary)
   auth_options = generate_authentication_options(
     rp_id=rp_id,
+    allow_credentials=[PublicKeyCredentialDescriptor(id=base64url_to_bytes(x)) for x in (existing_passkeys or [])],
   )
+
+  plpy.warning('auth options json', options_to_json(auth_options))
 
   return options_to_json(auth_options)
 $$
 language 'plpython3u';
 
-revoke all privileges on function api.generate_authentication_options(text) from public;
+revoke all privileges on function api.generate_authentication_options(text, text[]) from public;
 
 create or replace function api.passkey_authentication_begin(param json) returns json as $$
 declare usr record;
-declare options json;
+declare
+  options json;
+  existing_passkey_ids text[];
 
 begin
   select id, user_name from data.user
@@ -33,13 +40,19 @@ begin
     raise exception
       using detail = 'Cannot find provided user_name, if any, in database.',
       hint = 'Provide an existing user id in the body of the POST request: { "user_name": "valid_user" }';
+  end if;
+
+
+  select array_agg(data->>'credential_id')
+  into existing_passkey_ids
+  from data.passkey
+  where user_id = usr.id;
+
+  select api.generate_authentication_options(usr.user_name, existing_passkey_ids) into options;
+  if options IS NULL then
+    raise insufficient_privilege;
   else
-    select api.generate_authentication_options(usr.user_name) into options;
-    if options IS NULL then
-      raise insufficient_privilege;
-    else
-      return options;
-    end if;
+    return options;
   end if;
 end
 $$ security definer language plpgsql;
@@ -109,7 +122,6 @@ create or replace function api.id_from_credential(raw_credential text) returns t
 
   try:
     credential = AuthenticationCredential.parse_raw(raw_credential)
-    plpy.warning(credential)
     return credential.id
   except Exception:
     return None
