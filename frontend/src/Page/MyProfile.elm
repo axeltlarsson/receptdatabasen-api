@@ -125,13 +125,10 @@ view model =
     , stickyContent = Element.none
     , content =
         column [ alignLeft, spacing 20, padding 10, Region.mainContent ]
-            -- TOOD: remove profile view?
             [ row [ Font.light, Font.size Palette.xxLarge ] [ text "Min profil" ]
-
-            -- , row [] [ viewProfile model.profile ]
-            , column []
+            , column [ spacing 10 ]
                 [ viewRegisteredPasskeys model.registeredPasskeys
-                , row [ spacing 20 ]
+                , row [ spacing 20, width fill ]
                     [ viewPasskeyCreation model.passkeyRegistration
                     , viewPasskeyAuthentication model.passkeyAuthentication
                     ]
@@ -147,7 +144,13 @@ viewLogoutButton =
         icon =
             FeatherIcons.logOut |> FeatherIcons.toHtml [] |> Element.html
     in
-    el [ width <| Element.px 130, Background.color Palette.blush, Border.rounded 2, padding 10, Font.color Palette.white ]
+    el
+        [ width <| Element.px 130
+        , Background.color Palette.blush
+        , Border.rounded 2
+        , padding 10
+        , Font.color Palette.white
+        ]
         (Input.button [] { onPress = Just LogoutBtnPressed, label = row [] [ icon, text "Logga ut" ] })
 
 
@@ -207,13 +210,13 @@ viewPasskeyCreation passkeySupport =
     in
     case passkeySupport of
         CheckingSupport ->
-            el [] Element.none
+            Element.none
 
         NotSupported ->
             text "Passkeys stöds inte på denna enhet. 😢"
 
         Supported ->
-            row []
+            row [ Element.alignTop ]
                 [ Input.button
                     [ width fill, Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
                     { onPress = Just CreatePasskeyPressed
@@ -222,32 +225,31 @@ viewPasskeyCreation passkeySupport =
                 ]
 
         RegistrationBeginLoading ->
-            el [] (Element.html Loading.animation)
+            Element.html Loading.animation
 
         RegistrationBeginFailed err ->
-            el [] (viewServerError "" err)
+            viewServerError "" err
 
         CreatingCredential ->
-            el [] Element.none
+            Element.none
 
         FailedCreatingPasskey err ->
-            column []
+            column [ width fill ]
                 [ paragraph [] [ text "💥 Något gick fel när passkey skulle skapas: " ]
                 , paragraph [ Font.family [ Font.typeface "Courier New", Font.monospace ] ] [ text err ]
                 ]
 
         RegistrationCompleteLoading ->
-            el [] (Element.html Loading.animation)
+            Element.html Loading.animation
 
         RegistrationCompleteLoaded _ ->
-            el [] <|
-                row
-                    [ Border.width 1
-                    , Border.rounded 2
-                    , Border.color Palette.darkGrey
-                    , padding 10
-                    ]
-                    [ FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html, text " Passkey skapad!" ]
+            row
+                [ Border.width 1
+                , Border.rounded 2
+                , Border.color Palette.darkGrey
+                , padding 10
+                ]
+                [ FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html, text " Passkey skapad!" ]
 
         RegistrationCompleteFailed err ->
             viewServerError "posting to /complete failed" err
@@ -271,34 +273,34 @@ viewPasskeyAuthentication auth =
                 ]
 
         AuthBeginLoading ->
-            el [] Element.none
+            Element.none
 
         AuthBeginFailed err ->
-            el [] <| viewServerError "Har du valt rätt passkey att autentisera med?" err
+            viewServerError "Har du valt rätt passkey att autentisera med?" err
 
         GettingCredential ->
-            el [] Element.none
+            Element.none
 
         FailedGettingCredential err ->
-            column []
+            column [ width fill ]
                 [ paragraph [] [ text "💥 Något gick fel när passkey skulle hämtas: " ]
                 , paragraph [ Font.family [ Font.typeface "Courier New", Font.monospace ] ] [ text err ]
                 ]
 
         AuthCompleteLoading ->
-            el [] (Element.html Loading.animation)
+            Element.html Loading.animation
 
         AuthCompleteFailed err ->
-            el [] <| viewServerError "Har du valt rätt passkey att autentisera med?" err
+            viewServerError "Har du valt rätt passkey att autentisera med?" err
 
         AuthCompleteLoaded _ ->
-            el [] <|
-                row
-                    [ Border.width 1
-                    , Border.rounded 2
-                    , Border.color Palette.darkGrey
-                    ]
-                    [ FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html, text " Autentisering lyckades!" ]
+            row
+                [ Border.width 1
+                , Border.rounded 2
+                , Border.color Palette.darkGrey
+                , padding 9
+                ]
+                [ FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html, text " Autentisering lyckades!" ]
 
 
 type Msg
@@ -354,7 +356,7 @@ update msg model =
                     ( { model | passkeyRegistration = RegistrationCompleteLoading }, Profile.passkeyRegistrationComplete credential name LoadedRegistrationComplete )
 
                 Ok (PasskeyRetrieved passkey) ->
-                    ( { model | passkeyAuthentication = GettingCredential }, Profile.passkeyAuthenticationComplete passkey LoadedAuthenticationComplete )
+                    ( { model | passkeyAuthentication = AuthCompleteLoading }, Profile.passkeyAuthenticationComplete passkey LoadedAuthenticationComplete )
 
                 Ok (PasskeyRetrievalFailed err) ->
                     ( { model | passkeyAuthentication = FailedGettingCredential err }, Cmd.none )
@@ -389,7 +391,7 @@ update msg model =
                     ( model, Cmd.none )
 
         LoadedAuthenticationBegin (Ok options) ->
-            ( { model | passkeyAuthentication = AuthCompleteLoading }, passkeyPortSender (getPasskeyMsg options) )
+            ( { model | passkeyAuthentication = GettingCredential }, passkeyPortSender (getPasskeyMsg options) )
 
         LoadedAuthenticationBegin (Err err) ->
             handleError err ( { model | passkeyAuthentication = AuthBeginFailed err }, Cmd.none )
