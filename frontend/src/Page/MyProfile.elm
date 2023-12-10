@@ -392,7 +392,7 @@ update msg model =
             ( { model | passkeyAuthentication = AuthCompleteLoading }, passkeyPortSender (getPasskeyMsg options) )
 
         LoadedAuthenticationBegin (Err err) ->
-            handleError err ( { model | passkeyAuthentication = AuthCompleteFailed err }, Cmd.none )
+            handleError err ( { model | passkeyAuthentication = AuthBeginFailed err }, Cmd.none )
 
         LoadedAuthenticationComplete (Ok response) ->
             ( { model | passkeyAuthentication = AuthCompleteLoaded response }, Profile.fetchPasskeys LoadedPasskeys )
