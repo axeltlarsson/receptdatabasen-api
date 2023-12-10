@@ -117,6 +117,58 @@ const getBrowserInfo = () => {
   return `${browser}, ${os}${osVersion}`;
 };
 
+const encodeOptions = (options) => {
+  const opts = options;
+  // passkeycreation requires user.id and challenge to be in buffers
+  // the server base64url encodes the user.id and challenge
+  if (options.user) {
+    opts.user.id = base64urlToBuffer(opts.user.id);
+  }
+  opts.challenge = base64urlToBuffer(opts.challenge);
+  if (opts.excludeCredentials) {
+    for (let i = 0; i < opts.excludeCredentials.length; i++) {
+      opts.excludeCredentials[i].id = base64urlToBuffer(opts.excludeCredentials[i].id);
+    }
+  }
+
+  return opts;
+};
+
+app.ports.loginPasskeyPortSender.subscribe((message) => {
+  console.log('port message received', message);
+
+  switch (message.type) {
+    case 'getPasskeyConditional': {
+      if (window.PublicKeyCredential && PublicKeyCredential.isConditionalMediationAvailable) {
+        // Check if conditional mediation is available.
+        PublicKeyCredential.isConditionalMediationAvailable().then((isCMA) => {
+          if (isCMA) {
+            // Call WebAuthn authentication
+            const opts = encodeOptions(message.options);
+            navigator.credentials.get({
+              publicKey: opts,
+              mediation: 'conditional',
+            }).then((credential) => {
+              console.log(credential);
+            }).catch((err) => {
+              console.log(err);
+              app.ports.loginPasskeyPortReceiver.send({ type: 'errorRetrievingPasskey', error: err.toString() });
+            });
+          } else {
+            console.warning('Passkeys are not supported in this browser');
+            app.ports.loginPasskeyPortReceiver.send({ type: 'passkeysNotSupported' });
+          }
+        });
+      }
+      break;
+    }
+
+    default: {
+      break;
+    }
+  }
+});
+
 app.ports.passkeyPortSender.subscribe((message) => {
   console.log('port message recevied in js land', message);
   switch (message.type) {
@@ -129,17 +181,9 @@ app.ports.passkeyPortSender.subscribe((message) => {
     case 'createPasskey': {
       const { options } = message;
 
-      // passkeycreation requires user.id and challenge to be in buffers
-      // the server base64url encodes the user.id and challenge
-      options.user.id = base64urlToBuffer(options.user.id);
-      options.challenge = base64urlToBuffer(options.challenge);
-      if (options.excludeCredentials) {
-        for (let i = 0; i < options.excludeCredentials.length; i++) {
-          options.excludeCredentials[i].id = base64urlToBuffer(options.excludeCredentials[i].id);
-        }
-      }
+      const opts = encodeOptions(options);
 
-      createPasskey(options).then((credential) => {
+      createPasskey(opts).then((credential) => {
         const serialized = {
           authenticatorAttachment: credential.authenticatorAttachment,
           id: credential.id,

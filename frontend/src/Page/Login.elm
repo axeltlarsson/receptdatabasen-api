@@ -1,4 +1,4 @@
-module Page.Login exposing (Model, Msg, init, toSession, update, view)
+port module Page.Login exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
 import Api exposing (ServerError, expectJsonWithBody, viewServerError)
 import Element exposing (Element, centerX, column, el, fill, padding, paddingEach, row, spacing, text, width)
@@ -10,11 +10,13 @@ import Element.Input as Input
 import Element.Region as Region
 import FeatherIcons
 import Form exposing (errorBorder, onEnter, viewValidationError)
+import Html
 import Html.Attributes as HtmlAttributes
 import Http
 import Json.Decode as Decode exposing (field, int, string)
 import Json.Encode as Encode
 import Palette
+import Profile
 import Route
 import Session exposing (Session)
 import String.Verify
@@ -27,7 +29,32 @@ import Verify
 
 
 type alias Model =
-    { session : Session, status : Status, problem : Maybe ServerError }
+    { session : Session
+    , status : Status
+    , problem : Maybe ServerError
+    , passkeyAuthentication : PasskeyAuthentication
+    }
+
+
+
+{-
+   Passkey authenticaction with conditional UI.
+   1. Immediately, issue a request to server /auth/begin to get registration options
+   2. Call the navigator.credentials.get in js-land through port using the "conditional" flag
+   3.
+-}
+
+
+type PasskeyAuthentication
+    = -- POST /passkeys/authentication/begin without user_names to get options with challenge
+      AuthBeginLoading
+    | AuthBeginFailed Api.ServerError
+      -- Get passkey in js-land
+    | GettingCredentialConditional
+    | FailedGettingCredential String
+    | AuthCompleteLoading
+    | AuthCompleteFailed Api.ServerError
+    | AuthCompleteLoaded Encode.Value
 
 
 type Status
@@ -53,7 +80,14 @@ type ValidationStatus
 
 init : Session -> ( Model, Cmd Msg )
 init session =
-    ( { session = session, status = FillingForm initialForm, problem = Nothing }, Cmd.none )
+    ( { session = session
+      , status = FillingForm initialForm
+      , problem = Nothing
+      , passkeyAuthentication = AuthBeginLoading
+      }
+    , Profile.passkeyAuthenticationBegin Nothing LoadedAuthenticationBegin
+      -- , Cmd.none
+    )
 
 
 initialForm : LoginForm
@@ -94,6 +128,23 @@ view model =
 
 viewForm : LoginForm -> Element Msg
 viewForm form =
+    let
+        htmlForm =
+            Element.html
+                (Html.form []
+                    [ Html.div []
+                        [ Html.input
+                            [ HtmlAttributes.type_ "text"
+                            , HtmlAttributes.name "username"
+                            , HtmlAttributes.id "username"
+                            , HtmlAttributes.placeholder "Username"
+                            , HtmlAttributes.attribute "autocomplete" "username webauthn"
+                            ]
+                            []
+                        ]
+                    ]
+                )
+    in
     column [ width fill, Font.extraLight, spacing 20 ]
         [ viewUserNameInput form.invalidCredentials form.userNameValidationActive form.userName
         , viewPasswordInput form.invalidCredentials form.passwordValidationActive form.password
@@ -114,6 +165,9 @@ viewUserNameInput invalidCredentials active name =
         userIcon =
             el [ paddingEach { left = 0, right = 10, top = 0, bottom = 0 } ]
                 (FeatherIcons.user |> FeatherIcons.toHtml [] |> Element.html)
+
+        formElement contents =
+            Element.html <| Html.form [] [ contents ]
     in
     column [ spacing 10, width fill ]
         [ row [ width fill ]
@@ -122,6 +176,8 @@ viewUserNameInput invalidCredentials active name =
                 ([ Events.onLoseFocus BlurredUserName
                  , Border.rounded 2
                  , Element.htmlAttribute (HtmlAttributes.attribute "autocomplete" "username webauthn")
+                 , Element.htmlAttribute (HtmlAttributes.attribute "name" "username")
+                 , Element.htmlAttribute (HtmlAttributes.attribute "id" "username")
                  ]
                     ++ errorBorder active name theValidator
                 )
@@ -156,6 +212,8 @@ viewPasswordInput invalidCredentials active password =
                 ([ Events.onLoseFocus BlurredPassword
                  , Element.htmlAttribute (onEnter SubmitForm)
                  , Border.rounded 2
+                 , Element.htmlAttribute (HtmlAttributes.attribute "name" "password")
+                 , Element.htmlAttribute (HtmlAttributes.attribute "autocomplete" "current-password")
                  ]
                     ++ errorBorder active password theValidator
                 )
@@ -186,6 +244,8 @@ type Msg
     | BlurredPassword
     | SubmitForm
     | CompletedLogin (Result Api.ServerError Me)
+    | LoadedAuthenticationBegin (Result Api.ServerError Encode.Value)
+    | PortMsg Decode.Value
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -232,6 +292,15 @@ update msg ({ session, status } as model) =
                 CompletedLogin (Err _) ->
                     ( model, Cmd.none )
 
+                PortMsg m ->
+                    ( model, Cmd.none )
+
+                LoadedAuthenticationBegin (Ok options) ->
+                    ( model, loginPasskeyPortSender <| getPasskeyConditionalMsg options )
+
+                LoadedAuthenticationBegin (Err err) ->
+                    ( { model | passkeyAuthentication = AuthBeginFailed err }, Cmd.none )
+
         SubmittingForm form ->
             case msg of
                 CompletedLogin (Ok _) ->
@@ -256,6 +325,26 @@ update msg ({ session, status } as model) =
 
                 _ ->
                     ( model, Cmd.none )
+
+
+port loginPasskeyPortSender : Encode.Value -> Cmd msg
+
+
+port loginPasskeyPortReceiver : (Decode.Value -> msg) -> Sub msg
+
+
+getPasskeyConditionalMsg : Encode.Value -> Encode.Value
+getPasskeyConditionalMsg options =
+    Encode.object [ ( "type", Encode.string "getPasskeyConditional" ), ( "options", options ) ]
+
+
+type PortMsg
+    = PasskeyConditional
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    loginPasskeyPortReceiver PortMsg
 
 
 
@@ -333,4 +422,3 @@ meDecoder =
 
 type alias Me =
     { userName : String, id : Int }
-

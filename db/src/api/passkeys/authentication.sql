@@ -1,7 +1,7 @@
 /*
   passkeys/authentication/begin
 */
-create or replace function api.generate_authentication_options(user_name text, existing_passkeys text[]) returns text as $$
+create or replace function api.generate_authentication_options(existing_passkeys text[]) returns text as $$
   from webauthn import (
       generate_authentication_options,
       options_to_json,
@@ -23,7 +23,7 @@ create or replace function api.generate_authentication_options(user_name text, e
 $$
 language 'plpython3u';
 
-revoke all privileges on function api.generate_authentication_options(text, text[]) from public;
+revoke all privileges on function api.generate_authentication_options(text[]) from public;
 
 create or replace function api.passkey_authentication_begin(param json) returns json as $$
 declare usr record;
@@ -32,23 +32,14 @@ declare
   existing_passkey_ids text[];
 
 begin
-  select id, user_name from data.user
-  where user_name = param->>'user_name'
-  into usr;
-
-  if usr is NULL then
-    raise exception
-      using detail = 'Cannot find provided user_name, if any, in database.',
-      hint = 'Provide an existing user id in the body of the POST request: { "user_name": "valid_user" }';
-  end if;
-
 
   select array_agg(data->>'credential_id')
   into existing_passkey_ids
   from data.passkey
-  where user_id = usr.id;
+  join data.user on data.user.id = data.passkey.user_id
+  where data.user.user_name = (param->>'user_name');
 
-  select api.generate_authentication_options(usr.user_name, existing_passkey_ids) into options;
+  select api.generate_authentication_options(existing_passkey_ids) into options;
   if options IS NULL then
     raise insufficient_privilege;
   else

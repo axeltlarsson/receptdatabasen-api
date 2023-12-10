@@ -145,7 +145,7 @@ def test_registration_complete(passkey_with_session):
     assert last_passkey["name"] == "my passkey"
 
 
-def test_bogus_authentication_complete(session):
+def test_bogus_registration_complete(session):
     response = session.post(
         f"{BASE_URL}/passkeys/registration/complete", json={"hej": False}
     )
@@ -179,15 +179,16 @@ def auth_options_w_session():
     assert "challenge" in body
     assert body["rpId"] == "localhost"
     assert "allowCredentials" in body
+    assert len(body["allowCredentials"]) == 1
 
     return {"publicKey": body}, session
 
 
-def test_bogus_auth_begin(session):
+def test_auth_begin_no_username(session):
     res = session.post(
-        f"{BASE_URL}/passkeys/authentication/begin", json={"bogus": True}
+        f"{BASE_URL}/passkeys/authentication/begin", json={"noop": True}
     )
-    assert res.status_code == 400
+    assert res.status_code == 200
     assert res.json()
 
 

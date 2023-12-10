@@ -4,11 +4,11 @@ module Profile exposing
     , deletePasskey
     , fetch
     , fetchPasskeys
+    , logout
     , passkeyAuthenticationBegin
     , passkeyAuthenticationComplete
     , passkeyRegistrationBegin
     , passkeyRegistrationComplete
-    , logout
     )
 
 import Api exposing (ServerError, expectJsonWithBody)
@@ -133,13 +133,17 @@ passkeyRegistrationComplete passkey name toMsg =
         }
 
 
-passkeyAuthenticationBegin : String -> (Result ServerError Encode.Value -> msg) -> Cmd msg
-passkeyAuthenticationBegin userName toMsg =
+passkeyAuthenticationBegin : Maybe String -> (Result ServerError Encode.Value -> msg) -> Cmd msg
+passkeyAuthenticationBegin maybeUser toMsg =
     let
         body =
-            Encode.object
-                [ ( "user_name", Encode.string userName )
-                ]
+            case maybeUser of
+                Nothing ->
+                    Encode.object [ ( "nothing", Encode.string "no user" ) ]
+
+                Just userName ->
+                    Encode.object
+                        [ ( "user_name", Encode.string userName ) ]
     in
     Http.request
         { method = "POST"
@@ -191,6 +195,7 @@ deletePasskey id toMsg =
         , timeout = Nothing
         , tracker = Nothing
         }
+
 
 logout : (Result ServerError () -> msg) -> Cmd msg
 logout toMsg =

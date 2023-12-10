@@ -176,7 +176,7 @@ viewRegisteredPasskeys passkeyStatus =
                 , Element.table [ width fill, spacingXY 10 0 ]
                     { data = ps
                     , columns =
-                        [ { header = el [ Font.bold ] (text "Skapad av")
+                        [ { header = el [ Font.bold ] (text "Skapad på enhet")
                           , width = fill
                           , view = .name >> text
                           }
@@ -385,7 +385,7 @@ update msg model =
         AuthPasskeyPressed ->
             case model.profile of
                 Loaded profile ->
-                    ( { model | passkeyAuthentication = AuthBeginLoading }, Profile.passkeyAuthenticationBegin profile.userName LoadedAuthenticationBegin )
+                    ( { model | passkeyAuthentication = AuthBeginLoading }, Profile.passkeyAuthenticationBegin (Just profile.userName) LoadedAuthenticationBegin )
 
                 _ ->
                     ( model, Cmd.none )

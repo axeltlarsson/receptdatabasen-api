@@ -303,8 +303,8 @@ subscriptions model =
                 Editor _ editor ->
                     Sub.map GotEditorMsg (Editor.subscriptions editor)
 
-                Login _ ->
-                    Sub.none
+                Login login ->
+                    Sub.map GotLoginMsg (Login.subscriptions login)
 
                 MyProfile profile ->
                     Sub.map GotMyProfileMsg (MyProfile.subscriptions profile)
