@@ -6,13 +6,9 @@ create or replace function api.generate_registration_options(user_id text, user_
   from webauthn import (
       generate_registration_options,
       options_to_json,
+      base64url_to_bytes,
   )
   from webauthn.helpers.structs import PublicKeyCredentialDescriptor
-
-  if exclude_credentials is None:
-    exclude_creds = []
-  else:
-    exclude_creds = exclude_credentials
 
   registration_options = generate_registration_options(
     rp_id=rp_id,
@@ -20,7 +16,7 @@ create or replace function api.generate_registration_options(user_id text, user_
     user_id=user_id,
     user_name=user_name,
     user_display_name=user_name,
-    exclude_credentials=[PublicKeyCredentialDescriptor(id=bytes(cred, 'utf-8')) for cred in exclude_creds]
+    exclude_credentials=[PublicKeyCredentialDescriptor(id=base64url_to_bytes(cred)) for cred in (exclude_credentials or [])]
   )
 
   return options_to_json(registration_options)
