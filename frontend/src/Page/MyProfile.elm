@@ -1,4 +1,4 @@
-port module Page.MyProfile exposing (Model, Msg, init, subscriptions, toSession, update, view)
+module Page.MyProfile exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
 import Api exposing (viewServerError)
 import Element
@@ -26,7 +26,15 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 import Loading
 import Palette
-import Profile exposing (Passkey, Profile)
+import Passkey
+    exposing
+        ( Passkey
+        , Profile
+        , passkeyPortReceiver
+        , sendCheckPasskeySupportMsg
+        , sendCreatePasskeyMsg
+        , sendGetPasskeyMsg
+        )
 import Route
 import Session exposing (Session)
 
@@ -112,9 +120,9 @@ init session =
       , passkeyAuthentication = NotRequested
       }
     , Cmd.batch
-        [ Profile.fetch LoadedProfile
-        , Profile.fetchPasskeys LoadedPasskeys
-        , passkeyPortSender checkPasskeySupport
+        [ Passkey.fetch LoadedProfile
+        , Passkey.fetchPasskeys LoadedPasskeys
+        , sendCheckPasskeySupportMsg
         ]
     )
 
@@ -338,27 +346,27 @@ update msg model =
             ( { model | profile = Failed err }, Cmd.none )
 
         PortMsg m ->
-            case Decode.decodeValue passkeyPortMsgDecoder m of
+            case Decode.decodeValue Passkey.passkeyPortMsgDecoder m of
                 Err _ ->
                     ( model, Cmd.none )
 
-                Ok (PasskeySupported supported) ->
+                Ok (Passkey.PasskeySupported supported) ->
                     if supported then
                         ( { model | passkeyRegistration = Supported }, Cmd.none )
 
                     else
                         ( { model | passkeyRegistration = NotSupported }, Cmd.none )
 
-                Ok (PasskeyCreationFailed errStr) ->
+                Ok (Passkey.PasskeyCreationFailed errStr) ->
                     ( { model | passkeyRegistration = FailedCreatingPasskey errStr }, Cmd.none )
 
-                Ok (PasskeyCreated credential name) ->
-                    ( { model | passkeyRegistration = RegistrationCompleteLoading }, Profile.passkeyRegistrationComplete credential name LoadedRegistrationComplete )
+                Ok (Passkey.PasskeyCreated credential name) ->
+                    ( { model | passkeyRegistration = RegistrationCompleteLoading }, Passkey.passkeyRegistrationComplete credential name LoadedRegistrationComplete )
 
-                Ok (PasskeyRetrieved passkey) ->
-                    ( { model | passkeyAuthentication = AuthCompleteLoading }, Profile.passkeyAuthenticationComplete passkey LoadedAuthenticationComplete )
+                Ok (Passkey.PasskeyRetrieved passkey) ->
+                    ( { model | passkeyAuthentication = AuthCompleteLoading }, Passkey.passkeyAuthenticationComplete passkey LoadedAuthenticationComplete )
 
-                Ok (PasskeyRetrievalFailed err) ->
+                Ok (Passkey.PasskeyRetrievalFailed err) ->
                     ( { model | passkeyAuthentication = FailedGettingCredential err }, Cmd.none )
 
         LoadedPasskeys (Ok ps) ->
@@ -368,16 +376,16 @@ update msg model =
             handleError err ( { model | registeredPasskeys = Failed err }, Cmd.none )
 
         CreatePasskeyPressed ->
-            ( { model | passkeyRegistration = RegistrationBeginLoading }, Profile.passkeyRegistrationBegin LoadedRegistrationBegin )
+            ( { model | passkeyRegistration = RegistrationBeginLoading }, Passkey.passkeyRegistrationBegin LoadedRegistrationBegin )
 
         LoadedRegistrationBegin (Ok options) ->
-            ( { model | passkeyRegistration = CreatingCredential }, passkeyPortSender (createPasskeyMsg options) )
+            ( { model | passkeyRegistration = CreatingCredential }, sendCreatePasskeyMsg options )
 
         LoadedRegistrationBegin (Err err) ->
             handleError err ( { model | passkeyRegistration = RegistrationBeginFailed err }, Cmd.none )
 
         LoadedRegistrationComplete (Ok response) ->
-            ( { model | passkeyRegistration = RegistrationCompleteLoaded response }, Profile.fetchPasskeys LoadedPasskeys )
+            ( { model | passkeyRegistration = RegistrationCompleteLoaded response }, Passkey.fetchPasskeys LoadedPasskeys )
 
         LoadedRegistrationComplete (Err err) ->
             handleError err ( { model | passkeyRegistration = RegistrationCompleteFailed err }, Cmd.none )
@@ -385,95 +393,40 @@ update msg model =
         AuthPasskeyPressed ->
             case model.profile of
                 Loaded profile ->
-                    ( { model | passkeyAuthentication = AuthBeginLoading }, Profile.passkeyAuthenticationBegin (Just profile.userName) LoadedAuthenticationBegin )
+                    ( { model | passkeyAuthentication = AuthBeginLoading }, Passkey.passkeyAuthenticationBegin (Just profile.userName) LoadedAuthenticationBegin )
 
                 _ ->
                     ( model, Cmd.none )
 
         LoadedAuthenticationBegin (Ok options) ->
-            ( { model | passkeyAuthentication = GettingCredential }, passkeyPortSender (getPasskeyMsg options) )
+            ( { model | passkeyAuthentication = GettingCredential }, Passkey.sendGetPasskeyMsg options )
 
         LoadedAuthenticationBegin (Err err) ->
             handleError err ( { model | passkeyAuthentication = AuthBeginFailed err }, Cmd.none )
 
         LoadedAuthenticationComplete (Ok response) ->
-            ( { model | passkeyAuthentication = AuthCompleteLoaded response }, Profile.fetchPasskeys LoadedPasskeys )
+            ( { model | passkeyAuthentication = AuthCompleteLoaded response }, Passkey.fetchPasskeys LoadedPasskeys )
 
         LoadedAuthenticationComplete (Err err) ->
             handleError err ( { model | passkeyAuthentication = AuthCompleteFailed err }, Cmd.none )
 
         RmPasskeyBtnPressed id ->
-            ( model, Profile.deletePasskey id DeletePasskeyComplete )
+            ( model, Passkey.deletePasskey id DeletePasskeyComplete )
 
         DeletePasskeyComplete (Ok ()) ->
-            ( model, Profile.fetchPasskeys LoadedPasskeys )
+            ( model, Passkey.fetchPasskeys LoadedPasskeys )
 
         DeletePasskeyComplete (Err err) ->
             handleError err ( model, Cmd.none )
 
         LogoutBtnPressed ->
-            ( model, Profile.logout LogoutComplete )
+            ( model, Passkey.logout LogoutComplete )
 
         LogoutComplete (Ok _) ->
             ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
 
         LogoutComplete (Err _) ->
             ( model, Cmd.none )
-
-
-port passkeyPortSender : Encode.Value -> Cmd msg
-
-
-port passkeyPortReceiver : (Decode.Value -> msg) -> Sub msg
-
-
-checkPasskeySupport : Encode.Value
-checkPasskeySupport =
-    Encode.object [ ( "type", Encode.string "checkPasskeySupport" ) ]
-
-
-createPasskeyMsg : RegistrationOptions -> Encode.Value
-createPasskeyMsg options =
-    Encode.object [ ( "type", Encode.string "createPasskey" ), ( "options", options ) ]
-
-
-getPasskeyMsg : AuthOptions -> Encode.Value
-getPasskeyMsg options =
-    Encode.object [ ( "type", Encode.string "getPasskey" ), ( "options", options ) ]
-
-
-type PasskeyPortMsg
-    = PasskeySupported Bool
-    | PasskeyCreated Decode.Value String
-    | PasskeyCreationFailed String
-    | PasskeyRetrieved Decode.Value
-    | PasskeyRetrievalFailed String
-
-
-passkeyPortMsgDecoder : Decode.Decoder PasskeyPortMsg
-passkeyPortMsgDecoder =
-    Decode.field "type" Decode.string
-        |> Decode.andThen
-            (\t ->
-                case t of
-                    "passkeySupported" ->
-                        Decode.map PasskeySupported (Decode.field "passkeySupport" Decode.bool)
-
-                    "passkeyCreated" ->
-                        Decode.map2 PasskeyCreated (Decode.field "passkey" Decode.value) (Decode.field "name" Decode.string)
-
-                    "errorCreatingPasskey" ->
-                        Decode.map PasskeyCreationFailed (Decode.field "error" Decode.string)
-
-                    "passkeyRetrieved" ->
-                        Decode.map PasskeyRetrieved (Decode.field "passkey" Decode.value)
-
-                    "errorRetrievingPasskey" ->
-                        Decode.map PasskeyRetrievalFailed (Decode.field "error" Decode.string)
-
-                    _ ->
-                        Decode.fail ("trying to decode port passkeyPortMsg but " ++ t ++ " is not supported")
-            )
 
 
 toSession : Model -> Session
@@ -483,4 +436,5 @@ toSession model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    passkeyPortReceiver PortMsg
+    Passkey.subscribe PortMsg
+

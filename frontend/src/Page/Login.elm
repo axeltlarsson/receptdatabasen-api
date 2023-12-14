@@ -16,7 +16,7 @@ import Http
 import Json.Decode as Decode exposing (field, int, string)
 import Json.Encode as Encode
 import Palette
-import Profile
+import Passkey
 import Route
 import Session exposing (Session)
 import String.Verify
@@ -85,7 +85,7 @@ init session =
       , problem = Nothing
       , passkeyAuthentication = AuthBeginLoading
       }
-    , Profile.passkeyAuthenticationBegin Nothing LoadedAuthenticationBegin
+    , Passkey.passkeyAuthenticationBegin Nothing LoadedAuthenticationBegin
       -- , Cmd.none
     )
 

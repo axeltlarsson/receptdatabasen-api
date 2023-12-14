@@ -1,5 +1,6 @@
-module Profile exposing
+port module Passkey exposing
     ( Passkey
+    , PasskeyPortMsg(..)
     , Profile
     , deletePasskey
     , fetch
@@ -7,8 +8,14 @@ module Profile exposing
     , logout
     , passkeyAuthenticationBegin
     , passkeyAuthenticationComplete
+    , passkeyPortMsgDecoder
+    , passkeyPortReceiver
     , passkeyRegistrationBegin
     , passkeyRegistrationComplete
+    , sendCheckPasskeySupportMsg
+    , sendCreatePasskeyMsg
+    , sendGetPasskeyMsg
+    , subscribe
     )
 
 import Api exposing (ServerError, expectJsonWithBody)
@@ -208,3 +215,70 @@ logout toMsg =
         , body = Http.emptyBody
         , expect = expectJsonWithBody toMsg (Decode.succeed ())
         }
+
+
+
+{-
+   Port
+   Send and receive messages with JS-land.
+-}
+
+
+port passkeyPortSender : Encode.Value -> Cmd msg
+
+
+sendGetPasskeyMsg : Encode.Value -> Cmd msg
+sendGetPasskeyMsg options =
+    passkeyPortSender (Encode.object [ ( "type", Encode.string "getPasskey" ), ( "options", options ) ])
+
+
+sendCreatePasskeyMsg : Encode.Value -> Cmd msg
+sendCreatePasskeyMsg options =
+    passkeyPortSender (Encode.object [ ( "type", Encode.string "createPasskey" ), ( "options", options ) ])
+
+
+sendCheckPasskeySupportMsg : Cmd msg
+sendCheckPasskeySupportMsg =
+    passkeyPortSender (Encode.object [ ( "type", Encode.string "checkPasskeySupport" ) ])
+
+
+port passkeyPortReceiver : (Decode.Value -> msg) -> Sub msg
+
+
+type PasskeyPortMsg
+    = PasskeySupported Bool
+    | PasskeyCreated Decode.Value String
+    | PasskeyCreationFailed String
+    | PasskeyRetrieved Decode.Value
+    | PasskeyRetrievalFailed String
+
+
+passkeyPortMsgDecoder : Decode.Decoder PasskeyPortMsg
+passkeyPortMsgDecoder =
+    Decode.field "type" Decode.string
+        |> Decode.andThen
+            (\t ->
+                case t of
+                    "passkeySupported" ->
+                        Decode.map PasskeySupported (Decode.field "passkeySupport" Decode.bool)
+
+                    "passkeyCreated" ->
+                        Decode.map2 PasskeyCreated (Decode.field "passkey" Decode.value) (Decode.field "name" Decode.string)
+
+                    "errorCreatingPasskey" ->
+                        Decode.map PasskeyCreationFailed (Decode.field "error" Decode.string)
+
+                    "passkeyRetrieved" ->
+                        Decode.map PasskeyRetrieved (Decode.field "passkey" Decode.value)
+
+                    "errorRetrievingPasskey" ->
+                        Decode.map PasskeyRetrievalFailed (Decode.field "error" Decode.string)
+
+                    _ ->
+                        Decode.fail ("trying to decode port passkeyPortMsg but " ++ t ++ " is not supported")
+            )
+
+
+subscribe : (Encode.Value -> msg) -> Sub msg
+subscribe tagger =
+    passkeyPortReceiver tagger
