@@ -26,15 +26,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 import Loading
 import Palette
-import Passkey
-    exposing
-        ( Passkey
-        , Profile
-        , passkeyPortReceiver
-        , sendCheckPasskeySupportMsg
-        , sendCreatePasskeyMsg
-        , sendGetPasskeyMsg
-        )
+import Passkey exposing (Passkey, Profile)
 import Route
 import Session exposing (Session)
 
@@ -122,7 +114,7 @@ init session =
     , Cmd.batch
         [ Passkey.fetch LoadedProfile
         , Passkey.fetchPasskeys LoadedPasskeys
-        , sendCheckPasskeySupportMsg
+        , Passkey.sendCheckPasskeySupportMsg
         ]
     )
 
@@ -346,9 +338,10 @@ update msg model =
             ( { model | profile = Failed err }, Cmd.none )
 
         PortMsg m ->
-            case Decode.decodeValue Passkey.passkeyPortMsgDecoder m of
-                Err _ ->
-                    ( model, Cmd.none )
+            case Decode.decodeValue Passkey.portMsgDecoder m of
+                -- TODO: actually display these error messages?
+                Err err ->
+                    ( { model | passkeyRegistration = FailedCreatingPasskey (Decode.errorToString err) }, Cmd.none )
 
                 Ok (Passkey.PasskeySupported supported) ->
                     if supported then
@@ -379,7 +372,7 @@ update msg model =
             ( { model | passkeyRegistration = RegistrationBeginLoading }, Passkey.passkeyRegistrationBegin LoadedRegistrationBegin )
 
         LoadedRegistrationBegin (Ok options) ->
-            ( { model | passkeyRegistration = CreatingCredential }, sendCreatePasskeyMsg options )
+            ( { model | passkeyRegistration = CreatingCredential }, Passkey.sendCreatePasskeyMsg options )
 
         LoadedRegistrationBegin (Err err) ->
             handleError err ( { model | passkeyRegistration = RegistrationBeginFailed err }, Cmd.none )
@@ -437,4 +430,3 @@ toSession model =
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Passkey.subscribe PortMsg
-

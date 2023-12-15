@@ -1,4 +1,4 @@
-port module Page.Login exposing (Model, Msg, init, subscriptions, toSession, update, view)
+module Page.Login exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
 import Api exposing (ServerError, expectJsonWithBody, viewServerError)
 import Element exposing (Element, centerX, column, el, fill, padding, paddingEach, row, spacing, text, width)
@@ -10,7 +10,6 @@ import Element.Input as Input
 import Element.Region as Region
 import FeatherIcons
 import Form exposing (errorBorder, onEnter, viewValidationError)
-import Html
 import Html.Attributes as HtmlAttributes
 import Http
 import Json.Decode as Decode exposing (field, int, string)
@@ -49,8 +48,7 @@ type PasskeyAuthentication
     = -- POST /passkeys/authentication/begin without user_names to get options with challenge
       AuthBeginLoading
     | AuthBeginFailed Api.ServerError
-      -- Get passkey in js-land
-    | GettingCredentialConditional
+      -- Get passkey in js-land conditionally with options from AuthBegin, directly then to AuthCompleteLoading
     | FailedGettingCredential String
     | AuthCompleteLoading
     | AuthCompleteFailed Api.ServerError
@@ -86,7 +84,6 @@ init session =
       , passkeyAuthentication = AuthBeginLoading
       }
     , Passkey.passkeyAuthenticationBegin Nothing LoadedAuthenticationBegin
-      -- , Cmd.none
     )
 
 
@@ -128,23 +125,6 @@ view model =
 
 viewForm : LoginForm -> Element Msg
 viewForm form =
-    let
-        htmlForm =
-            Element.html
-                (Html.form []
-                    [ Html.div []
-                        [ Html.input
-                            [ HtmlAttributes.type_ "text"
-                            , HtmlAttributes.name "username"
-                            , HtmlAttributes.id "username"
-                            , HtmlAttributes.placeholder "Username"
-                            , HtmlAttributes.attribute "autocomplete" "username webauthn"
-                            ]
-                            []
-                        ]
-                    ]
-                )
-    in
     column [ width fill, Font.extraLight, spacing 20 ]
         [ viewUserNameInput form.invalidCredentials form.userNameValidationActive form.userName
         , viewPasswordInput form.invalidCredentials form.passwordValidationActive form.password
@@ -165,9 +145,6 @@ viewUserNameInput invalidCredentials active name =
         userIcon =
             el [ paddingEach { left = 0, right = 10, top = 0, bottom = 0 } ]
                 (FeatherIcons.user |> FeatherIcons.toHtml [] |> Element.html)
-
-        formElement contents =
-            Element.html <| Html.form [] [ contents ]
     in
     column [ spacing 10, width fill ]
         [ row [ width fill ]
@@ -245,6 +222,7 @@ type Msg
     | SubmitForm
     | CompletedLogin (Result Api.ServerError Me)
     | LoadedAuthenticationBegin (Result Api.ServerError Encode.Value)
+    | LoadedAuthenticationComplete (Result Api.ServerError Encode.Value)
     | PortMsg Decode.Value
 
 
@@ -293,13 +271,31 @@ update msg ({ session, status } as model) =
                     ( model, Cmd.none )
 
                 PortMsg m ->
-                    ( model, Cmd.none )
+                    case Decode.decodeValue Passkey.portMsgDecoder m of
+                        Ok (Passkey.PasskeyRetrieved passkey) ->
+                            ( { model | passkeyAuthentication = AuthCompleteLoading }, Passkey.passkeyAuthenticationComplete passkey LoadedAuthenticationComplete )
+
+                        Ok (Passkey.PasskeyRetrievalFailed err) ->
+                            ( { model | passkeyAuthentication = FailedGettingCredential err }, Cmd.none )
+
+                        Ok _ ->
+                            ( { model | passkeyAuthentication = FailedGettingCredential "unexpected message" }, Cmd.none )
+
+                        -- TODO: actually display these error messages?
+                        Err err ->
+                            ( { model | passkeyAuthentication = FailedGettingCredential (Decode.errorToString err) }, Cmd.none )
 
                 LoadedAuthenticationBegin (Ok options) ->
-                    ( model, loginPasskeyPortSender <| getPasskeyConditionalMsg options )
+                    ( model, Passkey.sendGetPasskeyConditionalMsg options )
 
                 LoadedAuthenticationBegin (Err err) ->
                     ( { model | passkeyAuthentication = AuthBeginFailed err }, Cmd.none )
+
+                LoadedAuthenticationComplete (Ok response) ->
+                    ( { model | passkeyAuthentication = AuthCompleteLoaded response }, Route.replaceUrl (Session.navKey session) (Route.RecipeList Nothing) )
+
+                LoadedAuthenticationComplete (Err err) ->
+                    ( { model | passkeyAuthentication = AuthCompleteFailed err }, Cmd.none )
 
         SubmittingForm form ->
             case msg of
@@ -327,24 +323,9 @@ update msg ({ session, status } as model) =
                     ( model, Cmd.none )
 
 
-port loginPasskeyPortSender : Encode.Value -> Cmd msg
-
-
-port loginPasskeyPortReceiver : (Decode.Value -> msg) -> Sub msg
-
-
-getPasskeyConditionalMsg : Encode.Value -> Encode.Value
-getPasskeyConditionalMsg options =
-    Encode.object [ ( "type", Encode.string "getPasskeyConditional" ), ( "options", options ) ]
-
-
-type PortMsg
-    = PasskeyConditional
-
-
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    loginPasskeyPortReceiver PortMsg
+    Passkey.subscribe PortMsg
 
 
 

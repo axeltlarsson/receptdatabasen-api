@@ -133,40 +133,17 @@ const encodeOptions = (options) => {
 
   return opts;
 };
-
-app.ports.loginPasskeyPortSender.subscribe((message) => {
-  console.log('port message received', message);
-
-  switch (message.type) {
-    case 'getPasskeyConditional': {
-      if (window.PublicKeyCredential && PublicKeyCredential.isConditionalMediationAvailable) {
-        // Check if conditional mediation is available.
-        PublicKeyCredential.isConditionalMediationAvailable().then((isCMA) => {
-          if (isCMA) {
-            // Call WebAuthn authentication
-            const opts = encodeOptions(message.options);
-            navigator.credentials.get({
-              publicKey: opts,
-              mediation: 'conditional',
-            }).then((credential) => {
-              console.log(credential);
-            }).catch((err) => {
-              console.log(err);
-              app.ports.loginPasskeyPortReceiver.send({ type: 'errorRetrievingPasskey', error: err.toString() });
-            });
-          } else {
-            console.warning('Passkeys are not supported in this browser');
-            app.ports.loginPasskeyPortReceiver.send({ type: 'passkeysNotSupported' });
-          }
-        });
-      }
-      break;
-    }
-
-    default: {
-      break;
-    }
-  }
+const serializePasskey = (credential) => ({
+  authenticatorAttachment: credential.authenticatorAttachment,
+  id: credential.id,
+  rawId: bufferToBase64url(credential.rawId),
+  response: {
+    authenticatorData: bufferToBase64url(credential.response.authenticatorData),
+    clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
+    signature: bufferToBase64url(credential.response.signature),
+    userHandle: bufferToBase64url(credential.response.userHandle),
+  },
+  type: credential.type,
 });
 
 app.ports.passkeyPortSender.subscribe((message) => {
@@ -214,23 +191,39 @@ app.ports.passkeyPortSender.subscribe((message) => {
         }
       }
       getPasskey(options).then((credential) => {
-        const serialized = {
-          authenticatorAttachment: credential.authenticatorAttachment,
-          id: credential.id,
-          rawId: bufferToBase64url(credential.rawId),
-          response: {
-            authenticatorData: bufferToBase64url(credential.response.authenticatorData),
-            clientDataJSON: bufferToBase64url(credential.response.clientDataJSON),
-            signature: bufferToBase64url(credential.response.signature),
-            userHandle: bufferToBase64url(credential.response.userHandle),
-          },
-          type: credential.type,
-        };
+        const serialized = serializePasskey(credential);
         app.ports.passkeyPortReceiver.send({ type: 'passkeyRetrieved', passkey: serialized });
       }).catch((err) => {
         console.error(err);
         app.ports.passkeyPortReceiver.send({ type: 'errorRetrievingPasskey', error: err.toString() });
       });
+      break;
+    }
+
+    case 'getPasskeyConditional': {
+      if (window.PublicKeyCredential
+        && window.PublicKeyCredential.isConditionalMediationAvailable) {
+        // Check if conditional mediation is available.
+        window.PublicKeyCredential.isConditionalMediationAvailable().then((isCMA) => {
+          if (isCMA) {
+            // Call WebAuthn authentication
+            const opts = encodeOptions(message.options);
+            navigator.credentials.get({
+              publicKey: opts,
+              mediation: 'conditional',
+            }).then((credential) => {
+              const serialized = serializePasskey(credential);
+              app.ports.passkeyPortReceiver.send({ type: 'passkeyRetrieved', passkey: serialized });
+            }).catch((err) => {
+              console.log(err);
+              app.ports.loginPasskeyPortReceiver.send({ type: 'errorRetrievingPasskey', error: err.toString() });
+            });
+          } else {
+            console.warning('Passkeys are not supported in this browser');
+            app.ports.loginPasskeyPortReceiver.send({ type: 'passkeysNotSupported' });
+          }
+        });
+      }
       break;
     }
 

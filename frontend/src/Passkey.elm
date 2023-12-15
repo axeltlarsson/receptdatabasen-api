@@ -8,12 +8,13 @@ port module Passkey exposing
     , logout
     , passkeyAuthenticationBegin
     , passkeyAuthenticationComplete
-    , passkeyPortMsgDecoder
     , passkeyPortReceiver
     , passkeyRegistrationBegin
     , passkeyRegistrationComplete
+    , portMsgDecoder
     , sendCheckPasskeySupportMsg
     , sendCreatePasskeyMsg
+    , sendGetPasskeyConditionalMsg
     , sendGetPasskeyMsg
     , subscribe
     )
@@ -242,6 +243,11 @@ sendCheckPasskeySupportMsg =
     passkeyPortSender (Encode.object [ ( "type", Encode.string "checkPasskeySupport" ) ])
 
 
+sendGetPasskeyConditionalMsg : Encode.Value -> Cmd msg
+sendGetPasskeyConditionalMsg options =
+    passkeyPortSender (Encode.object [ ( "type", Encode.string "getPasskeyConditional" ), ( "options", options ) ])
+
+
 port passkeyPortReceiver : (Decode.Value -> msg) -> Sub msg
 
 
@@ -253,8 +259,8 @@ type PasskeyPortMsg
     | PasskeyRetrievalFailed String
 
 
-passkeyPortMsgDecoder : Decode.Decoder PasskeyPortMsg
-passkeyPortMsgDecoder =
+portMsgDecoder : Decode.Decoder PasskeyPortMsg
+portMsgDecoder =
     Decode.field "type" Decode.string
         |> Decode.andThen
             (\t ->
