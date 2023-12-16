@@ -216,7 +216,7 @@ app.ports.passkeyPortSender.subscribe((message) => {
               app.ports.passkeyPortReceiver.send({ type: 'passkeyRetrieved', passkey: serialized });
             }).catch((err) => {
               console.log(err);
-              app.ports.loginPasskeyPortReceiver.send({ type: 'errorRetrievingPasskey', error: err.toString() });
+              app.ports.passkeyPortReceiver.send({ type: 'errorRetrievingPasskey', error: err.toString() });
             });
           } else {
             console.warning('Passkeys are not supported in this browser');

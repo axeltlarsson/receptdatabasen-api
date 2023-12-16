@@ -17,8 +17,6 @@ create or replace function api.generate_authentication_options(existing_passkeys
     allow_credentials=[PublicKeyCredentialDescriptor(id=base64url_to_bytes(x)) for x in (existing_passkeys or [])],
   )
 
-  plpy.warning('auth options json', options_to_json(auth_options))
-
   return options_to_json(auth_options)
 $$
 language 'plpython3u';
@@ -94,12 +92,12 @@ revoke all privileges on function api.verify_authentication_response(text, text,
 
 
 -- helper function to get user_handle from credential
-create or replace function api.user_handle_from_credential(raw_credential text) returns text as $$
+create or replace function api.user_handle_from_credential(raw_credential text) returns int as $$
   from webauthn.helpers.structs import AuthenticationCredential
 
   try:
     credential = AuthenticationCredential.parse_raw(raw_credential)
-    return credential.response.user_handle.decode("utf-8")
+    return int(credential.response.user_handle.decode("utf-8"))
   except Exception:
     return None
 $$
@@ -133,13 +131,13 @@ begin
     select api.id_from_credential(param->>'raw_credential') into credential_id;
 
     if user_handle is null then
-      raise exception
+      raise insufficient_privilege
         using detail = 'Cannot parse user_handle from credential payload.',
             hint = 'Check your payload';
     end if;
 
     if credential_id is null then
-      raise exception
+      raise insufficient_privilege
         using detail = 'Cannot parse credential_id from credential payload.',
             hint = 'Check your payload';
     end if;
@@ -163,7 +161,7 @@ begin
     limit 1;
 
     if existing_passkey is null then
-      raise exception 'Cannot find matching passkey for user_id and credential_id'
+      raise insufficient_privilege
       using detail = ('User_id: ', usr.id, 'credential_id: ', credential_id),
       hint = 'Check your user_handle payload';
     end if;

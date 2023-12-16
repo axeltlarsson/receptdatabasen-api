@@ -1,4 +1,4 @@
-module Api exposing (ServerError(..), expectJsonWithBody, viewServerError)
+module Api exposing (ServerError(..), expectJsonWithBody, viewServerError, errorFromString)
 
 import Element exposing (Element, column, el, fill, paddingEach, paragraph, row, spacing, text, width)
 import Element.Font as Font
@@ -23,13 +23,13 @@ expectJsonWithBody toMsg decoder =
         \response ->
             case response of
                 Http.BadUrl_ urll ->
-                    Err (otherError (Http.BadUrl urll) Nothing)
+                    Err (otherHttpError (Http.BadUrl urll) Nothing)
 
                 Http.Timeout_ ->
-                    Err (otherError Http.Timeout Nothing)
+                    Err (otherHttpError Http.Timeout Nothing)
 
                 Http.NetworkError_ ->
-                    Err (otherError Http.NetworkError Nothing)
+                    Err (otherHttpError Http.NetworkError Nothing)
 
                 Http.BadStatus_ { statusCode } body ->
                     case statusCode of
@@ -37,7 +37,7 @@ expectJsonWithBody toMsg decoder =
                             Err Unauthorized
 
                         _ ->
-                            Err (otherError (Http.BadStatus statusCode) (Just body))
+                            Err (otherHttpError (Http.BadStatus statusCode) (Just body))
 
                 Http.GoodStatus_ _ body ->
                     let
@@ -54,7 +54,7 @@ expectJsonWithBody toMsg decoder =
                             Ok value
 
                         Err err ->
-                            Err (otherError (Http.BadBody (Decode.errorToString err)) (Just body))
+                            Err (otherHttpError (Http.BadBody (Decode.errorToString err)) (Just body))
 
 
 
@@ -72,12 +72,17 @@ type ServerError
 
 
 type OtherError
-    = OtherError Http.Error (Maybe Body)
+    = OtherHttpError Http.Error (Maybe Body)
+    | OtherErr String
 
 
-otherError : Http.Error -> Maybe Body -> ServerError
-otherError httpError body =
-    Error (OtherError httpError body)
+otherHttpError : Http.Error -> Maybe Body -> ServerError
+otherHttpError httpError body =
+    Error (OtherHttpError httpError body)
+
+errorFromString : String -> ServerError
+errorFromString err =
+    Error (OtherErr err)
 
 
 type alias Body =
@@ -120,11 +125,14 @@ viewServerError prefix serverError =
                 ]
     in
     case serverError of
-        Error (OtherError httpError Nothing) ->
+        Error (OtherHttpError httpError Nothing) ->
             wrapError (httpErrorToString httpError) Nothing
 
-        Error (OtherError httpError (Just body)) ->
+        Error (OtherHttpError httpError (Just body)) ->
             wrapError (httpErrorToString httpError) (Just body)
+
+        Error (OtherErr err) ->
+            wrapError "Error" (Just err)
 
         Unauthorized ->
             wrapError "401 Unauthorized" Nothing

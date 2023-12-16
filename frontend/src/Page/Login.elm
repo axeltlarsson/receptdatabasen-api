@@ -119,6 +119,7 @@ view model =
             , model.problem
                 |> Maybe.map (viewServerError "Kunde ej logga in")
                 |> Maybe.withDefault Element.none
+            , viewPasskeyAuthErrors model.passkeyAuthentication
             ]
     }
 
@@ -214,6 +215,44 @@ viewSubmitButton =
         }
 
 
+viewPasskeyAuthErrors : PasskeyAuthentication -> Element Msg
+viewPasskeyAuthErrors passkeyAuth =
+    case passkeyAuth of
+        AuthBeginFailed err ->
+            viewServerError "Passkey authentication error" err
+
+        FailedGettingCredential err ->
+            viewServerError "Passkey kunde ej hämtas" <| Api.errorFromString err
+
+        AuthCompleteFailed err ->
+            let
+                alertIcon =
+                    el [ paddingEach { left = 0, right = 10, top = 0, bottom = 0 }, Font.color Palette.red ]
+                        (FeatherIcons.alertTriangle |> FeatherIcons.toHtml [] |> Element.html)
+            in
+            case err of
+                Api.Unauthorized ->
+                    column [ spacing 10, Font.family [ Font.typeface "Courier New", Font.monospace ] ]
+                        [ row [ Font.heavy ]
+                            [ alertIcon
+                            , el [ Font.color Palette.red ] (text "Kunde ej loggga!")
+                            ]
+                        , text "Har du valt rätt passkey?"
+                        ]
+
+                _ ->
+                    viewServerError "Passkey authentication error" err
+
+        AuthBeginLoading ->
+            Element.none
+
+        AuthCompleteLoading ->
+            Element.none
+
+        AuthCompleteLoaded _ ->
+            Element.none
+
+
 type Msg
     = UserNameChanged String
     | BlurredUserName
@@ -235,13 +274,14 @@ update msg ({ session, status } as model) =
                     ( { model | status = FillingForm { form | userName = userName, invalidCredentials = False } }, Cmd.none )
 
                 BlurredUserName ->
-                    ( { model | status = FillingForm { form | userNameValidationActive = True, invalidCredentials = False } }, Cmd.none )
+                    -- We don't activate username validation here because it gives a poor UX for selecting passkeys
+                    ( model, Cmd.none )
 
                 PasswordChanged password ->
                     ( { model | status = FillingForm { form | password = password, invalidCredentials = False } }, Cmd.none )
 
                 BlurredPassword ->
-                    ( { model | status = FillingForm { form | passwordValidationActive = True } }, Cmd.none )
+                    ( { model | status = FillingForm { form | passwordValidationActive = True, userNameValidationActive = True } }, Cmd.none )
 
                 SubmitForm ->
                     let
@@ -281,7 +321,6 @@ update msg ({ session, status } as model) =
                         Ok _ ->
                             ( { model | passkeyAuthentication = FailedGettingCredential "unexpected message" }, Cmd.none )
 
-                        -- TODO: actually display these error messages?
                         Err err ->
                             ( { model | passkeyAuthentication = FailedGettingCredential (Decode.errorToString err) }, Cmd.none )
 
@@ -289,13 +328,17 @@ update msg ({ session, status } as model) =
                     ( model, Passkey.sendGetPasskeyConditionalMsg options )
 
                 LoadedAuthenticationBegin (Err err) ->
-                    ( { model | passkeyAuthentication = AuthBeginFailed err }, Cmd.none )
+                    ( { model | passkeyAuthentication = AuthBeginFailed err }, Passkey.passkeyAuthenticationBegin Nothing LoadedAuthenticationBegin )
 
                 LoadedAuthenticationComplete (Ok response) ->
                     ( { model | passkeyAuthentication = AuthCompleteLoaded response }, Route.replaceUrl (Session.navKey session) (Route.RecipeList Nothing) )
 
                 LoadedAuthenticationComplete (Err err) ->
-                    ( { model | passkeyAuthentication = AuthCompleteFailed err }, Cmd.none )
+                    ( { model
+                        | passkeyAuthentication = AuthCompleteFailed err
+                      }
+                    , Passkey.passkeyAuthenticationBegin Nothing LoadedAuthenticationBegin
+                    )
 
         SubmittingForm form ->
             case msg of
