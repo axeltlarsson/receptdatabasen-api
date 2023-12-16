@@ -16,6 +16,7 @@ port module Passkey exposing
     , sendCreatePasskeyMsg
     , sendGetPasskeyConditionalMsg
     , sendGetPasskeyMsg
+    , sendAbortCMAMsg
     , subscribe
     )
 
@@ -246,6 +247,10 @@ sendCheckPasskeySupportMsg =
 sendGetPasskeyConditionalMsg : Encode.Value -> Cmd msg
 sendGetPasskeyConditionalMsg options =
     passkeyPortSender (Encode.object [ ( "type", Encode.string "getPasskeyConditional" ), ( "options", options ) ])
+
+sendAbortCMAMsg : Cmd msg
+sendAbortCMAMsg =
+    passkeyPortSender (Encode.object [ ("type", Encode.string "abortCMA")])
 
 
 port passkeyPortReceiver : (Decode.Value -> msg) -> Sub msg

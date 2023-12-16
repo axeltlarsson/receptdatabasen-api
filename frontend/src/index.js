@@ -146,6 +146,8 @@ const serializePasskey = (credential) => ({
   type: credential.type,
 });
 
+let abortController;
+
 app.ports.passkeyPortSender.subscribe((message) => {
   console.log('port message recevied in js land', message);
   switch (message.type) {
@@ -208,21 +210,32 @@ app.ports.passkeyPortSender.subscribe((message) => {
           if (isCMA) {
             // Call WebAuthn authentication
             const opts = encodeOptions(message.options);
+            abortController = new AbortController();
             navigator.credentials.get({
               publicKey: opts,
               mediation: 'conditional',
+              signal: abortController.signal,
             }).then((credential) => {
               const serialized = serializePasskey(credential);
               app.ports.passkeyPortReceiver.send({ type: 'passkeyRetrieved', passkey: serialized });
             }).catch((err) => {
-              console.log(err);
-              app.ports.passkeyPortReceiver.send({ type: 'errorRetrievingPasskey', error: err.toString() });
+              if (!abortController.signal.aborted) {
+                console.error(err);
+                app.ports.passkeyPortReceiver.send({ type: 'errorRetrievingPasskey', error: err.toString() });
+              }
             });
           } else {
             console.warning('Passkeys are not supported in this browser');
             app.ports.loginPasskeyPortReceiver.send({ type: 'passkeysNotSupported' });
           }
         });
+      }
+      break;
+    }
+
+    case 'abortCMA': {
+      if (abortController) {
+        abortController.abort();
       }
       break;
     }

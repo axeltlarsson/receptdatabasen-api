@@ -331,7 +331,9 @@ update msg ({ session, status } as model) =
                     ( { model | passkeyAuthentication = AuthBeginFailed err }, Passkey.passkeyAuthenticationBegin Nothing LoadedAuthenticationBegin )
 
                 LoadedAuthenticationComplete (Ok response) ->
-                    ( { model | passkeyAuthentication = AuthCompleteLoaded response }, Route.replaceUrl (Session.navKey session) (Route.RecipeList Nothing) )
+                    ( { model | passkeyAuthentication = AuthCompleteLoaded response }
+                    , Route.replaceUrl (Session.navKey session) (Route.RecipeList Nothing)
+                    )
 
                 LoadedAuthenticationComplete (Err err) ->
                     ( { model
@@ -347,7 +349,10 @@ update msg ({ session, status } as model) =
                         | status = FillingForm { form | invalidCredentials = False }
                         , problem = Nothing
                       }
-                    , Route.replaceUrl (Session.navKey session) (Route.RecipeList Nothing)
+                    , Cmd.batch
+                        [ Passkey.sendAbortCMAMsg
+                        , Route.replaceUrl (Session.navKey session) (Route.RecipeList Nothing)
+                        ]
                     )
 
                 CompletedLogin (Err err) ->
