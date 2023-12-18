@@ -34,13 +34,7 @@ curl -b cookie.txt -H 'content-type: application/json' localhost:1234/rest/rpc/m
 
 Passkey support on the BE side is implemented with the help of the Python [webauthn lib](https://github.com/duo-labs/py_webauthn/tree/master).
 
-1. The client with a valid session calls `GET /rest/passkeys/registration/begin` to get the "registration options" including a random challenge.
-    - options are generated with `webauthn.generate_registration_options()`
-1. The client creates a passkey with `navigator.credentials.create` using the options from step 1.
-1. The client calls `POST /rest/passkeys/registration/complete` with the serialised passkey (the public key).
-    - the server verifies that the public key is valid and contains the right challenge with `webauth.verify_registration_response()`
-    - the server stores the public key in the passkeys table
-
+See the [./tests/passkeys.py](tests/passkeys.py) file for the API details, but essentially, four endpoints are relevant: `/passkeys/{registration,authentication}/{begin,complete}`.
 
 
 Using [httpie](https://httpie.org/doc) it's very easy to interact with the API:

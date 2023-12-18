@@ -18,7 +18,7 @@ CREATE OR REPLACE FUNCTION api.disabled() RETURNS trigger
 BEGIN
   RAISE EXCEPTION 'Uploading raw passkeys is not allowed'
     USING DETAIL = 'Passkeys need to be registered in a two step process - first to obtain the configuration/challenge for the client - then to register the passkey',
-          HINT = 'Use /rpc/passkey_registration_begin and /rpc/passkey_registration_complete to add a new passkey';
+          HINT = 'Use /passkeys/registration/begin and /passkey/registration/complete to add a new passkey';
 END
 $$;
 
