@@ -75,7 +75,7 @@ view model =
         viewPage page toMsg config =
             let
                 { title, body } =
-                    Page.view page config
+                    Page.view page (toSession model) config
             in
             { title = title, body = List.map (Html.map toMsg) body }
 
@@ -87,11 +87,11 @@ view model =
             { title = title, body = List.map (Html.map toMsg) body }
     in
     case model of
-        Redirect _ ->
-            Page.view Page.Other Page.Blank.view
+        Redirect x ->
+            Page.view Page.Other (toSession <| Redirect x) Page.Blank.view
 
-        NotFound _ ->
-            Page.view Page.Other Page.NotFound.view
+        NotFound x ->
+            Page.view Page.Other (toSession <| NotFound x) Page.NotFound.view
 
         Recipe recipe ->
             viewPage Page.Recipe GotRecipeMsg (Recipe.view recipe)
