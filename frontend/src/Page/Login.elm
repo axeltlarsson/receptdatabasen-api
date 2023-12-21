@@ -39,13 +39,15 @@ type alias Model =
 {-
    Passkey authenticaction with conditional UI.
    1. Immediately, issue a request to server /auth/begin to get registration options
-   2. Call the navigator.credentials.get in js-land through port using the "conditional" flag
-   3.
+   2. Call the navigator.credentials.get in js-land through port using the "conditional" flag providing the registration options
+   3. If user selects passkey, continue with calling /auth/complete with the response from previous step
+   4. If successful auth continue to home page
+   4. If no selected passkey - abort the conditional call (abortCMA) and do normal username/password auth
 -}
 
 
 type PasskeyAuthentication
-    = -- POST /passkeys/authentication/begin without user_names to get options with challenge
+    = -- POST /passkeys/authentication/begin without user_name to get options with challenge
       AuthBeginLoading
     | AuthBeginFailed Api.ServerError
       -- Get passkey in js-land conditionally with options from AuthBegin, directly then to AuthCompleteLoading
@@ -219,7 +221,7 @@ viewPasskeyAuthErrors : PasskeyAuthentication -> Element Msg
 viewPasskeyAuthErrors passkeyAuth =
     case passkeyAuth of
         AuthBeginFailed err ->
-            viewServerError "Passkey authentication error" err
+            viewServerError "Passkey-autentiseringsfel" err
 
         FailedGettingCredential err ->
             viewServerError "Passkey kunde ej hämtas" <| Api.errorFromString err
@@ -241,7 +243,7 @@ viewPasskeyAuthErrors passkeyAuth =
                         ]
 
                 _ ->
-                    viewServerError "Passkey authentication error" err
+                    viewServerError "Passkey-autentiseringsfel" err
 
         AuthBeginLoading ->
             Element.none
