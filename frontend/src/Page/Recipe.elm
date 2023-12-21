@@ -49,7 +49,12 @@ import Task
 
 
 type alias Model =
-    { session : Session, recipe : Status (Recipe Full), checkboxStatus : Dict Int Bool, scaledPortions : Int, toDelete : Bool }
+    { session : Session
+    , recipe : Status (Recipe Full)
+    , checkboxStatus : Dict Int Bool
+    , scaledPortions : Int
+    , toDelete : Bool
+    }
 
 
 type Status recipe
@@ -489,10 +494,9 @@ update msg model =
 
         ClickedConfirmedDelete ->
             case model.recipe of
-                Loaded _ ->
-                    ( { model | toDelete = False }, Cmd.none )
+                Loaded recipe ->
+                    ( { model | toDelete = False }, Recipe.delete (Recipe.slug recipe) Deleted )
 
-                -- Recipe.delete (Recipe.slug recipe) Deleted )
                 _ ->
                     ( model, Cmd.none )
 
