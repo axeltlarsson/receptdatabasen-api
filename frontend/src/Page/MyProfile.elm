@@ -121,13 +121,17 @@ init session =
 
 view : Model -> { title : String, stickyContent : Element msg, content : Element Msg }
 view model =
+    let
+        device =
+            Session.device model.session
+    in
     { title = "Min profil"
     , stickyContent = Element.none
     , content =
         column [ alignLeft, spacing 20, padding 10, Region.mainContent ]
             [ row [ Font.light, Font.size Palette.xxLarge ] [ text "Min profil" ]
             , column [ spacing 10 ]
-                [ viewRegisteredPasskeys model.registeredPasskeys
+                [ viewRegisteredPasskeys model.registeredPasskeys device
                 , row [ spacing 20, width fill ]
                     [ viewPasskeyCreation model.passkeyRegistration
                     , viewPasskeyAuthentication model.passkeyAuthentication
@@ -140,29 +144,24 @@ view model =
 
 viewLogoutButton : Element Msg
 viewLogoutButton =
-    let
-        icon =
-            FeatherIcons.logOut |> FeatherIcons.toHtml [] |> Element.html
-    in
     el
-        [ width <| Element.px 130
+        [ width fill
         , Background.color Palette.blush
         , Border.rounded 2
         , padding 10
         , Font.color Palette.white
         ]
-        (Input.button [] { onPress = Just LogoutBtnPressed, label = row [] [ icon, text "Logga ut" ] })
+        (Input.button [] { onPress = Just LogoutBtnPressed, label = row [ spacing 10 ] [ wrapIcon FeatherIcons.logOut, text "Logga ut" ] })
 
 
-viewRegisteredPasskeys : Status (List Passkey) -> Element Msg
-viewRegisteredPasskeys passkeyStatus =
-    let
-        rmIcon =
-            FeatherIcons.x |> FeatherIcons.toHtml [] |> Element.html
+wrapIcon : FeatherIcons.Icon -> Element msg
+wrapIcon icon =
+    el [ Element.centerX ]
+        (icon |> FeatherIcons.withSize 26 |> FeatherIcons.withStrokeWidth 1 |> FeatherIcons.toHtml [] |> Element.html)
 
-        formatDate =
-            String.slice 0 16 >> String.replace "T" " "
-    in
+
+viewRegisteredPasskeys : Status (List Passkey) -> Element.Device -> Element Msg
+viewRegisteredPasskeys passkeyStatus device =
     case passkeyStatus of
         Loading ->
             Element.html Loading.animation
@@ -173,40 +172,92 @@ viewRegisteredPasskeys passkeyStatus =
         Loaded ps ->
             column [ spacing 10 ]
                 [ el [ Font.light, Font.size Palette.large ] (text "Registrerade passkeys")
-                , Element.table [ width fill, spacingXY 10 0 ]
-                    { data = ps
-                    , columns =
-                        [ { header = el [ Font.bold ] (text "Skapad på enhet")
-                          , width = fill
-                          , view = .name >> text
-                          }
-                        , { header = el [ Font.bold ] (text "ID")
-                          , width = fill
-                          , view = .credentialId >> text
-                          }
-                        , { header = el [ Font.bold ] (text "Datum skapad")
-                          , width = fill
-                          , view = .createdAt >> formatDate >> text
-                          }
-                        , { header = el [ Font.bold ] (text "Senast använd")
-                          , width = fill
-                          , view = .lastUsedAt >> Maybe.withDefault "" >> formatDate >> text
-                          }
-                        , { header = el [ Font.bold ] (text "Ta bort")
-                          , width = fill
-                          , view =
-                                \p -> row [] [ Input.button [] { onPress = Just (RmPasskeyBtnPressed p.id), label = row [] [ rmIcon ] } ]
-                          }
-                        ]
-                    }
+                , viewResponsiveTable device ps
                 ]
+
+
+viewResponsiveTable : Element.Device -> List Passkey -> Element Msg
+viewResponsiveTable device passkeys =
+    let
+        phoneLayout { class, orientation } =
+            case ( class, orientation ) of
+                ( Element.Phone, Element.Portrait ) ->
+                    True
+
+                _ ->
+                    False
+
+        formatDate =
+            String.slice 0 16 >> String.replace "T" " "
+    in
+    column
+        [ spacing 10
+        , Border.glow Palette.lightGrey 0.5
+        , Background.color Palette.white
+        , Border.rounded 2
+        , padding 10
+        , Font.color Palette.nearBlack
+        ]
+        (List.append passkeys passkeys
+            |> List.map
+                (\p ->
+                    row [ width fill, spacing 10]
+                        [ wrapIcon FeatherIcons.key
+                        , column []
+                            [ el [ Font.bold ] (p.name |> text)
+                            , row [ spacing 5 ]
+                                [ el [ Font.extraLight ] (text "ID")
+                                , p.credentialId |> String.slice 0 40 |> (\x -> x ++ "..." |> text |> el [ Font.family [ Font.monospace ] ])
+                                ]
+                            , row [ spacing 5, Font.extraLight ]
+                                [ text "Skapad"
+                                , el [ Font.family [ Font.monospace ] ] (text (p.createdAt |> formatDate))
+                                ]
+                            , row [ spacing 5, Font.extraLight ]
+                                [ text "Använd"
+                                , el [ Font.family [ Font.monospace ] ] (text (p.lastUsedAt |> Maybe.withDefault "" |> formatDate))
+                                ]
+                            ]
+                        , Input.button [] { onPress = Just (RmPasskeyBtnPressed p.id), label = row [] [ wrapIcon FeatherIcons.x ] }
+                        ]
+                )
+        )
+
+
+
+-- Element.table [ width fill, spacingXY 10 0 ]
+-- { data = List.append passkeys passkeys
+-- , columns =
+-- [ { header = el [ Font.bold ] (text "Skapad på enhet")
+-- , width = fill
+-- , view = .name >> text
+-- }
+-- , { header = el [ Font.bold ] (text "ID")
+-- , width = fill
+-- , view = .credentialId >> String.slice 0 20 >> (\x -> x ++ "...") >> text
+-- }
+-- , { header = el [ Font.bold ] (text "Datum skapad")
+-- , width = fill
+-- , view = .createdAt >> formatDate >> text
+-- }
+-- , { header = el [ Font.bold ] (text "Senast använd")
+-- , width = fill
+-- , view = .lastUsedAt >> Maybe.withDefault "" >> formatDate >> text
+-- }
+-- , { header = el [ Font.bold ] (text "Ta bort")
+-- , width = fill
+-- , view =
+-- \p -> row [] [ Input.button [] { onPress = Just (RmPasskeyBtnPressed p.id), label = row [] [ wrapIcon FeatherIcons.x ] } ]
+-- }
+-- ]
+-- }
 
 
 viewPasskeyCreation : PasskeyRegistration -> Element Msg
 viewPasskeyCreation passkeySupport =
     let
         createIcon =
-            FeatherIcons.plus |> FeatherIcons.toHtml [] |> Element.html
+            wrapIcon FeatherIcons.plus
     in
     case passkeySupport of
         CheckingSupport ->
@@ -249,15 +300,10 @@ viewPasskeyCreation passkeySupport =
                 , Border.color Palette.darkGrey
                 , padding 10
                 ]
-                [ FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html, text " Passkey skapad!" ]
+                [ wrapIcon FeatherIcons.check, text " Passkey skapad!" ]
 
         RegistrationCompleteFailed err ->
             viewServerError "posting to /complete failed" err
-
-
-authIcon : Element Msg
-authIcon =
-    FeatherIcons.key |> FeatherIcons.toHtml [] |> Element.html
 
 
 viewPasskeyAuthentication : PasskeyAuthentication -> Element Msg
@@ -268,7 +314,7 @@ viewPasskeyAuthentication auth =
                 [ Input.button
                     [ width fill, Background.color Palette.green, Border.rounded 2, padding 10, Font.color Palette.white ]
                     { onPress = Just AuthPasskeyPressed
-                    , label = row [] [ authIcon, text "Autentisera med passkey" ]
+                    , label = row [] [ wrapIcon FeatherIcons.key, text "Autentisera med passkey" ]
                     }
                 ]
 
@@ -300,7 +346,7 @@ viewPasskeyAuthentication auth =
                 , Border.color Palette.darkGrey
                 , padding 9
                 ]
-                [ FeatherIcons.check |> FeatherIcons.toHtml [] |> Element.html, text " Autentisering lyckades!" ]
+                [ wrapIcon FeatherIcons.check, text " Autentisering lyckades!" ]
 
 
 type Msg
