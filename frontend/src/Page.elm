@@ -17,7 +17,6 @@ import Element
         , paddingXY
         , row
         , spacing
-        , spacingXY
         , text
         , width
         )

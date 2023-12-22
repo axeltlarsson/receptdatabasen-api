@@ -8,7 +8,6 @@ port module Passkey exposing
     , logout
     , passkeyAuthenticationBegin
     , passkeyAuthenticationComplete
-    , passkeyPortReceiver
     , passkeyRegistrationBegin
     , passkeyRegistrationComplete
     , portMsgDecoder
