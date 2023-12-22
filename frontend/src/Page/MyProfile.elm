@@ -4,15 +4,16 @@ import Api exposing (viewServerError)
 import Element
     exposing
         ( Element
-        , alignLeft
+        , alignRight
+        , centerX
         , column
         , el
         , fill
         , padding
+        , paddingEach
         , paragraph
         , row
         , spacing
-        , spacingXY
         , text
         , width
         )
@@ -124,15 +125,22 @@ view model =
     let
         device =
             Session.device model.session
+
+        responsiveLayout attrs contents =
+            if phoneLayout device then
+                column attrs contents
+
+            else
+                row attrs contents
     in
     { title = "Min profil"
     , stickyContent = Element.none
     , content =
-        column [ alignLeft, spacing 20, padding 10, Region.mainContent ]
+        column [ centerX, spacing 20, padding 10, width (fill |> Element.maximum 700), Region.mainContent ]
             [ row [ Font.light, Font.size Palette.xxLarge ] [ text "Min profil" ]
-            , column [ spacing 10 ]
+            , column [ spacing 10, width fill, centerX ]
                 [ viewRegisteredPasskeys model.registeredPasskeys device
-                , row [ spacing 20, width fill ]
+                , responsiveLayout [ spacing 20 ]
                     [ viewPasskeyCreation model.passkeyRegistration
                     , viewPasskeyAuthentication model.passkeyAuthentication
                     ]
@@ -170,87 +178,70 @@ viewRegisteredPasskeys passkeyStatus device =
             Api.viewServerError "Något gick fel när passkeys skulle laddas" err
 
         Loaded ps ->
-            column [ spacing 10 ]
-                [ el [ Font.light, Font.size Palette.large ] (text "Registrerade passkeys")
-                , viewResponsiveTable device ps
-                ]
+            viewResponsiveTable device ps
+
+
+phoneLayout { class, orientation } =
+    case ( class, orientation ) of
+        ( Element.Phone, Element.Portrait ) ->
+            True
+
+        _ ->
+            False
 
 
 viewResponsiveTable : Element.Device -> List Passkey -> Element Msg
 viewResponsiveTable device passkeys =
     let
-        phoneLayout { class, orientation } =
-            case ( class, orientation ) of
-                ( Element.Phone, Element.Portrait ) ->
-                    True
-
-                _ ->
-                    False
-
         formatDate =
             String.slice 0 16 >> String.replace "T" " "
+
+        shortenId len id =
+            String.left (len - 6) id ++ "..." ++ String.right 3 id
+
+        responsiveId id =
+            if phoneLayout device then
+                shortenId 20 id
+
+            else
+                id
     in
     column
-        [ spacing 10
-        , Border.glow Palette.lightGrey 0.5
+        [ Border.glow Palette.lightGrey 0.5
         , Background.color Palette.white
         , Border.rounded 2
-        , padding 10
+        , paddingEach { left = 0, right = 0, top = 5, bottom = 5 }
         , Font.color Palette.nearBlack
+        , width fill
         ]
-        (List.append passkeys passkeys
-            |> List.map
-                (\p ->
-                    row [ width fill, spacing 10]
-                        [ wrapIcon FeatherIcons.key
-                        , column []
-                            [ el [ Font.bold ] (p.name |> text)
-                            , row [ spacing 5 ]
-                                [ el [ Font.extraLight ] (text "ID")
-                                , p.credentialId |> String.slice 0 40 |> (\x -> x ++ "..." |> text |> el [ Font.family [ Font.monospace ] ])
+        (List.concat
+            [ [ el [ padding 10, Font.extraLight, Font.size Palette.medium ] (text "Registrerade passkeys") ]
+            , passkeys
+                |> List.map
+                    (\p ->
+                        row [ width fill, spacing 10, padding 10 ]
+                            [ wrapIcon FeatherIcons.key
+                            , column [ spacing 10, width fill ]
+                                [ el [ Font.semiBold ] (p.name |> text)
+                                , row [ spacing 5 ]
+                                    [ el [ Font.extraLight ] (text "ID")
+                                    , p.credentialId |> responsiveId |> text |> el [ Font.family [ Font.monospace ] ]
+                                    ]
+                                , row [ spacing 5, Font.extraLight ]
+                                    [ text "Skapad"
+                                    , el [ Font.family [ Font.monospace ] ] (text (p.createdAt |> formatDate))
+                                    ]
+                                , row [ spacing 5, Font.extraLight ]
+                                    [ text "Använd"
+                                    , el [ Font.family [ Font.monospace ] ] (text (p.lastUsedAt |> Maybe.withDefault "" |> formatDate))
+                                    ]
                                 ]
-                            , row [ spacing 5, Font.extraLight ]
-                                [ text "Skapad"
-                                , el [ Font.family [ Font.monospace ] ] (text (p.createdAt |> formatDate))
-                                ]
-                            , row [ spacing 5, Font.extraLight ]
-                                [ text "Använd"
-                                , el [ Font.family [ Font.monospace ] ] (text (p.lastUsedAt |> Maybe.withDefault "" |> formatDate))
-                                ]
+                            , Input.button [ paddingEach { top = 0, left = 5, right = 10, bottom = 0 }, alignRight ]
+                                { onPress = Just (RmPasskeyBtnPressed p.id), label = row [] [ wrapIcon FeatherIcons.x ] }
                             ]
-                        , Input.button [] { onPress = Just (RmPasskeyBtnPressed p.id), label = row [] [ wrapIcon FeatherIcons.x ] }
-                        ]
-                )
+                    )
+            ]
         )
-
-
-
--- Element.table [ width fill, spacingXY 10 0 ]
--- { data = List.append passkeys passkeys
--- , columns =
--- [ { header = el [ Font.bold ] (text "Skapad på enhet")
--- , width = fill
--- , view = .name >> text
--- }
--- , { header = el [ Font.bold ] (text "ID")
--- , width = fill
--- , view = .credentialId >> String.slice 0 20 >> (\x -> x ++ "...") >> text
--- }
--- , { header = el [ Font.bold ] (text "Datum skapad")
--- , width = fill
--- , view = .createdAt >> formatDate >> text
--- }
--- , { header = el [ Font.bold ] (text "Senast använd")
--- , width = fill
--- , view = .lastUsedAt >> Maybe.withDefault "" >> formatDate >> text
--- }
--- , { header = el [ Font.bold ] (text "Ta bort")
--- , width = fill
--- , view =
--- \p -> row [] [ Input.button [] { onPress = Just (RmPasskeyBtnPressed p.id), label = row [] [ wrapIcon FeatherIcons.x ] } ]
--- }
--- ]
--- }
 
 
 viewPasskeyCreation : PasskeyRegistration -> Element Msg
