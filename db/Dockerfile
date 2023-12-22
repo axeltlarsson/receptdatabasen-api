@@ -1,5 +1,5 @@
 ARG PG_VERSION
-FROM postgres:${PG_VERSION}
+FROM postgres:12
 
 # Add pl/python
 RUN apt-get update
