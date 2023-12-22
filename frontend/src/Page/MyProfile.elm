@@ -14,6 +14,7 @@ import Element
         , paragraph
         , row
         , spacing
+        , spacingXY
         , text
         , width
         )
@@ -137,9 +138,9 @@ view model =
     , stickyContent = Element.none
     , content =
         column [ centerX, spacing 20, padding 10, width (fill |> Element.maximum 700), Region.mainContent ]
-            [ row [ Font.light, Font.size Palette.xxLarge ] [ text "Min profil" ]
-            , column [ spacing 10, width fill, centerX ]
-                [ viewRegisteredPasskeys model.registeredPasskeys device
+            [ column [ spacing 10, width fill, centerX ]
+                [ viewProfile model.profile
+                , viewRegisteredPasskeys model.registeredPasskeys device
                 , responsiveLayout [ spacing 20 ]
                     [ viewPasskeyCreation model.passkeyRegistration
                     , viewPasskeyAuthentication model.passkeyAuthentication
@@ -148,6 +149,30 @@ view model =
             , row [] [ viewLogoutButton ]
             ]
     }
+
+
+viewProfile : Status Profile -> Element Msg
+viewProfile profileStatus =
+    case profileStatus of
+        Loaded profile ->
+            column
+                [ Border.glow Palette.lightGrey 0.5
+                , Background.color Palette.white
+                , Border.rounded 2
+                , paddingEach { left = 0, right = 0, top = 5, bottom = 5 }
+                , centerX
+                , spacing 5
+                , padding 10
+                , width (fill |> Element.maximum 700)
+                ]
+                [ row [ paddingEach { left = 0, right = 0, top = 0, bottom = 10 }, Font.extraLight, Font.size Palette.medium ] [ text "Kontouppgifter" ]
+                , row [ spacing 5 ] [ el [ Font.extraLight ] (text "Användar-id"), profile.id |> String.fromInt |> text ]
+                , row [ spacing 5 ] [ el [ Font.extraLight ] (text "Användarnamn"), profile.userName |> text ]
+                , row [ spacing 5 ] [ el [ Font.extraLight ] (text "Email"), profile.email |> Maybe.withDefault "ej angiven" |> text ]
+                ]
+
+        _ ->
+            Element.none
 
 
 viewLogoutButton : Element Msg
