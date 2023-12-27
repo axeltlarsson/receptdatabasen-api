@@ -1,5 +1,5 @@
 ARG PG_VERSION
-FROM postgres:12
+FROM postgres:${PG_VERSION}
 
 # Add pl/python
 RUN apt-get update
@@ -7,6 +7,6 @@ RUN apt-get update
 RUN apt-get -y install python3 postgresql-plpython3-12 python3-pip
 
 # Install py_webauthn
-RUN pip3 install webauthn
+RUN pip install --break-system-packages webauthn
 
 COPY ./src/ /docker-entrypoint-initdb.d
