@@ -93,18 +93,13 @@ revoke all privileges on function api.verify_authentication_response(text, text,
 
 -- helper function to get user_handle from credential
 create or replace function api.user_handle_from_credential(raw_credential text) returns int as $$
-  from webauthn.helpers.structs import AuthenticationCredential
-  from webauthn import base64url_to_bytes
-
-  plpy.warning("user_handle from credential")
+  import json
+  import base64
 
   try:
-    credential = AuthenticationCredential.parse_raw(raw_credential)
-    plpy.warning("user_handle from credential")
-    plpy.warning(base64url_to_bytes(credential.response.user_handle))
-    return int(credential.response.user_handle.decode("utf-8"))
+    user_handle = base64.b64decode(json.loads(raw_credential)["response"]["userHandle"] + "==").decode("utf-8")
+    return int(user_handle)
   except Exception as e:
-    plpy.warning(e)
     return None
 $$
 language 'plpython3u';
