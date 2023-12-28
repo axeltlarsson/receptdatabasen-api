@@ -29,9 +29,68 @@
             pythonImportsCheck = [ "soft_webauthn" ];
           }
         );
+        # maturin_py = (
+          # pyPkgs.buildPythonPackage rec {
+            # pname = "maturin";
+            # version = "1.4.0";
+            # src = pkgs.fetchPypi {
+              # inherit pname version;
+              # sha256 = "sha256-7RLhdoCUp63q/Dp069uNwiAfpkxOfjHxTPxwN4v5N5A=";
+              # # sha256 = pkgs.lib.fakeSha256;
+            # };
+            # doCheck = false;
+            # # format = "pyproject";
+            # propagatedBuildInputs = with pyPkgs; [
+              # # typing-extensions
+              # setuptools_rust
+            # ];
+
+            # pythonImportsCheck = [ "maturin" ];
+          # }
+        # );
+        # pydantic_core_v2 = (
+          # pyPkgs.buildPythonPackage rec {
+            # pname = "pydantic_core";
+            # version = "2.14.6";
+            # src = pkgs.fetchPypi {
+              # inherit pname version;
+              # sha256 = "sha256-H9DB05U3KEP7oTpRwo47udWb166/6xc1j/qqHk276Ug=";
+              # # sha256 = pkgs.lib.fakeSha256;
+            # };
+            # doCheck = false;
+            # format = "pyproject";
+            # propagatedBuildInputs = with pyPkgs; [
+              # typing-extensions
+              # maturin_py
+            # ];
+
+            # pythonImportsCheck = [ "pydantic-core" ];
+          # }
+        # );
+        # pydantic_v2 = (
+          # pyPkgs.buildPythonPackage rec {
+            # pname = "pydantic";
+            # version = "2.5.3";
+            # src = pkgs.fetchPypi {
+              # inherit pname version;
+              # sha256 = "sha256-s+9XxiU1sJQWl8zmOMCJANh/y2finPqZ6KaPdH85P3o=";
+            # };
+            # doCheck = false;
+            # format = "pyproject";
+            # propagatedBuildInputs = with pyPkgs; [
+              # hatchling
+              # hatch-fancy-pypi-readme
+              # typing-extensions
+              # pydantic_core_v2
+            # ];
+
+            # pythonImportsCheck = [ "pydantic" ];
+          # }
+        # );
         pythonEnv = pkgs.python311.withPackages (ps: [
           ps.requests
           ps.pytest
+          # (ps.webauthn.override { pydantic = pydantic_v2; })
           ps.webauthn
           soft-webauthn
         ]);

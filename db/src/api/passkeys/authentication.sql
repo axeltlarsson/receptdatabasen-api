@@ -61,7 +61,7 @@ create or replace function api.verify_authentication_response(raw_credential tex
   from webauthn.helpers.structs import AuthenticationCredential
   from webauthn.helpers.exceptions import InvalidAuthenticationResponse
 
-  credential = AuthenticationCredential.parse_raw(raw_credential)
+  credential = AuthenticationCredential.model_validate_json(raw_credential)
 
 
   expected_origin = plpy.execute("select settings.get('origin')")[0]["get"]
@@ -94,11 +94,17 @@ revoke all privileges on function api.verify_authentication_response(text, text,
 -- helper function to get user_handle from credential
 create or replace function api.user_handle_from_credential(raw_credential text) returns int as $$
   from webauthn.helpers.structs import AuthenticationCredential
+  from webauthn import base64url_to_bytes
+
+  plpy.warning("user_handle from credential")
 
   try:
     credential = AuthenticationCredential.parse_raw(raw_credential)
+    plpy.warning("user_handle from credential")
+    plpy.warning(base64url_to_bytes(credential.response.user_handle))
     return int(credential.response.user_handle.decode("utf-8"))
-  except Exception:
+  except Exception as e:
+    plpy.warning(e)
     return None
 $$
 language 'plpython3u';
@@ -110,7 +116,7 @@ create or replace function api.id_from_credential(raw_credential text) returns t
   from webauthn.helpers.structs import AuthenticationCredential
 
   try:
-    credential = AuthenticationCredential.parse_raw(raw_credential)
+    credential = AuthenticationCredential.model_validate_json(raw_credential)
     return credential.id
   except Exception:
     return None

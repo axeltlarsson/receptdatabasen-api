@@ -67,7 +67,7 @@ create or replace function api.verify_registration_response(raw_credential text,
   from webauthn.helpers.structs import RegistrationCredential
   from webauthn.helpers.exceptions import InvalidRegistrationResponse
 
-  credential = RegistrationCredential.parse_raw(raw_credential)
+  credential = RegistrationCredential.model_validate_json(raw_credential)
 
 
   expected_origin = plpy.execute("select settings.get('origin')")[0]["get"]

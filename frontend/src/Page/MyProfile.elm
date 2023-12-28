@@ -386,8 +386,8 @@ update msg model =
     let
         handleError err updates =
             case err of
-                Api.Unauthorized ->
-                    ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+                -- Api.Unauthorized ->
+                    -- ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
 
                 _ ->
                     updates
@@ -401,7 +401,6 @@ update msg model =
 
         PortMsg m ->
             case Decode.decodeValue Passkey.portMsgDecoder m of
-                -- TODO: actually display these error messages?
                 Err err ->
                     ( { model | passkeyRegistration = FailedCreatingPasskey (Decode.errorToString err) }, Cmd.none )
 
