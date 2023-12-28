@@ -7,6 +7,6 @@ RUN apt-get update
 RUN apt-get -y install python3 postgresql-plpython3-12 python3-pip
 
 # Install py_webauthn
-RUN pip install webauthn==1.11.0
+RUN pip install --break-system-packages webauthn
 
 COPY ./src/ /docker-entrypoint-initdb.d
