@@ -160,7 +160,7 @@ app.ports.passkeyPortSender.subscribe((message) => {
     case 'createPasskey': {
       const { options } = message;
 
-      const opts = encodeOptions(options);
+      const opts = encodeOptions(options[0].passkey_registration_begin);
 
       createPasskey(opts).then((credential) => {
         const serialized = {

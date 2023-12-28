@@ -19,6 +19,7 @@ create or replace function api.generate_registration_options(user_id text, user_
     exclude_credentials=[PublicKeyCredentialDescriptor(id=base64url_to_bytes(cred)) for cred in (exclude_credentials or [])]
   )
 
+  plpy.warning(options_to_json(registration_options))
   return options_to_json(registration_options)
 
 $$
