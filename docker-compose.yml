@@ -19,6 +19,7 @@ services:
       - DEVELOPMENT=${DEVELOPMENT}
       - JWT_SECRET=${JWT_SECRET}
       - JWT_LIFETIME=${JWT_LIFETIME}
+      - PG_VERSION=${PG_VERSION}
 
     volumes:
       - db-vol:/var/lib/postgresql/data

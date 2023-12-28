@@ -7,7 +7,7 @@ services:
     build:
       context: ./db
       args:
-        - VERSION=${PG_VERSION}
+        - PG_VERSION=${PG_VERSION}
     networks:
       - backend
 

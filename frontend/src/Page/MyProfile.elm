@@ -386,8 +386,8 @@ update msg model =
     let
         handleError err updates =
             case err of
-                -- Api.Unauthorized ->
-                    -- ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+                Api.Unauthorized ->
+                    ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
 
                 _ ->
                     updates

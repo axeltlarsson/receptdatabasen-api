@@ -1,4 +1,4 @@
-ARG PG_VERSION
+ARG PG_VERSION=12
 FROM postgres:${PG_VERSION}
 
 # Add pl/python
