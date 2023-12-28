@@ -26,7 +26,9 @@ else
   -- initiate a session
   local session = resty_session.start()
   session.data.jwt = resp_data.token
-  session.cookie.samesite = 'Strict'
+  if session.cookie then
+    session.cookie.samesite = 'Strict'
+  end
   session:save()
   return ngx.say(cjson.encode(response))
 end
