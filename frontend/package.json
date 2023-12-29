@@ -1,37 +1,37 @@
 {
-  "name": "receptdatabasen_frontend",
-  "version": "1.2.0",
-  "description": "Run it in dev mode with: `npm start`",
-  "source": "src/index.html",
-  "browserslist": "last 2 versions, not dead",
-  "directories": {
-    "test": "tests"
-  },
-  "scripts": {
-    "start": "parcel",
-    "build": "rm -rf dist && parcel build",
-    "test": "elm-test"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "easymde": "^2.16.1"
-  },
-  "devDependencies": {
-    "@parcel/packager-raw-url": "^2.7.0",
-    "@parcel/reporter-bundle-analyzer": "^2.7.0",
-    "@parcel/transformer-elm": "^2.7.0",
-    "@parcel/transformer-webmanifest": "^2.7.0",
-    "elm": "^0.19.1-5",
-    "eslint": "^7.32.0",
-    "eslint-config-airbnb-base": "^14.2.0",
-    "eslint-plugin-import": "^2.25.4",
-    "http-proxy-middleware": "^2.0.6",
-    "parcel": "^2.7.0",
-    "parcel-reporter-static-files-copy": "^1.4.0"
-  },
-  "staticFiles": {
-    "staticPath": "src/assets/static"
-  }
+    "name": "receptdatabasen_frontend",
+    "version": "1.2.0",
+    "description": "Run it in dev mode with: `npm start`",
+    "source": "src/index.html",
+    "browserslist": "last 2 versions, not dead",
+    "directories": {
+        "test": "tests"
+    },
+    "scripts": {
+        "start": "parcel",
+        "build": "rm -rf dist && parcel build",
+        "test": "elm-test"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "easymde": "^2.18.0 "
+    },
+    "devDependencies": {
+        "@parcel/packager-raw-url": "^2.10.0",
+        "@parcel/reporter-bundle-analyzer": "^2.10.0",
+        "@parcel/transformer-elm": "^2.10.0",
+        "@parcel/transformer-webmanifest": "^2.10.0",
+        "elm": "^0.19.1-5",
+        "eslint": "^7.32.0",
+        "eslint-config-airbnb-base": "^14.2.0",
+        "eslint-plugin-import": "^2.25.4",
+        "http-proxy-middleware": "^2.0.6",
+        "parcel": "^2.10.0",
+        "parcel-reporter-static-files-copy": "^1.5.0"
+    },
+    "staticFiles": {
+        "staticPath": "src/assets/static"
+    }
 }
