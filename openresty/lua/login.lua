@@ -23,12 +23,14 @@ else
   local resp_data = cjson.decode(res.body)
   -- Only keep the "me" key in the resonse, strip jwt
   local response = { me = resp_data.me }
-  -- initiate a session
-  local session = resty_session.start()
-  session.data.jwt = resp_data.token
-  if session.cookie then
-    session.cookie.samesite = 'Strict'
+
+  -- initiate a session and save the jwt token
+  local session = resty_session.new()
+  session:set("jwt", resp_data.token)
+  local ok, err = session:save()
+  if not ok then
+    utils.return_error("Could not save session cookie")
   end
-  session:save()
+
   return ngx.say(cjson.encode(response))
 end

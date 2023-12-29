@@ -17,10 +17,10 @@ else
     local b = cjson.decode(res.body)
     local challenge = b['challenge']
     if challenge then
-        -- and store it in session
+        -- and store it in session (possibly new)
         local session = resty_session.open()
 
-        session.data.challenge = challenge
+        session:set('challenge', challenge)
         local ok, err = session:save()
         if not ok then
             utils.return_error("Could not store passkey challenge in session cookie", ngx.HTTP_BAD_REQUEST)

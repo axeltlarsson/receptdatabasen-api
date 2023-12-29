@@ -2,16 +2,16 @@ local cjson = require 'cjson'
 local utils = require "utils"
 local resty_session = require "resty.session"
 
-local session, present, reason = resty_session.open()
+local session, err, exists = resty_session.open()
 
 -- Read the challenge from the session and inject into request for the Postgrest endpoint
-if present and session.data.challenge then
+if session and session:get("challenge") then
     -- read the request body
     ngx.req.read_body()
     local body = ngx.req.get_body_data()
     -- ...and inject the challenge into it from session
     local new_body = cjson.encode({
-        expected_challenge = session.data.challenge,
+        expected_challenge = session:get("challenge"),
         raw_credential = cjson.decode(body).credential,
         name = cjson.decode(body).name
     })

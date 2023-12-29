@@ -5,16 +5,16 @@ local resty_session = require "resty.session"
 -- passkey_authentication_complete lua code to relay POST request to PostgREST
 -- but to read the expected challange from the session and relay it in the body
 
-local session, present, reason = resty_session.open()
+local session, err, exists = resty_session.open()
 
 -- Read the challenge from the session and inject into request for the Postgrest endpoint
-if present and session.data.challenge then
+if session and session:get("challenge") then
     -- read the request body
     ngx.req.read_body()
     local body = ngx.req.get_body_data()
     -- ...and inject the challenge into it from session
     local new_body = cjson.encode({
-        expected_challenge = session.data.challenge,
+        expected_challenge = session:get("challenge"),
         raw_credential = cjson.decode(body)
     })
 
@@ -34,8 +34,7 @@ if present and session.data.challenge then
         local resp_data = cjson.decode(res.body)
         -- Only keep the "me" and "authentication" keys in the resonse, strip jwt
         local response = { me = resp_data.me, authentication = resp_data.authentication }
-        session.data.jwt = resp_data.token
-        session.cookie.samesite = 'Strict'
+        session:set("jwt", resp_data.token)
         session:save()
         return ngx.say(cjson.encode(response))
     end

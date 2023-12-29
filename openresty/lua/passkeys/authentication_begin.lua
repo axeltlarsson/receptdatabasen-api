@@ -26,7 +26,7 @@ else
         -- and store it in session
         local session = resty_session.open()
 
-        session.data.challenge = challenge
+        session:set('challenge', challenge)
         local ok, err = session:save()
         if not ok then
             utils.return_error("Could not store passkey challenge in session cookie", ngx.HTTP_BAD_REQUEST)
