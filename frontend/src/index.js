@@ -3,7 +3,6 @@ import './hourglass_loader.css';
 import './fonts.css';
 import * as EasyMDE from 'easymde';
 import { Elm } from './Main.elm';
-// import * as serviceWorker from './serviceWorker';
 
 const flags = { width: window.innerWidth, height: window.innerHeight };
 const app = Elm.Main.init({
@@ -327,8 +326,3 @@ class EasyMDEditor extends HTMLElement {
 }
 
 customElements.define('easy-mde', EasyMDEditor);
-
-// If you want your app to work offline and load faster, you can change
-// unregister() to register() below. Note this comes with some pitfalls.
-// Learn more about service workers: https://bit.ly/CRA-PWA
-serviceWorker.register();
