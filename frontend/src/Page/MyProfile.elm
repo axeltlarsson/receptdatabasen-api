@@ -14,7 +14,6 @@ import Element
         , paragraph
         , row
         , spacing
-        , spacingXY
         , text
         , width
         )
@@ -202,8 +201,11 @@ viewRegisteredPasskeys passkeyStatus device =
         Failed err ->
             Api.viewServerError "Något gick fel när passkeys skulle laddas" err
 
-        Loaded ps ->
-            viewResponsiveTable device ps
+        Loaded [] ->
+            el [ Font.color Palette.nearBlack, Font.extraLight, padding 10 ] <| text "Inga passkeys har registrerats än"
+
+        Loaded (p :: ps) ->
+            viewResponsiveTable device (p :: ps)
 
 
 phoneLayout { class, orientation } =

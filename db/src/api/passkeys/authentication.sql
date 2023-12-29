@@ -100,6 +100,7 @@ create or replace function api.user_handle_from_credential(raw_credential text) 
     user_handle = base64.b64decode(json.loads(raw_credential)["response"]["userHandle"] + "==").decode("utf-8")
     return int(user_handle)
   except Exception as e:
+    plpy.warning("failed to decode user_handle_from_credential", e)
     return None
 $$
 language 'plpython3u';
@@ -133,7 +134,7 @@ begin
 
     if user_handle is null then
       raise insufficient_privilege
-        using detail = 'Cannot parse user_handle from credential payload.',
+        using detail = ('Cannot parse user_handle from credential payload.', param),
             hint = 'Check your payload';
     end if;
 
