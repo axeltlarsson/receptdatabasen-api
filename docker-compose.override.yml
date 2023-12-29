@@ -19,5 +19,5 @@ services:
       - "8080:80"
     volumes:
       - ./openresty/nginx:/usr/local/openresty/nginx/conf
-      - ./frontend/build:/usr/local/openresty/nginx/html
+      - ./frontend/dist:/usr/local/openresty/nginx/html
       - ./openresty/lua:/usr/local/openresty/lua
