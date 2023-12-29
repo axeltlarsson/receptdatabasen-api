@@ -3,7 +3,7 @@ import './hourglass_loader.css';
 import './fonts.css';
 import * as EasyMDE from 'easymde';
 import { Elm } from './Main.elm';
-import * as serviceWorker from './serviceWorker';
+// import * as serviceWorker from './serviceWorker';
 
 const flags = { width: window.innerWidth, height: window.innerHeight };
 const app = Elm.Main.init({
