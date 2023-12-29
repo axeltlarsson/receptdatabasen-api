@@ -88,7 +88,7 @@ create or replace function api.verify_registration_response(raw_credential text,
     plpy.warning(e)
     return None
 
-  return registration_verification.json()
+  return registration_verification.model_dump_json()
 $$
 language 'plpython3u';
 

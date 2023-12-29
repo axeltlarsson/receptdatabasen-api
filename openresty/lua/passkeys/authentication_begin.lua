@@ -5,7 +5,6 @@ local utils = require "utils"
 -- but to capture and store the challenge in the session
 
 -- read the body so we can forward it
-print("lua, passkey_registration_begin")
 ngx.req.read_body()
 
 ngx.req.set_header("Prefer", "params=single-object")
@@ -20,12 +19,10 @@ if res.status ~= 200 then
     ngx.status = res.status
     return ngx.say(res.body)
 else
-    print("reading challenge from the body...")
     -- read the challenge from the body 
     local b = cjson.decode(res.body)
     local challenge = b['challenge']
     if challenge then
-        print("challenge was: " .. challenge)
         -- and store it in session
         local session = resty_session.open()
 
@@ -36,6 +33,5 @@ else
         end
     end
     ngx.status = 200
-    print("returning body: " .. res.body)
     return ngx.say(res.body)
 end

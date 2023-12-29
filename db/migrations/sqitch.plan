@@ -5,3 +5,4 @@
 20210128222018-authentication 2021-01-28T22:20:31Z root <root@docker-desktop> # Add authentication changes for cookie sessions
 20210128224105-auth_secrets 2021-01-28T22:41:06Z root <root@docker-desktop> # Add authentication secrets
 passkey_table 2023-06-27T22:50:07Z System Administrator <root@axel-mbp14> # add passkeys table
+schema_cache_refresh_trigger 2023-12-29T13:56:57Z System Administrator <root@axel-mbp14> # Automatically trigger schema cache refresh on ddl_command_end
