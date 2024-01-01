@@ -6,6 +6,17 @@ resty_session = require("resty.session")
 
 if type(hooks.on_init) == 'function' then
 		-- initialize session with some options
+		if os.getenv("DEVELOPMENT") == "1" then
+			-- setting this to false makes it easier to serve dev on non-localhost
+			cookie_secure = false
+		else
+			cookie_secure = true
+		end
+
+		print("cookie_secure: ")
+		print(cookie_secure)
+		print(os.getenv("development"))
+
 		resty_session.init({
 				audience = "receptdatabasen",
 				remember = true,
@@ -14,7 +25,7 @@ if type(hooks.on_init) == 'function' then
 				secret = os.getenv("COOKIE_SESSION_SECRET"),
 				cookie_name = "receptdatabasen_session",
 				cookie_http_only = true,
-				cookie_secure = true,
+				cookie_secure = cookie_secure,
 				cookie_same_site = 'Strict',
 				-- persistent cookie timeous, I don't care about refresh cookies so those options I disable
 				remember_rolling_timeout = tonumber(os.getenv("COOKIE_SESSION_LIFETIME")) or 60480, -- default: a week
