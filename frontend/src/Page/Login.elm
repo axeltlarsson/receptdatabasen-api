@@ -194,6 +194,7 @@ viewPasswordInput invalidCredentials active password =
                  , Element.htmlAttribute (onEnter SubmitForm)
                  , Border.rounded 2
                  , Element.htmlAttribute (HtmlAttributes.attribute "name" "password")
+                 , Element.htmlAttribute (HtmlAttributes.attribute "id" "password")
                  , Element.htmlAttribute (HtmlAttributes.attribute "autocomplete" "current-password")
                  ]
                     ++ errorBorder active password theValidator

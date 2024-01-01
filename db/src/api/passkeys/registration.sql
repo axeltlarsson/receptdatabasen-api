@@ -8,7 +8,12 @@ create or replace function api.generate_registration_options(user_id text, user_
       options_to_json,
       base64url_to_bytes,
   )
-  from webauthn.helpers.structs import PublicKeyCredentialDescriptor
+  from webauthn.helpers.structs import (
+    PublicKeyCredentialDescriptor,
+    AuthenticatorSelectionCriteria,
+    ResidentKeyRequirement,
+    AuthenticatorAttachment
+  )
 
   registration_options = generate_registration_options(
     rp_id=rp_id,
@@ -16,7 +21,11 @@ create or replace function api.generate_registration_options(user_id text, user_
     user_id=user_id,
     user_name=user_name,
     user_display_name=user_name,
-    exclude_credentials=[PublicKeyCredentialDescriptor(id=base64url_to_bytes(cred)) for cred in (exclude_credentials or [])]
+    exclude_credentials=[PublicKeyCredentialDescriptor(id=base64url_to_bytes(cred)) for cred in (exclude_credentials or [])],
+    authenticator_selection=AuthenticatorSelectionCriteria(
+        authenticator_attachment=AuthenticatorAttachment.PLATFORM,
+        resident_key=ResidentKeyRequirement.REQUIRED,
+    ),
   )
 
   return options_to_json(registration_options)
@@ -29,7 +38,7 @@ revoke all privileges on function api.generate_registration_options(text, text, 
 API route /rpc/passkey_registration_begin
 Responds with required information to call navigator.credential.create() on the client
 */
-create function api.passkey_registration_begin() returns json as $$
+create or replace function api.passkey_registration_begin() returns json as $$
 declare usr record;
 declare registration_options json;
 declare exclude_credentials text[] := ARRAY[]::text[];

@@ -246,8 +246,8 @@ def test_authentication_complete(get_passkey_w_session):
     assert res.status_code == 200
 
     body = res.json()
-    assert body[0]["last_used_at"]
-    assert body[0]["data"]["sign_count"] == 1
+    assert body[1]["last_used_at"]
+    assert body[1]["data"]["sign_count"] == 1
 
 
 # Poor man's teardown
