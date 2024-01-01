@@ -2,7 +2,7 @@
 
 # revert latest migration
 # finds next-to-last migration
-revert_to=$(find db/migrations/revert -type f -printf "%T@ %f\n" | sort -n | sed -n '2p' | awk '{print $2}' | xargs -I {} basename {} .sql)
+revert_to=$(sqitch --chdir db/migrations plan --format "format:%n" | tail -n2 | head -1)
 sqitch --chdir db/migrations revert -y --to "${revert_to}"
 
 # deploy again
