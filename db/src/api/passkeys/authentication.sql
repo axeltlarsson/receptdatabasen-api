@@ -90,23 +90,6 @@ language 'plpython3u';
 
 revoke all privileges on function api.verify_authentication_response(text, text, text, int) from public;
 
-
--- helper function to get user_handle from credential
-create or replace function api.user_handle_from_credential(raw_credential text) returns int as $$
-  import json
-  import base64
-
-  try:
-    user_handle = base64.b64decode(json.loads(raw_credential)["response"]["userHandle"] + "==").decode("utf-8")
-    return int(user_handle)
-  except Exception as e:
-    plpy.warning("failed to decode user_handle_from_credential", e)
-    return None
-$$
-language 'plpython3u';
-
-revoke all privileges on function api.user_handle_from_credential(text) from public;
-
 -- helper function to get credential_id from credential
 create or replace function api.id_from_credential(raw_credential text) returns text as $$
   from webauthn.helpers.structs import AuthenticationCredential
@@ -114,7 +97,8 @@ create or replace function api.id_from_credential(raw_credential text) returns t
   try:
     credential = AuthenticationCredential.model_validate_json(raw_credential)
     return credential.id
-  except Exception:
+  except Exception as e:
+    plpy.warning(e)
     return None
 $$
 language 'plpython3u';
@@ -125,18 +109,10 @@ create or replace function api.passkey_authentication_complete(param json) retur
 declare
     usr record;
     authentication json;
-    user_handle text;
     existing_passkey record;
     credential_id text;
 begin
-    select api.user_handle_from_credential(param->>'raw_credential') into user_handle;
     select api.id_from_credential(param->>'raw_credential') into credential_id;
-
-    if user_handle is null then
-      raise insufficient_privilege
-        using detail = ('Cannot parse user_handle from credential payload.', param),
-            hint = 'Check your payload';
-    end if;
 
     if credential_id is null then
       raise insufficient_privilege
@@ -144,29 +120,29 @@ begin
             hint = 'Check your payload';
     end if;
 
-    select * into usr
-    from data.user
-    where id = user_handle::int;
-
-    if usr is null then
-      raise insufficient_privilege
-        using detail = ('Cannot find user with id:', user_handle),
-            hint = 'Check your user_handle';
-    end if;
-
     select * into existing_passkey
     from data.passkey
     where
-      user_id = usr.id
-      and data.passkey.data->>'credential_id' = credential_id
+      data.passkey.data->>'credential_id' = credential_id
     order by created_at desc
     limit 1;
 
     if existing_passkey is null then
       raise insufficient_privilege
-      using detail = ('User_id: ', usr.id, 'credential_id: ', credential_id),
-      hint = 'Check your user_handle payload';
+      using detail = ('Cannt find credential_id in database: ', credential_id),
+      hint = 'Check your payload';
     end if;
+
+    select * into usr
+    from data.user
+    where id = existing_passkey.user_id;
+
+    if usr is null then
+      raise insufficient_privilege
+        using detail = ('Could not find user record for passkey with user_id: ', existing_passkey.user_id),
+            hint = 'This should actually never happen in practice...💥';
+    end if;
+
 
     select api.verify_authentication_response(
       param->>'raw_credential',

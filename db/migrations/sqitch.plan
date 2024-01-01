@@ -7,3 +7,4 @@
 passkey_table 2023-06-27T22:50:07Z System Administrator <root@axel-mbp14> # add passkeys table
 schema_cache_refresh_trigger 2023-12-29T13:56:57Z System Administrator <root@axel-mbp14> # Automatically trigger schema cache refresh on ddl_command_end
 debug_passkey_auth 2023-12-29T18:54:16Z System Administrator <root@axel-mbp14.local> # Add debug prints to passkey authentication print out
+use_credential_id 2024-01-01T14:03:46Z System Administrator <root@axel-mbp14.local> # Use credential_id and not userHandle
