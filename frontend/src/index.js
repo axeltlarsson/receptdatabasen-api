@@ -224,10 +224,13 @@ app.ports.passkeyPortSender.subscribe((message) => {
               }
             });
           } else {
-            console.warning('Passkeys are not supported in this browser');
-            app.ports.loginPasskeyPortReceiver.send({ type: 'passkeysNotSupported' });
+            console.warn('Passkeys are not available in this browser');
+            app.ports.passkeyPortReceiver.send({ type: 'passkeySupported', passkeySupport: false });
           }
         });
+      } else {
+        console.warn('Passkeys are not supported in this browser');
+        app.ports.passkeyPortReceiver.send({ type: 'passkeySupported', passkeySupport: false });
       }
       break;
     }

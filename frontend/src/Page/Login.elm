@@ -48,7 +48,8 @@ type alias Model =
 
 type PasskeyAuthentication
     = -- POST /passkeys/authentication/begin without user_name to get options with challenge
-      AuthBeginLoading
+      NotSupported
+    | AuthBeginLoading
     | AuthBeginFailed Api.ServerError
       -- Get passkey in js-land conditionally with options from AuthBegin, directly then to AuthCompleteLoading
     | FailedGettingCredential String
@@ -220,6 +221,9 @@ viewSubmitButton =
 viewPasskeyAuthErrors : PasskeyAuthentication -> Element Msg
 viewPasskeyAuthErrors passkeyAuth =
     case passkeyAuth of
+        NotSupported ->
+            Element.none
+
         AuthBeginFailed err ->
             viewServerError "Passkey-autentiseringsfel" err
 
@@ -319,6 +323,9 @@ update msg ({ session, status } as model) =
 
                         Ok (Passkey.PasskeyRetrievalFailed err) ->
                             ( { model | passkeyAuthentication = FailedGettingCredential err }, Cmd.none )
+
+                        Ok (Passkey.PasskeySupported False) ->
+                            ( { model | passkeyAuthentication = NotSupported }, Cmd.none )
 
                         Ok _ ->
                             ( { model | passkeyAuthentication = FailedGettingCredential "unexpected message" }, Cmd.none )
