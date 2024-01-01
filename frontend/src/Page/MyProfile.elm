@@ -230,6 +230,9 @@ viewResponsiveTable device passkeys =
             if phoneLayout device then
                 shortenId 20 id
 
+            else if String.length id > 40 then
+                shortenId 40 id
+
             else
                 id
     in
