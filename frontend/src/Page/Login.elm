@@ -68,15 +68,8 @@ type alias LoginForm =
     , userNameValidationActive : Bool
     , password : String
     , passwordValidationActive : Bool
-    , validationStatus : ValidationStatus
     , invalidCredentials : Bool
     }
-
-
-type ValidationStatus
-    = NotActivated
-    | Invalid
-    | Valid
 
 
 init : Session -> ( Model, Cmd Msg )
@@ -96,7 +89,6 @@ initialForm =
     , userNameValidationActive = False
     , password = ""
     , passwordValidationActive = False
-    , validationStatus = NotActivated
     , invalidCredentials = False
     }
 
@@ -281,33 +273,39 @@ update msg ({ session, status } as model) =
                     ( { model | status = FillingForm { form | userName = userName, invalidCredentials = False } }, Cmd.none )
 
                 BlurredUserName ->
-                    -- We don't activate username validation here because it gives a poor UX for selecting passkeys
-                    ( model, Cmd.none )
+                    if String.length form.userName > 0 then
+                        ( { model | status = FillingForm { form | userNameValidationActive = True } }, Cmd.none )
+
+                    else
+                        ( model, Cmd.none )
 
                 PasswordChanged password ->
                     ( { model | status = FillingForm { form | password = password, invalidCredentials = False } }, Cmd.none )
 
                 BlurredPassword ->
-                    ( { model | status = FillingForm { form | passwordValidationActive = True, userNameValidationActive = True } }, Cmd.none )
+                    if String.length form.password > 0 then
+                        ( { model | status = FillingForm { form | passwordValidationActive = True } }, Cmd.none )
+
+                    else
+                        ( model, Cmd.none )
 
                 SubmitForm ->
                     let
-                        activatedForm f valid =
+                        activatedForm f =
                             { f
                                 | userNameValidationActive = True
                                 , passwordValidationActive = True
-                                , validationStatus = valid
                                 , invalidCredentials = False
                             }
                     in
                     case validator form of
                         Ok verifiedForm ->
-                            ( { model | status = SubmittingForm (activatedForm form Valid) }
+                            ( { model | status = SubmittingForm (activatedForm form) }
                             , submitForm verifiedForm
                             )
 
                         Err _ ->
-                            ( { model | status = FillingForm (activatedForm form Invalid) }
+                            ( { model | status = FillingForm (activatedForm form) }
                             , Cmd.none
                             )
 
