@@ -321,6 +321,9 @@ update msg model =
         SearchQueryEntered "" ->
             ( { model | query = "" }, Recipe.fetchMany LoadedRecipes )
 
+        SearchQueryEntered "undefined" ->
+            ( { model | query = "hej" }, Recipe.fetchMany LoadedRecipes )
+
         SearchQueryEntered query ->
             ( { model | query = query }, search model.session query )
 
