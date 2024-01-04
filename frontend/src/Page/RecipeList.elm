@@ -60,9 +60,6 @@ init session query =
         Nothing ->
             Recipe.fetchMany LoadedRecipes
 
-        Just "undefined" ->
-            Cmd.none
-
         Just q ->
             search session q
     )
@@ -116,7 +113,11 @@ viewSearchBox model =
             FeatherIcons.x |> FeatherIcons.toHtml [] |> Element.html
     in
     row [ Border.width 1, Border.rounded 3, Border.color Palette.lightGrey, width fill ]
-        [ Input.search [ Border.width 0, width fill ]
+        [ Input.search
+            [ Element.htmlAttribute (Html.Attributes.attribute "id" "search-box")
+            , Border.width 0
+            , width fill
+            ]
             { onChange = SearchQueryEntered
             , text = model.query
             , placeholder = Just placeholder
@@ -320,9 +321,6 @@ update msg model =
 
         SearchQueryEntered "" ->
             ( { model | query = "" }, Recipe.fetchMany LoadedRecipes )
-
-        SearchQueryEntered "undefined" ->
-            ( { model | query = "hej" }, Recipe.fetchMany LoadedRecipes )
 
         SearchQueryEntered query ->
             ( { model | query = query }, search model.session query )

@@ -171,15 +171,7 @@ changeRouteTo maybeRoute model =
                     ( model, Cmd.none )
 
                 _ ->
-                    case query of
-                        Just "undefined" ->
-                            RecipeList.init session Nothing |> updateWith RecipeList GotRecipeListMsg
-
-                        Nothing ->
-                            RecipeList.init session Nothing |> updateWith RecipeList GotRecipeListMsg
-
-                        _ ->
-                            RecipeList.init session query |> updateWith RecipeList GotRecipeListMsg
+                    RecipeList.init session query |> updateWith RecipeList GotRecipeListMsg
 
         Just Route.NewRecipe ->
             Editor.initNew session

@@ -266,7 +266,7 @@ type Msg
     | PasswordChanged String
     | BlurredPassword
     | SubmitForm
-    | CompletedLogin (Result Api.ServerError Me)
+    | CompletedLogin (Result Api.ServerError Encode.Value)
     | LoadedAuthenticationBegin (Result Api.ServerError Encode.Value)
     | LoadedAuthenticationComplete (Result Api.ServerError Encode.Value)
     | PortMsg Decode.Value
@@ -312,7 +312,7 @@ update msg ({ session, status } as model) =
                             )
 
                 CompletedLogin (Ok _) ->
-                    ( model, Cmd.none )
+                    ( model, Route.replaceUrl (Session.navKey session) (Route.RecipeList Nothing) )
 
                 CompletedLogin (Err _) ->
                     ( model, Cmd.none )
@@ -341,9 +341,7 @@ update msg ({ session, status } as model) =
                     ( { model | passkeyAuthentication = AuthBeginFailed err }, Passkey.passkeyAuthenticationBegin Nothing LoadedAuthenticationBegin )
 
                 LoadedAuthenticationComplete (Ok response) ->
-                    ( { model | passkeyAuthentication = AuthCompleteLoaded response }
-                    , Route.replaceUrl (Session.navKey session) (Route.RecipeList Nothing)
-                    )
+                    update (CompletedLogin (Ok response)) { model | passkeyAuthentication = AuthCompleteLoaded response }
 
                 LoadedAuthenticationComplete (Err err) ->
                     ( { model
@@ -448,16 +446,5 @@ submitForm form =
         , tracker = Nothing
         , headers = []
         , body = Http.jsonBody jsonForm
-        , expect = expectJsonWithBody CompletedLogin meDecoder
+        , expect = expectJsonWithBody CompletedLogin (Decode.value)
         }
-
-
-meDecoder : Decode.Decoder Me
-meDecoder =
-    Decode.map2 Me
-        (field "me" (field "user_name" string))
-        (field "me" (field "id" int))
-
-
-type alias Me =
-    { userName : String, id : Int }
