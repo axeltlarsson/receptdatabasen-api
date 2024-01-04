@@ -148,9 +148,10 @@ viewUserNameInput invalidCredentials active name =
             , Input.username
                 ([ Events.onLoseFocus BlurredUserName
                  , Border.rounded 2
+                 , Element.htmlAttribute (HtmlAttributes.name "username")
+                 , Element.htmlAttribute (HtmlAttributes.id "username")
                  , Element.htmlAttribute (HtmlAttributes.attribute "autocomplete" "username webauthn")
-                 , Element.htmlAttribute (HtmlAttributes.attribute "name" "username")
-                 , Element.htmlAttribute (HtmlAttributes.attribute "id" "username")
+                 , Element.htmlAttribute (HtmlAttributes.required True)
                  ]
                     ++ errorBorder active name theValidator
                 )
@@ -185,9 +186,10 @@ viewPasswordInput invalidCredentials active password =
                 ([ Events.onLoseFocus BlurredPassword
                  , Element.htmlAttribute (onEnter SubmitForm)
                  , Border.rounded 2
-                 , Element.htmlAttribute (HtmlAttributes.attribute "name" "password")
-                 , Element.htmlAttribute (HtmlAttributes.attribute "id" "password")
+                 , Element.htmlAttribute (HtmlAttributes.name "password")
+                 , Element.htmlAttribute (HtmlAttributes.id "password")
                  , Element.htmlAttribute (HtmlAttributes.attribute "autocomplete" "current-password webauthn")
+                 , Element.htmlAttribute (HtmlAttributes.required True)
                  ]
                     ++ errorBorder active password theValidator
                 )
