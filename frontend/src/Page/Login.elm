@@ -195,7 +195,7 @@ viewPasswordInput invalidCredentials active password =
                  , Border.rounded 2
                  , Element.htmlAttribute (HtmlAttributes.attribute "name" "password")
                  , Element.htmlAttribute (HtmlAttributes.attribute "id" "password")
-                 , Element.htmlAttribute (HtmlAttributes.attribute "autocomplete" "current-password")
+                 , Element.htmlAttribute (HtmlAttributes.attribute "autocomplete" "current-password webauthn")
                  ]
                     ++ errorBorder active password theValidator
                 )
@@ -312,7 +312,7 @@ update msg ({ session, status } as model) =
                             )
 
                 CompletedLogin (Ok _) ->
-                    ( model, Route.replaceUrl (Session.navKey session) (Route.RecipeList Nothing) )
+                    ( model, Cmd.none )
 
                 CompletedLogin (Err _) ->
                     ( model, Cmd.none )
@@ -341,7 +341,7 @@ update msg ({ session, status } as model) =
                     ( { model | passkeyAuthentication = AuthBeginFailed err }, Passkey.passkeyAuthenticationBegin Nothing LoadedAuthenticationBegin )
 
                 LoadedAuthenticationComplete (Ok response) ->
-                    update (CompletedLogin (Ok response)) { model | passkeyAuthentication = AuthCompleteLoaded response }
+                    ( { model | passkeyAuthentication = AuthCompleteLoaded response }, Route.replaceUrl (Session.navKey session) (Route.RecipeList Nothing) )
 
                 LoadedAuthenticationComplete (Err err) ->
                     ( { model
@@ -446,5 +446,5 @@ submitForm form =
         , tracker = Nothing
         , headers = []
         , body = Http.jsonBody jsonForm
-        , expect = expectJsonWithBody CompletedLogin (Decode.value)
+        , expect = expectJsonWithBody CompletedLogin Decode.value
         }
