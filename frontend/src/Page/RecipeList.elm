@@ -60,6 +60,9 @@ init session query =
         Nothing ->
             Recipe.fetchMany LoadedRecipes
 
+        Just "undefined" ->
+            Cmd.none
+
         Just q ->
             search session q
     )
