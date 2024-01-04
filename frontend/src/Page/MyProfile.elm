@@ -30,6 +30,8 @@ import Palette
 import Passkey exposing (Passkey, Profile)
 import Route
 import Session exposing (Session)
+import Task
+import Time
 
 
 type alias Model =
@@ -38,6 +40,7 @@ type alias Model =
     , registeredPasskeys : Status (List Passkey)
     , passkeyRegistration : PasskeyRegistration
     , passkeyAuthentication : PasskeyAuthentication
+    , timeZone : Time.Zone
     }
 
 
@@ -111,11 +114,13 @@ init session =
       , registeredPasskeys = Loading
       , passkeyRegistration = CheckingSupport
       , passkeyAuthentication = NotRequested
+      , timeZone = Time.utc
       }
     , Cmd.batch
         [ Passkey.fetch LoadedProfile
         , Passkey.fetchPasskeys LoadedPasskeys
         , Passkey.sendCheckPasskeySupportMsg
+        , Task.perform GetTimeZone Time.here
         ]
     )
 
@@ -139,7 +144,7 @@ view model =
         column [ centerX, spacing 20, padding 10, width (fill |> Element.maximum 700), Region.mainContent ]
             [ column [ spacing 10, width fill, centerX ]
                 [ viewProfile model.profile
-                , viewRegisteredPasskeys model.registeredPasskeys device
+                , viewRegisteredPasskeys model.registeredPasskeys device model.timeZone
                 , responsiveLayout [ spacing 20 ]
                     [ viewPasskeyCreation model.passkeyRegistration
                     , viewPasskeyAuthentication model.passkeyAuthentication
@@ -192,8 +197,8 @@ wrapIcon icon =
         (icon |> FeatherIcons.withSize 26 |> FeatherIcons.withStrokeWidth 1 |> FeatherIcons.toHtml [] |> Element.html)
 
 
-viewRegisteredPasskeys : Status (List Passkey) -> Element.Device -> Element Msg
-viewRegisteredPasskeys passkeyStatus device =
+viewRegisteredPasskeys : Status (List Passkey) -> Element.Device -> Time.Zone -> Element Msg
+viewRegisteredPasskeys passkeyStatus device zone =
     case passkeyStatus of
         Loading ->
             Element.html Loading.animation
@@ -205,7 +210,7 @@ viewRegisteredPasskeys passkeyStatus device =
             el [ Font.color Palette.nearBlack, Font.extraLight, padding 10 ] <| text "Inga passkeys har registrerats än"
 
         Loaded (p :: ps) ->
-            viewResponsiveTable device (p :: ps)
+            viewResponsiveTable device zone (p :: ps)
 
 
 phoneLayout { class, orientation } =
@@ -217,11 +222,59 @@ phoneLayout { class, orientation } =
             False
 
 
-viewResponsiveTable : Element.Device -> List Passkey -> Element Msg
-viewResponsiveTable device passkeys =
+viewResponsiveTable : Element.Device -> Time.Zone -> List Passkey -> Element Msg
+viewResponsiveTable device zone passkeys =
     let
-        formatDate =
-            String.slice 0 16 >> String.replace "T" " "
+        formatDate : Time.Posix -> String
+        formatDate date =
+            let
+                numericMonth month =
+                    case month of
+                        Time.Jan ->
+                            "01"
+
+                        Time.Feb ->
+                            "02"
+
+                        Time.Mar ->
+                            "03"
+
+                        Time.Apr ->
+                            "04"
+
+                        Time.May ->
+                            "05"
+
+                        Time.Jun ->
+                            "06"
+
+                        Time.Jul ->
+                            "07"
+
+                        Time.Aug ->
+                            "08"
+
+                        Time.Sep ->
+                            "09"
+
+                        Time.Oct ->
+                            "10"
+
+                        Time.Nov ->
+                            "11"
+
+                        Time.Dec ->
+                            "12"
+
+                r =
+                    { year = Time.toYear zone date |> String.fromInt
+                    , month = Time.toMonth zone date |> numericMonth
+                    , day = Time.toDay zone date |> String.fromInt
+                    , hour = Time.toHour zone date |> String.fromInt
+                    , min = Time.toMinute zone date |> String.fromInt
+                    }
+            in
+            r.year ++ "-" ++ r.month ++ "-" ++ r.day ++ " " ++ r.hour ++ ":" ++ r.hour
 
         shortenId len id =
             String.left (len - 6) id ++ "..." ++ String.right 3 id
@@ -263,7 +316,7 @@ viewResponsiveTable device passkeys =
                                     ]
                                 , row [ spacing 5, Font.extraLight ]
                                     [ text "Använd"
-                                    , el [ Font.family [ Font.monospace ] ] (text (p.lastUsedAt |> Maybe.withDefault "" |> formatDate))
+                                    , el [ Font.family [ Font.monospace ] ] (text (p.lastUsedAt |> Maybe.map formatDate |> Maybe.withDefault ""))
                                     ]
                                 ]
                             , Input.button [ paddingEach { top = 0, left = 5, right = 10, bottom = 0 }, alignRight ]
@@ -372,6 +425,7 @@ viewPasskeyAuthentication auth =
 
 type Msg
     = LoadedProfile (Result Api.ServerError Profile)
+    | GetTimeZone Time.Zone
     | PortMsg Decode.Value
     | LoadedPasskeys (Result Api.ServerError (List Passkey))
     | CreatePasskeyPressed
@@ -403,6 +457,9 @@ update msg model =
 
         LoadedProfile (Err err) ->
             ( { model | profile = Failed err }, Cmd.none )
+
+        GetTimeZone zone ->
+            ( { model | timeZone = zone }, Cmd.none )
 
         PortMsg m ->
             case Decode.decodeValue Passkey.portMsgDecoder m of

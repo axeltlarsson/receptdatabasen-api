@@ -24,6 +24,8 @@ import Http
 import Json.Decode as Decode exposing (field, int, nullable, string)
 import Json.Encode as Encode
 import Url.Builder
+import Time
+import Iso8601
 
 
 type alias Profile =
@@ -37,8 +39,8 @@ type alias Passkey =
     { credentialId : String
     , signCount : Int
     , name : String
-    , createdAt : String -- TODO: handle DATES?
-    , lastUsedAt : Maybe String
+    , createdAt : Time.Posix
+    , lastUsedAt : Maybe Time.Posix
     , id : Int
     }
 
@@ -94,8 +96,8 @@ passkeyDecoder =
             (field "data" <| field "credential_id" string)
             (field "data" <| field "sign_count" int)
             (field "name" string)
-            (field "created_at" string)
-            (field "last_used_at" <| nullable string)
+            (field "created_at" Iso8601.decoder)
+            (field "last_used_at" <| nullable Iso8601.decoder)
             (field "id" int)
         )
 
