@@ -89,7 +89,7 @@ addListIndexMetadata blocks =
         |> Block.mapAndAccumulate
             (\sofar block ->
                 case block of
-                    Block.UnorderedList _ ->
+                    Block.UnorderedList _ _ ->
                         ( sofar + 1, ( block, Just sofar ) )
 
                     _ ->
@@ -107,8 +107,9 @@ allListsAsTaskList =
         (Block.walk
             (\block ->
                 case block of
-                    Block.UnorderedList listItems ->
+                    Block.UnorderedList _ listItems ->
                         Block.UnorderedList
+                            Block.Tight
                             (List.map
                                 (\listItem ->
                                     case listItem of
@@ -127,29 +128,34 @@ allListsAsTaskList =
         )
 
 
+transformListItems : (String -> String) -> Block -> Block
+transformListItems mappingFun listItem =
+    Block.walk
+        (\block ->
+            case block of
+                Block.Paragraph inlines ->
+                    Block.Paragraph [ inlines |> extractInlineText |> mappingFun |> Block.Text ]
+
+                _ ->
+                    block
+        )
+        listItem
+
+
 mapListItems : (String -> String) -> List Block -> List Block
-mapListItems mappingFun =
+mapListItems mappingFun blocks =
     List.map
         (Block.walk
             (\block ->
                 case block of
-                    Block.UnorderedList listItems ->
+                    Block.UnorderedList listSpacing listItems ->
                         Block.UnorderedList
+                            listSpacing
                             (List.map
                                 (\listItem ->
-                                    let
-                                        transformed is =
-                                            Block.Text (mappingFun (extractInlineText is))
-                                    in
                                     case listItem of
-                                        ListItem NoTask inlines ->
-                                            ListItem NoTask [ transformed inlines ]
-
-                                        ListItem IncompleteTask inlines ->
-                                            ListItem IncompleteTask [ transformed inlines ]
-
-                                        ListItem CompletedTask inlines ->
-                                            ListItem CompletedTask [ transformed inlines ]
+                                        ListItem task children ->
+                                            ListItem task (List.map (transformListItems mappingFun) children)
                                 )
                                 listItems
                             )
@@ -158,6 +164,7 @@ mapListItems mappingFun =
                         block
             )
         )
+        blocks
 
 
 all : (Block -> Bool) -> String -> Bool
@@ -201,11 +208,11 @@ onlyListAndHeading input =
                 Block.Heading _ _ ->
                     True
 
-                Block.UnorderedList _ ->
+                Block.UnorderedList _ _ ->
                     True
 
-                _ ->
-                    False
+                x ->
+                    Debug.log  (Debug.toString x) False
         )
         input
 
@@ -257,6 +264,7 @@ renderer =
     , tableRow = row []
     , tableHeaderCell = \_ children -> paragraph [] children
     , tableCell = \_ children -> paragraph [] children
+    , strikethrough = paragraph [ Font.strike ]
     }
 
 
