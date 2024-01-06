@@ -51,7 +51,9 @@ renderWithMapping markdown mapper clickedCheckbox =
         |> Markdown.Parser.parse
         |> Result.mapError (\e -> e |> List.map Markdown.Parser.deadEndToString |> String.join "\n")
         |> Result.map (mapListItems mapper)
+        |> Result.map (\blocks -> Debug.log (Debug.toString blocks) blocks)
         |> Result.map addListIndexMetadata
+        |> Result.map (\blocks -> Debug.log (Debug.toString blocks) blocks)
         |> Result.andThen
             (Markdown.Renderer.renderWithMeta
                 (\maybeListIdx ->
@@ -97,6 +99,13 @@ addListIndexMetadata blocks =
             )
             1
         |> Tuple.second
+        -- v7.0.1 of dillonkearns/elm-markdown
+        -- mapAndAccumulate returns the mapped result and then the original (in certain cases) -> causing duplicate output
+        -- https://github.com/dillonkearns/elm-markdown/issues/117
+        -- only do this in certain cases... wtf?
+        -- solution: just keep the first part...
+        -- problem: not really a solution because sometimes we lose contents with this
+        |> List.take 1
 
 
 {-| Turn all unordered lists into task lists - useful so that people don't have to write the fiddly markdown for that
@@ -212,7 +221,7 @@ onlyListAndHeading input =
                     True
 
                 x ->
-                    Debug.log  (Debug.toString x) False
+                    Debug.log (Debug.toString x) False
         )
         input
 
@@ -313,6 +322,10 @@ heading { level, children } =
         , paddingEach { edges | bottom = 15, top = 15 }
         ]
         children
+
+
+debug =
+    Element.explain Debug.todo
 
 
 unorderedList : Int -> Dict Int Bool -> (Int -> Bool -> msg) -> List (ListItem (Element msg)) -> Element msg
