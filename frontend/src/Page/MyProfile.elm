@@ -269,7 +269,7 @@ viewResponsiveTable device zone passkeys =
                 r =
                     { year = Time.toYear zone date |> String.fromInt
                     , month = Time.toMonth zone date |> numericMonth
-                    , day = Time.toDay zone date |> String.fromInt
+                    , day = Time.toDay zone date |> String.fromInt |> String.padLeft 2 '0'
                     , hour = Time.toHour zone date |> String.fromInt
                     , min = Time.toMinute zone date |> String.fromInt
                     }
