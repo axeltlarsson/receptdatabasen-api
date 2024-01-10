@@ -28,12 +28,13 @@ import Element.Input as Input
 import Element.Region as Region
 import FeatherIcons
 import Html
-import Html.Attributes
+import Html.Attributes exposing (attribute, src)
 import Markdown.Block as Block exposing (Block, ListItem(..), Task(..), extractInlineText)
 import Markdown.Html
 import Markdown.Parser
 import Markdown.Renderer
 import Palette exposing (edges)
+import Url
 
 
 {-| render markdown to elm-ui - treating all unordered lists as task lists
@@ -250,7 +251,7 @@ renderer =
     , orderedList = orderedList
     , codeBlock = \_ -> Element.none
     , html =
-        Markdown.Html.oneOf [ youtube ]
+        Markdown.Html.oneOf [ youtube, instagram ]
     , table = column []
     , tableHeader = column []
     , tableBody = column []
@@ -284,6 +285,38 @@ youtube =
         )
         |> Markdown.Html.withAttribute "url"
         |> Markdown.Html.withAttribute "thumb"
+
+
+instagram : Markdown.Html.Renderer (a -> Element msg)
+instagram =
+    let
+        embedUrl instagramUrl =
+            -- https://www.instagram.com/p/CnO1W0TMNRu/?igshid=MDJmNzVkMjY%3D ->
+            -- https://www.instagram.com/p/CnO1W0TMNRu/embed
+            instagramUrl
+                |> Url.fromString
+                |> Maybe.map .path
+                |> Maybe.map (String.split "/")
+                -- ["", "reel", "<id>", ""]
+                |> Maybe.map (List.drop 2)
+                |> Maybe.andThen List.head
+                |> Maybe.map (\x -> "https://instagram.com/p/" ++ x ++ "/embed")
+                |> Maybe.withDefault (instagramUrl ++ "/embed")
+    in
+    Markdown.Html.tag "instagram"
+        (\url _ ->
+            Html.iframe
+                [ src (embedUrl url)
+                , Html.Attributes.width 400
+                , Html.Attributes.height 480
+                , attribute "frameborder" "0"
+                , attribute "scrolling" "no"
+                , attribute "allowTransparency" "true"
+                ]
+                []
+                |> Element.html
+        )
+        |> Markdown.Html.withAttribute "url"
 
 
 heading : { level : Block.HeadingLevel, rawText : String, children : List (Element msg) } -> Element msg
