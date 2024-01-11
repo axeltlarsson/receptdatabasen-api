@@ -253,6 +253,7 @@ class EasyMDEditor extends HTMLElement {
     this.appendChild(textArea);
     const id = this.getAttribute('id');
     const enableYoutube = this.getAttribute('youtube');
+    const enableInstagram = this.getAttribute('instagram');
 
     let options = this.getAttribute('options');
     if (options) {
@@ -294,6 +295,24 @@ class EasyMDEditor extends HTMLElement {
       options = { toolbar: [...options.toolbar, youtubeBtn] };
     } else {
       options = { toolbar: [...options.toolbar] };
+    }
+
+    const instagramBtn = {
+      name: 'add-instagram-post',
+      action: (editor) => {
+        const url = prompt('Klistra in Instagram URL', '');
+        if (!url) {
+          return false;
+        }
+        editor.codemirror.replaceSelection(`<instagram url="${url}" />`);
+        return true;
+      },
+      className: 'fa fa-instagram',
+      title: 'Add Instagram post/reel',
+    };
+
+    if (enableInstagram) {
+      options = { toolbar: [...options.toolbar, instagramBtn] };
     }
 
     const easyMDE = new EasyMDE({

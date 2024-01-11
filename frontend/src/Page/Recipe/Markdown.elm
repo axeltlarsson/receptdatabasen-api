@@ -28,7 +28,7 @@ import Element.Input as Input
 import Element.Region as Region
 import FeatherIcons
 import Html
-import Html.Attributes exposing (attribute, src)
+import Html.Attributes exposing (attribute, class, src)
 import Markdown.Block as Block exposing (Block, ListItem(..), Task(..), extractInlineText)
 import Markdown.Html
 import Markdown.Parser
@@ -307,14 +307,23 @@ instagram =
         (\url _ ->
             Html.iframe
                 [ src (embedUrl url)
-                , Html.Attributes.width 400
-                , Html.Attributes.height 480
+
+                , Html.Attributes.width 450
+                , Html.Attributes.height 650
+                , Html.Attributes.attribute "style" "width: 100%; height: 100%;"
                 , attribute "frameborder" "0"
                 , attribute "scrolling" "no"
                 , attribute "allowTransparency" "true"
+                , attribute "style" "border: 1px solid red;"
                 ]
                 []
                 |> Element.html
+                |> el
+                    [ spacing 10
+                    , htmlAttribute (class "iframe-container-instagram")
+                    , width fill
+                    , height fill
+                    ]
         )
         |> Markdown.Html.withAttribute "url"
 
