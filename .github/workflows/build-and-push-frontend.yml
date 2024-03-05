@@ -19,10 +19,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Convert repository owner to lowercase
-      id: lowercase-repo-owner
-      run: echo "::set-output name=repo_owner::$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')"
-      
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
 
@@ -40,5 +36,5 @@ jobs:
         file: ./frontend/Dockerfile
         push: true
         tags: |
-          ghcr.io/${{ steps.lowercase-repo-owner.outputs.repo_owner }}/frontend:latest
-          ghcr.io/${{ steps.lowercase-repo-owner.outputs.repo_owner }}/frontend:${{ github.sha }}
+          ghcr.io/${{ github.repository_owner }}/frontend:latest
+          ghcr.io/${{ github.repository_owner }}/frontend:${{ github.sha }}
