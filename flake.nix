@@ -85,5 +85,8 @@
           '';
 
         };
-      });
+      })
+      // { 
+        nixosModules.default = ./module.nix;
+      };
 }
