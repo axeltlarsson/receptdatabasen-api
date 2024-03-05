@@ -41,6 +41,8 @@ RUN DEBIAN_FRONTEND=noninteractive \
 
 # The final openresty image
 FROM --platform=linux/amd64 openresty/openresty:buster
+LABEL org.opencontainers.image.source=https://github.com/axeltlarsson/receptdatabasen-api
+LABEL org.opencontainers.image.description="Receptdatabasen openresty"
 
 COPY --from=builder /usr/local/lib /usr/local/lib
 
