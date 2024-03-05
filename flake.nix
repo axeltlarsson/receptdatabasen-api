@@ -85,8 +85,14 @@
           '';
 
         };
+        packages.dockerComposeFiles = nixpkgs.lib.runCommandNoCC "docker-compose-files" {} ''
+          mkdir -p $out
+          cp ${./docker-compose.yml} $out/docker-compose.yml
+          cp ${./docker-compose.prod.yml} $out/docker-compose.prod.yml
+        '';
+
       })
       // { 
         nixosModules.default = ./module.nix;
-      };
+     };
 }

@@ -39,6 +39,7 @@ jobs:
         tags: |
           ghcr.io/${{ github.repository_owner }}/receptdatabasen-frontend:latest
           ghcr.io/${{ github.repository_owner }}/receptdatabasen-frontend:${{ github.sha }}
+        platforms: linux/amd64,linux/arm64
 
     - name: Build and push openresty
       uses: docker/build-push-action@v5
@@ -49,3 +50,4 @@ jobs:
         tags: |
           ghcr.io/${{ github.repository_owner }}/receptdatabasen-openresty:latest
           ghcr.io/${{ github.repository_owner }}/receptdatabasen-openresty:${{ github.sha }}
+        platforms: linux/amd64,linux/arm64
