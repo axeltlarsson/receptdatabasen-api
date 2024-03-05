@@ -3,7 +3,7 @@ name: Build and Push Frontend Docker Image
 on:
   push:
     branches:
-      - axel/nixos
+      - main
     paths:
       - 'frontend/**'
 
@@ -18,6 +18,10 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
+
+    - name: Lowercase repo owner
+      id: repo_owner
+      run: echo "REPO_OWNER=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
@@ -36,5 +40,5 @@ jobs:
         file: ./frontend/Dockerfile
         push: true
         tags: |
-          ghcr.io/${{ github.repository_owner }}/frontend:latest
-          ghcr.io/${{ github.repository_owner }}/frontend:${{ github.sha }}
+          ghcr.io/${{ env.REPO_OWNER }}/frontend:latest
+          ghcr.io/${{ env.REPO_OWNER }}/frontend:${{ github.sha }}
