@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - axel/nixos
-    # paths:
-      # - 'frontend/**'
-      # - 'openresty/**'
+    paths:
+      - 'frontend/**'
+      - 'openresty/**'
 
 jobs:
   build-and-push:
