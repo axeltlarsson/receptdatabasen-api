@@ -1,40 +1,47 @@
-{ config, lib, pkgs, ... }: let
+# the first level of argument (docker-compose-file) is provided by this repo's flake
+# the actual NixOS machine configuration will then pass in the actual module arguments
+# that way the NixOS machine can use the module as is and doesn't have to worry about
+# the docker-compose-file arg
+docker-compose-file:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
   cfg = config.services.receptdatabasen;
 in {
   options.services.receptdatabasen = {
     enable = lib.mkEnableOption "Receptdatabasen service";
-    
-    dockerComposeFiles = lib.mkOption {
-      type = lib.types.listOf lib.types.path;
-      default = [./docker-compose.yml];
-      description = "List of Docker Compose files.";
-    };
   };
 
   config = lib.mkIf cfg.enable {
-    services.docker.enable = true; # Ensure Docker service is enabled
-    environment.systemPackages = with pkgs; [ dockerCompose ]; # Ensure Docker Compose is available
+    virtualisation.docker.enable = true; # Ensure Docker service is enabled
+    environment.systemPackages = with pkgs; [docker-compose]; # Ensure Docker Compose is available
 
-    # todo: firewall, caddy reverse proxy
+    # todo: firewall
+    # todo: caddy reverse proxy
+    # todo: configuration, env vars for docker-compose, prod etc
 
     # docker-compose script with systemd service
     systemd.services.receptdatabasen = {
       description = "Receptdatabasen";
-      wantedBy = [ "multi-user.target" ];
-      after = [ "docker.service" ];
+      after = ["docker.service"];
+      wants = ["docker.service"];
+      wantedBy = ["multi-user.target"];
+      script = ''
+        ${pkgs.docker-compose}/bin/docker-compose -f ${docker-compose-file} up -d
+      '';
+      preStop = ''
+        ${pkgs.docker-compose}/bin/docker-compose -f ${docker-compose-file} stop
+      '';
       serviceConfig = {
         Type = "simple";
-        User = "receptdatabasen";
-        Group = "receptdatabasen";
-        ExecStart = "${pkgs.docker-compose}/bin/docker-compose -f ${lib.concatMapStringsSep " -f " toString cfg.dockerComposeFiles} up -d";
-        Environment = [
-          "DATABASE_URL=postgresql://${config.services.receptdatabasen.SUPER_USER}:${config.services.receptdatabasen.SUPER_USER_PASSWORD}@localhost:${config.services.receptdatabasen.DB_PORT}/${config.services.receptdatabasen.DB_NAME}"
-        ];
-        Restart = "on-failure";
+        User = "root";
+        # Consider setting specific capabilities or sandboxing options here if necessary
       };
-      # Note: Consider adding ExecStop for graceful shutdown
     };
 
-    # alternatively oci-containers for all but openresty
+    # alternatively oci-containers for all but openresty (next step)
   };
 }
