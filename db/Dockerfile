@@ -1,5 +1,8 @@
 ARG PG_VERSION=12
+
 FROM postgres:${PG_VERSION}
+LABEL org.opencontainers.image.source=https://github.com/axeltlarsson/receptdatabasen-api
+LABEL org.opencontainers.image.description="Receptdatabasen db"
 
 # Add pl/python
 RUN apt-get update

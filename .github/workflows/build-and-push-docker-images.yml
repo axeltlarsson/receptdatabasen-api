@@ -7,6 +7,7 @@ on:
     paths:
       - 'frontend/**'
       - 'openresty/**'
+      - 'db/**'
 
 jobs:
   build-and-push:
@@ -30,6 +31,21 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Build and push db
+      uses: docker/build-push-action@v5
+      with:
+        context: ./db
+        build-args: |
+          PG_VERSION=12
+        file: ./db/Dockerfile
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/receptdatabasen-db:latest
+          ghcr.io/${{ github.repository_owner }}/receptdatabasen-db:${{ github.sha }}
+        platforms: linux/amd64,linux/arm64
+
+    # TODO: https://docs.docker.com/build/ci/github-actions/share-image-jobs/
+    # instead of pushing to registry, as this image is fairly useless on its own
     - name: Build and push frontend
       uses: docker/build-push-action@v5
       with:
