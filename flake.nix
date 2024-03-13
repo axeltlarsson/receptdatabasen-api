@@ -73,6 +73,7 @@
         virtualisation = {
           graphics = false;
           host = {inherit pkgs;};
+          diskSize = 2 * 1024; # 2 GiB
         };
       };
       machine = nixpkgs.lib.nixosSystem {
