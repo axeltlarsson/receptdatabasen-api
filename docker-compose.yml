@@ -20,6 +20,9 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - JWT_LIFETIME=${JWT_LIFETIME}
       - PG_VERSION=${PG_VERSION}
+      - RP_ID=${RP_ID}
+      - ORIGIN=${ORIGIN}
+      - DISABLE_USR_VERIFICATION=${DISABLE_USR_VERIFICATION}
 
     volumes:
       - db-vol:/var/lib/postgresql/data
@@ -36,9 +39,6 @@ services:
       - PGRST_JWT_SECRET=${JWT_SECRET}
       - PGRST_MAX_ROWS=${MAX_ROWS}
       - PGRST_PRE_REQUEST=${PRE_REQUEST}
-      - PGRST_RP_ID=${RP_ID}
-      - PGRST_ORIGIN=${ORIGIN}
-      - PGRST_DISABLE_USER_VERIFICATION=${DISABLE_USER_VERIFICATION}
     depends_on:
       - db
 

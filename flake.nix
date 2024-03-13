@@ -126,7 +126,7 @@
 
       packages.docker-compose-file = pkgs.writeTextFile {
         name = "docker-compose.yml";
-        text = pkgs.lib.readFile ./docker-compose.yml;
+        text = pkgs.lib.readFile ./docker-compose.nixos.yml;
       };
     })
     // {
