@@ -14,7 +14,7 @@ set client_min_messages to warning;
 \set jwt_lifetime `echo $JWT_LIFETIME`
 \set quoted_jwt_lifetime '\'' :jwt_lifetime '\''
 \set rp_id `echo $RP_ID`
-\set origin `echo $origin`
+\set origin `echo $ORIGIN`
 \set req_usr_verification `echo $DISABLE_USR_VERIFICATION`
 
 \echo # Loading database definition
