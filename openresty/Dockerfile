@@ -1,7 +1,7 @@
 # Build vips in a builder container, taken from:
 # https://github.com/h2non/imaginary/blob/master/Dockerfile
 ARG GOLANG="1.13"
-FROM --platform=linux/amd64 golang:${GOLANG}  as builder
+FROM golang:${GOLANG} as builder
 
 ARG LIBVIPS_VERSION="8.12.2"
 
@@ -40,7 +40,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
       ldconfig
 
 # The final openresty image
-FROM --platform=linux/amd64 openresty/openresty:buster
+FROM openresty/openresty:buster
 LABEL org.opencontainers.image.source=https://github.com/axeltlarsson/receptdatabasen-api
 LABEL org.opencontainers.image.description="Receptdatabasen openresty"
 
