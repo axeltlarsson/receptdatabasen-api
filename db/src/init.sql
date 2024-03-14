@@ -41,7 +41,7 @@ select settings.set('jwt_secret', :quoted_jwt_secret);
 select settings.set('jwt_lifetime', :quoted_jwt_lifetime);
 select settings.set('rp_id', :rp_id);
 select settings.set('origin', :origin);
-select settings.set('disable_user_verification', :disable_user_verification);
+select settings.set('disable_user_verification', :disable_user_verification::int::text); --  settings need bools as '0' or '1'
 
 \echo # Loading application definitions
 
