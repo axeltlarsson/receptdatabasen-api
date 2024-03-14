@@ -43,7 +43,6 @@ select settings.set('rp_id', :rp_id);
 select settings.set('origin', :origin);
 select settings.set('disable_user_verification', :disable_user_verification);
 
-
 \echo # Loading application definitions
 
 -- private schema where all tables will be defined
