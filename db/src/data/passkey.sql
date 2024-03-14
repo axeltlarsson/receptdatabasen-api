@@ -12,9 +12,6 @@ create trigger passkey_set_updated_at_timestamp
   before update on data.passkey for each row
   execute procedure set_updated_at_timestamp ();
 
-grant select, insert, update, delete on data.passkey to api;
-
-
 alter table passkey enable row level security;
 create policy users_access_own_passkeys on passkey
     using (user_id = request.user_id());

@@ -45,6 +45,9 @@ select settings.set('disable_user_verification', :disable_user_verification::int
 
 \echo # Loading application definitions
 
+\echo # Loading roles
+\ir authorization/roles.sql
+
 -- private schema where all tables will be defined
 -- you can use other names besides "data" or even spread the tables
 -- between different schemas. The schema name "data" is just a convention
@@ -55,9 +58,7 @@ select settings.set('disable_user_verification', :disable_user_verification::int
 -- privileges defined for the current PostgreSQL role making the requests
 \ir api/schema.sql
 
-
-\echo # Loading roles and privilege settings
-\ir authorization/roles.sql
+\echo # Loading privileges
 \ir authorization/privileges.sql
 
 \echo # Loading sample data
