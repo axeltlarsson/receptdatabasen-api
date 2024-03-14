@@ -10,60 +10,47 @@ on:
       - 'db/**'
 
 jobs:
-  build-and-push:
+
+  build-and-push-db:
+    if: contains(github.event.push.commits[].modified, 'db/')
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Build and push Docker image for db
+        uses: ./.github/actions/docker-build-push
+        with:
+          context: ./db
+          dockerfile: ./db/Dockerfile
+          tags: >
+            ghcr.io/${{ github.repository_owner }}/receptdatabasen-db:latest,
+            ghcr.io/${{ github.repository_owner }}/receptdatabasen-db:${{ github.sha }}
+          build-args: PG_VERSION=12
+          cache-ref: ghcr.io/${{ github.repository_owner }}/receptdatabasen-db:cache
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+  build-frontend:
+    if: contains(github.event.push.commits[].modified, 'frontend/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build Docker image for frontend (no push)
+        uses: ./.github/actions/docker-build-push
+        with:
+          context: ./frontend
+          dockerfile: ./frontend/Dockerfile
+          tags: frontend:build
+          cache-ref: ghcr.io/${{ github.repository_owner }}/receptdatabasen-frontend:cache
+          push: 'false'
 
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Build and push db
-      uses: docker/build-push-action@v5
-      with:
-        context: ./db
-        build-args: |
-          PG_VERSION=12
-        file: ./db/Dockerfile
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository_owner }}/receptdatabasen-db:latest
-          ghcr.io/${{ github.repository_owner }}/receptdatabasen-db:${{ github.sha }}
-        platforms: linux/amd64,linux/arm64
-
-    # TODO: https://docs.docker.com/build/ci/github-actions/share-image-jobs/
-    # instead of pushing to registry, as this image is fairly useless on its own
-    - name: Build and push frontend
-      uses: docker/build-push-action@v5
-      with:
-        context: ./frontend
-        file: ./frontend/Dockerfile
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository_owner }}/receptdatabasen-frontend:latest
-          ghcr.io/${{ github.repository_owner }}/receptdatabasen-frontend:${{ github.sha }}
-        platforms: linux/amd64,linux/arm64
-
-    - name: Build and push openresty
-      uses: docker/build-push-action@v5
-      with:
-        context: ./openresty
-        file: ./openresty/Dockerfile
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository_owner }}/receptdatabasen-openresty:latest
-          ghcr.io/${{ github.repository_owner }}/receptdatabasen-openresty:${{ github.sha }}
-        platforms: linux/amd64,linux/arm64
+  build-and-push-openresty:
+    needs: build-frontend
+    if: contains(github.event.push.commits[].modified, 'openresty/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build and push Docker image for openresty
+        uses: ./.github/actions/docker-build-push
+        with:
+          context: ./openresty
+          dockerfile: ./openresty/Dockerfile
+          tags: >
+            ghcr.io/${{ github.repository_owner }}/receptdatabasen-openresty:latest,
+            ghcr.io/${{ github.repository_owner }}/receptdatabasen-openresty:${{ github.sha }}
+          build-args: FRONTEND_IMAGE=ghcr.io/${{ github.repository_owner }}/receptdatabasen-frontend:latest
+          cache-ref: ghcr.io/${{ github.repository_owner }}/receptdatabasen-openresty:cache

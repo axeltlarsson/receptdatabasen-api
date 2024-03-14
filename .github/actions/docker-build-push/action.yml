@@ -1,0 +1,44 @@
+name: 'Docker Build and Push'
+description: 'Builds and pushes Docker images'
+inputs:
+  context:
+    description: 'Context path for Docker build'
+    required: true
+  dockerfile:
+    description: 'Path to the Dockerfile'
+    required: true
+  tags:
+    description: 'Docker image tags'
+    required: true
+  build-args:
+    description: 'Build arguments for Docker build'
+    required: false
+  cache-ref:
+    description: 'Cache reference for Docker'
+    required: true
+  push:
+    description: 'Flag to enable or disable pushing the image'
+    required: false
+    default: 'true'
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+    - uses: docker/setup-buildx-action@v3
+    - uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - run: |
+        docker buildx build \
+          --tag ${{ inputs.tags }} \
+          --file ${{ inputs.dockerfile }} \
+          --build-arg ${{ inputs.build-args }} \
+          --cache-from type=registry,ref=${{ inputs.cache-ref }} \
+          --cache-to type=registry,ref=${{ inputs.cache-ref }},mode=max \
+          ${{ inputs.push == 'true' && '--push' || '' }} \
+          ${{ inputs.context }}
+      shell: bash
+

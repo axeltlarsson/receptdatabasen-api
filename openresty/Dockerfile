@@ -1,7 +1,7 @@
 # Build vips in a builder container, taken from:
 # https://github.com/h2non/imaginary/blob/master/Dockerfile
 ARG GOLANG="1.13"
-FROM golang:${GOLANG} as builder
+FROM --platform=linux/amd64 golang:${GOLANG}  as builder
 
 ARG LIBVIPS_VERSION="8.12.2"
 
@@ -70,7 +70,7 @@ RUN luarocks install lua-resty-session
 RUN mkdir -p /uploads/cache && chown -R nobody /uploads
 VOLUME /uploads
 
-COPY --from=ghcr.io/axeltlarsson/receptdatabasen-frontend /app/dist /usr/local/openresty/nginx/html
+COPY --from=frontend:build /app/dist /usr/local/openresty/nginx/html
 COPY nginx /usr/local/openresty/nginx/conf
 COPY nginx_prod /usr/local/openresty/nginx/conf/prod
 COPY lua /usr/local/openresty/lua
