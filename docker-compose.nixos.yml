@@ -24,7 +24,7 @@ services:
       - PG_VERSION=12
       - RP_ID=${RP_ID}
       - ORIGIN=${ORIGIN}
-      - DISABLE_USR_VERIFICATION=false
+      - DISABLE_USER_VERIFICATION=false
 
     volumes:
       - db-vol:/var/lib/postgresql/data
@@ -42,9 +42,6 @@ services:
       - PGRST_JWT_SECRET=${JWT_SECRET}
       - PGRST_MAX_ROWS=5000
       - PGRST_PRE_REQUEST=""
-      - PGRST_RP_ID=${RP_ID}
-      - PGRST_ORIGIN=${ORIGIN}
-      - PGRST_DISABLE_USR_VERIFICATION=false
     depends_on:
       - db
     networks:
