@@ -54,6 +54,14 @@ in {
       };
     };
 
+    # TODO: make this work properly in a VM, somehow
+    services.caddy = {
+      enable = true;
+      virtualHosts."localhost:1234".extraConfig = ''
+        respond "hello, world"
+      '';
+    };
+
     # alternatively oci-containers for all but openresty (next step)
   };
 }

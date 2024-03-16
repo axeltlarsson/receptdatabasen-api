@@ -71,6 +71,8 @@ services:
       - uploads-vol:/uploads
     depends_on:
       - postgrest
+    ports:
+      - "8080:80"
 
 volumes:
   db-vol:
