@@ -61,15 +61,23 @@
             host = { inherit pkgs; };
             diskSize = 2 * 1024; # 2 GiB
 
-            forwardPorts = [{
-              from = "host";
-              host.port = 2222;
-              guest.port = 22;
-            }];
+            forwardPorts = [
+              {
+                from = "host";
+                host.port = 2222;
+                guest.port = 22;
+              }
+              {
+                from = "host";
+                host.port = 8080;
+                guest.port = 8080;
+              }
+            ];
           };
           services.openssh.enable = true;
           services.openssh.settings.PermitRootLogin = "yes";
           users.extraUsers.root.initialPassword = "";
+          system.stateVersion = "24.05";
         };
         machine = nixpkgs.lib.nixosSystem {
           system = builtins.replaceStrings [ "darwin" ] [ "linux" ] system;
