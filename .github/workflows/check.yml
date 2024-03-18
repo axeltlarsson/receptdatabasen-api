@@ -1,0 +1,22 @@
+name: Run NixOS integration tests
+
+on:
+  push:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - run: nix run nixpkgs#dig ghcr.io
+      - run: nix run nixpkgs#dig recept.axellarsson.nu
+      - run: nix run nixpkgs#dig www.example.com
+      - run: nix -L flake check
