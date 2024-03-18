@@ -1,4 +1,3 @@
-
 create or replace function login(user_name text, password text) returns json as $$
 declare
 usr record;
