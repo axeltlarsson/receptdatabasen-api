@@ -122,9 +122,62 @@
           program = "${program}";
         };
 
-        packages.docker-compose-file = pkgs.writeTextFile {
-          name = "docker-compose.yml";
-          text = pkgs.lib.readFile ./docker-compose.nixos.yml;
+        packages = {
+          docker-compose-file = pkgs.writeTextFile {
+            name = "docker-compose.yml";
+            text = pkgs.lib.readFile ./docker-compose.nixos.yml;
+          };
+
+          inherit (self.checks.${system}.default) driverInteractive;
+        };
+
+        checks.default = nixpkgs.legacyPackages."${system}".nixosTest {
+          name = "Integration test of the NixOS module";
+          nodes = {
+            server = { modulesPath, ... }: {
+              imports = [ self.nixosModules.default ];
+
+              config = {
+                virtualisation = {
+                  diskSize = 2 * 1024; # 2 GiB - the project needs a little bit more space
+                };
+                services.receptdatabasen.enable = true;
+                networking.firewall.allowedTCPPorts = [ 8080 ];
+
+              };
+            };
+            client = { pkgs, ... }: {
+              config = { environment.defaultPackages = [ pkgs.curl ]; };
+            };
+          };
+
+          testScript = { nodes }:
+            let
+              # inherit (nodes.server.tutorial) port;
+              inherit (nodes.client.nixpkgs.pkgs) curl;
+
+            in ''
+              import json
+
+              start_all()
+
+              server.wait_for_unit("receptdatabasen")
+              server.wait_for_open_port(8080)
+
+              expected = {"me":{"email":"alice@email.com","user_name":"alice","id":1}}
+
+              actual = json.loads(
+                  client.wait_until_succeeds("""
+                    ${curl}/bin/curl --fail --silent -H 'content-type: application/json' \
+                    -d '{"user_name": "alice", "password": "pass"}' \
+                    http://server:8080/rest/login
+                    """,
+                    5,
+                  )
+                )
+
+              assert actual == expected, f"Expected {expected}, but got {actual}"
+            '';
         };
       }) // {
         nixosModules.default = { pkgs, ... }:
