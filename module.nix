@@ -63,11 +63,11 @@ in {
         SUPER_USER = "superuser";
         SUPER_USER_PASSWORD = "superpassword";
         DB_PASS = "passwordpassswordpassword";
-        JWT_SECRET = "so secret";
+        JWT_SECRET = "AG7Yo/BbqGZUm75BZ5HfDkexDKAIumSCJY+eoyh9f1sr"; # need to be minimum 32 characters
         RP_ID = "'${rp_id}'";
         ORIGIN = "'${origin}'";
 
-        COOKIE_SESSION_SECRET = "secret";
+        COOKIE_SESSION_SECRET = "TFp3nhFY_mUFbHqBoSkYnIbhBBKVr1ar";
         OPENRESTY_PORT = toString cfg.port;
       };
       serviceConfig = {
