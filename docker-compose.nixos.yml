@@ -71,7 +71,7 @@ services:
     networks:
       - net
     ports:
-      - "8080:80"
+      - "${OPENRESTY_PORT}:80"
 
 volumes:
   db-vol:

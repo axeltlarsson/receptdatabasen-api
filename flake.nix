@@ -61,13 +61,18 @@
             forwardPorts = [
               {
                 from = "host";
-                host.port = 2222;
-                guest.port = 22;
+                host.port = 8081;
+                guest.port = 8081;
               }
               {
                 from = "host";
-                host.port = 8080;
-                guest.port = 8080;
+                host.port = 80;
+                guest.port = 80;
+              }
+              {
+                from = "host";
+                host.port = 443;
+                guest.port = 443;
               }
             ];
           };
@@ -81,7 +86,11 @@
           modules = [
             base
             self.nixosModules.default
-            ({ config, pkgs, ... }: { services.receptdatabasen.enable = true; })
+            ({ config, pkgs, ... }: {
+              services.receptdatabasen.enable = true;
+              services.receptdatabasen.port = 8081;
+              services.receptdatabasen.domain = "test.axellarsson.nu";
+            })
           ];
         };
         program = pkgs.writeShellScript "run-vm.sh" ''

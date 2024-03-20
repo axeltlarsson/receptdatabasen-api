@@ -4,42 +4,71 @@
 # the docker-compose-file arg
 docker-compose-file:
 { config, lib, pkgs, ... }:
-let cfg = config.services.receptdatabasen;
+let
+
+  cfg = config.services.receptdatabasen;
+
 in {
   options.services.receptdatabasen = {
     enable = lib.mkEnableOption "Receptdatabasen service";
+
+    port = lib.mkOption {
+      type = lib.types.port;
+      default = 8080;
+      description = ''
+        The internal port to run Receptdatabasen on
+      '';
+    };
+
+    domain = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      example = "recept.axellarsson.nu";
+      description = ''
+        A domain to run Receptdatabasen on
+        If set, the Caddy service will be configured to serve Receptdatabasen on this domain
+      '';
+    };
+
+    openFirewall = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Whether to open the firewall for Receptdatabasen at port 80 and 443
+        This only has an effect if the domain option is set
+      '';
+    };
   };
 
   config = lib.mkIf cfg.enable {
-    virtualisation.docker.enable = true; # Ensure Docker service is enabled
-    environment.systemPackages = with pkgs;
-      [ docker-compose ]; # Ensure Docker Compose is available
+    # Currently we run the project via docker/compose
+    virtualisation.docker.enable = true;
+    environment.systemPackages = [ pkgs.docker-compose ];
 
-    # todo: firewall
-    # todo: caddy reverse proxy
-    # todo: configuration, env vars for docker-compose, prod etc
-    # todo: secrets
-
-    # docker-compose script with systemd service
+    # systemd service for the docker-compose setup
     systemd.services.receptdatabasen = {
       description = "Receptdatabasen";
       requires = [ "docker.service" ];
       after = [ "docker.service" ];
       wantedBy = [ "multi-user.target" ];
-      environment = {
+      environment = let
+        rp_id = if cfg.domain != "" then cfg.domain else "localhost";
+        origin = if cfg.domain != "" then
+          "https://" + cfg.domain
+        else
+          "http://localhost:${toString cfg.port}";
+      in {
         COMPOSE_PROJECT_NAME = "receptdatabasen";
-        JWT_SECRET = "so secret";
-        # DB connection details (used by all containers);
-        DB_PASS = "passwordpassswordpassword";
-        # OpenResty;
-        COOKIE_SESSION_SECRET = "secret";
-        # PostgREST;
-        RP_ID = "'recept.axellarsson.nu'"; # TODO: option
-        ORIGIN = "'https://recept.axellarsson.nu'"; # TODO: option
-        # PostgreSQL container config;
-        # Use this to connect directly to the db running in the container;
+
         SUPER_USER = "superuser";
         SUPER_USER_PASSWORD = "superpassword";
+        DB_PASS = "passwordpassswordpassword";
+        JWT_SECRET = "so secret";
+        RP_ID = "'${rp_id}'";
+        ORIGIN = "'${origin}'";
+
+        COOKIE_SESSION_SECRET = "secret";
+        OPENRESTY_PORT = toString cfg.port;
       };
       serviceConfig = {
         Type = "simple";
@@ -54,14 +83,16 @@ in {
       };
     };
 
-    # TODO: make this work properly in a VM, somehow
-    services.caddy = {
+    # Reverse proxy setup using caddy
+    networking.firewall.allowedTCPPorts =
+      lib.mkIf (cfg.domain != "" && cfg.openFirewall) [ 80 443 ];
+
+    services.caddy = lib.mkIf (cfg.domain != "") {
       enable = true;
-      virtualHosts."localhost:1234".extraConfig = ''
-        respond "hello, world"
+
+      virtualHosts."${cfg.domain}".extraConfig = ''
+        reverse_proxy localhost:${toString cfg.port}
       '';
     };
-
-    # alternatively oci-containers for all but openresty (next step)
   };
 }
