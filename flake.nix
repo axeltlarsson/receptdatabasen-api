@@ -7,8 +7,6 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = nixpkgs.legacyPackages.${system};
-
-        python = pkgs.python311;
         pyPkgs = pkgs.python311Packages;
 
         soft-webauthn = (pyPkgs.buildPythonPackage rec {
@@ -24,11 +22,10 @@
 
           pythonImportsCheck = [ "soft_webauthn" ];
         });
-        # );
+
         pythonEnv = pkgs.python311.withPackages
           (ps: [ ps.requests ps.pytest ps.webauthn soft-webauthn ]);
 
-        pg = pkgs.postgresql_12;
         import_prod = pkgs.writeShellApplication {
           name = "import-prod";
           runtimeInputs = [ pkgs.docker pkgs.docker-compose ];
@@ -50,22 +47,17 @@
           text = pkgs.lib.strings.fileContents ./scripts/hot-reload.sh;
         };
 
-        # nixos VM
+        # NixOS VM
         base = { lib, modulesPath, ... }: {
           imports = [ "${modulesPath}/virtualisation/qemu-vm.nix" ];
           # https://github.com/utmapp/UTM/issues/2353
-          # networking.nameservers = lib.mkIf pkgs.stdenv.isDarwin [ "8.8.8.8" ];
-          networking.nameservers = [ "1.1.1.1" "9.9.9.9" "8.8.8.8" ];
-          environment.defaultPackages =
-            [ nixpkgs.legacyPackages.aarch64-linux.dig ];
+          networking.nameservers = lib.mkIf pkgs.stdenv.isDarwin [ "8.8.8.8" ];
           services.getty.autologinUser = "root";
           virtualisation = {
             graphics = false;
             host = { inherit pkgs; };
             diskSize = 2 * 1024; # 2 GiB
 
-            # docker.daemon.settings = { dns = [ "8.8.8.8" "8.8.4.4" ]; };
-            docker.extraOptions = "--dns 8.8.8.8";
             forwardPorts = [
               {
                 from = "host";
@@ -97,6 +89,7 @@
           trap "rm -f $NIX_DISK_IMAGE" EXIT
           ${machine.config.system.build.vm}/bin/run-nixos-vm
         '';
+
       in {
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = [ pkgs.bashInteractive ];
@@ -144,57 +137,25 @@
 
               config = {
                 virtualisation = {
-                  diskSize = 2
-                    * 1024; # 2 GiB - the project needs a little bit more space
-                  # docker.daemon.settings = { dns = [ "8.8.8.8" "8.8.4.4" ]; };
-                  docker.extraOptions = "--dns 8.8.8.8";
+                  # 2 GiB - the project needs a little bit more space
+                  diskSize = 2 * 1024;
                 };
 
-                networking.nameservers = [ "1.1.1.1" "9.9.9.9" "8.8.8.8" ];
                 services.receptdatabasen.enable = true;
-                # networking.firewall.allowedTCPPorts = [ 8080 53 ];
-                # networking.firewall.allowedUDPPorts = [ 53 ];
-                networking.firewall.enable = false;
-                services.resolved.enable = true;
-                services.resolved.fallbackDns =
-                  [ "8.8.8.8" "2001:4860:4860::8844" ];
-
-                environment.defaultPackages = [ pkgs.dig ];
               };
             };
             client = { pkgs, ... }: {
-              config = {
-                environment.defaultPackages = [ pkgs.curl pkgs.dig ];
-                services.resolved.enable = true;
-                services.resolved.fallbackDns =
-                  [ "8.8.8.8" "2001:4860:4860::8844" ];
-
-                networking.firewall.enable = false;
-              };
+              config = { environment.defaultPackages = [ pkgs.curl ]; };
             };
           };
 
           testScript = { nodes }:
-            let
-              # inherit (nodes.server.tutorial) port;
-              inherit (nodes.client.nixpkgs.pkgs) curl dig;
+            let inherit (nodes.client.nixpkgs.pkgs) curl;
 
             in ''
               import json
 
               start_all()
-
-              output = server.execute("dig @8.8.8.8 ghcr.io")
-              print(output)
-              output = server.execute("dig example.com")
-              print(output)
-              output = server.execute("dig ghcr.io")
-              print(output)
-
-              output = client.execute("dig @8.8.8.8 ghcr.io")
-              print(output)
-              output = client.execute("dig ghcr.io")
-              print(output)
 
               server.wait_for_unit("receptdatabasen")
               server.wait_for_open_port(8080)
