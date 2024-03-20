@@ -8,6 +8,8 @@ CREATE TABLE passkey (
     last_used_at TIMESTAMPTZ
 );
 
+grant select, insert, update, delete on data.passkey to api;
+
 create trigger passkey_set_updated_at_timestamp
   before update on data.passkey for each row
   execute procedure set_updated_at_timestamp ();
