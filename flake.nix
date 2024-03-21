@@ -90,6 +90,10 @@
               services.receptdatabasen.enable = true;
               services.receptdatabasen.port = 8081;
               services.receptdatabasen.domain = "test.axellarsson.nu";
+              services.receptdatabasen.jwtSecret =
+                "3ARDEfnJWEXlnJE0GRp5NRFUiLbuNZlF";
+              services.receptdatabasen.cookieSessionSecret =
+                "SkNUZkQNePjYlOfBbLM641wqzFhi0I7u";
             })
           ];
         };
@@ -151,6 +155,10 @@
                 };
 
                 services.receptdatabasen.enable = true;
+                services.receptdatabasen.jwtSecret =
+                  "3ARDEfnJWEXlnJE0GRp5NRFUiLbuNZlF";
+                services.receptdatabasen.cookieSessionSecret =
+                  "SkNUZkQNePjYlOfBbLM641wqzFhi0I7u";
               };
             };
             client = { pkgs, ... }: {
@@ -158,31 +166,7 @@
             };
           };
 
-          testScript = { nodes }:
-            let inherit (nodes.client.nixpkgs.pkgs) curl;
-
-            in ''
-              import json
-
-              start_all()
-
-              server.wait_for_unit("receptdatabasen")
-              server.wait_for_open_port(8080)
-
-              expected = {"me":{"email":"alice@email.com","user_name":"alice","id":1}}
-
-              actual = json.loads(
-                  client.wait_until_succeeds("""
-                    ${curl}/bin/curl --fail --silent -H 'content-type: application/json' \
-                    -d '{"user_name": "alice", "password": "pass"}' \
-                    http://server:8080/rest/login
-                    """,
-                    5,
-                  )
-                )
-
-              assert actual == expected, f"Expected {expected}, but got {actual}"
-            '';
+          testScript = { nodes }: pkgs.lib.readFile ./nixos_integration_test.py;
         };
       }) // {
         nixosModules.default = { pkgs, ... }:

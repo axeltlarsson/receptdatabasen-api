@@ -7,12 +7,12 @@ import pytest
 import requests
 from soft_webauthn import SoftWebauthnDevice
 
-BASE_URL = "http://localhost:1234/rest"
+BASE_URL = "http://localhost:8080/rest"
 
 # insert into data.user (use_name, password) values ('user_1', 'password-password');
-USERNAME_1 = "user_1"
-USERNAME_2 = "user_2"
-PASSWORD = "password-password"
+USERNAME_1 = "alice"
+USERNAME_2 = "bob"
+PASSWORD = "pass"
 
 
 @pytest.fixture(name="session")

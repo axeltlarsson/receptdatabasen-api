@@ -18,7 +18,7 @@ create or replace function api.generate_registration_options(user_id text, user_
   registration_options = generate_registration_options(
     rp_id=rp_id,
     rp_name="receptdatabasen", 
-    user_id=user_id,
+    user_id=user_id.encode("utf-8"),
     user_name=user_name,
     user_display_name=user_name,
     exclude_credentials=[PublicKeyCredentialDescriptor(id=base64url_to_bytes(cred)) for cred in (exclude_credentials or [])],

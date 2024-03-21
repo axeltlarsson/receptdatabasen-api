@@ -1,6 +1,8 @@
 services:
   db:
-    image: ghcr.io/axeltlarsson/receptdatabasen-db:latest
+    # image: ghcr.io/axeltlarsson/receptdatabasen-db:latest
+    build:
+      context: ./db
     restart: unless-stopped
     networks:
       - net
@@ -16,7 +18,7 @@ services:
       - DB_USER=authenticator
       - DB_PASS=${DB_PASS}
       - DB_ANON_ROLE=anonymous
-      - DEVELOPMENT=0
+      - DEVELOPMENT=1
       - JWT_SECRET=${JWT_SECRET}
       - JWT_LIFETIME=2592060
       - PG_VERSION=12
@@ -25,7 +27,7 @@ services:
       - DISABLE_USER_VERIFICATION=false
 
     volumes:
-      - db-vol:/var/lib/postgresql/data
+      - db-vol2:/var/lib/postgresql/data
 
   # PostgREST instance, is responsible for communicating with the database
   # and providing a REST api, (almost) every request that is sent to the database goes through it
@@ -39,6 +41,9 @@ services:
       - PGRST_DB_POOL=10
       - PGRST_JWT_SECRET=${JWT_SECRET}
       - PGRST_MAX_ROWS=5000
+      - PGRST_RP_ID=${RP_ID}
+      - PGRST_ORIGIN=${ORIGIN}
+      - PGRST_DISABLE_USER_VERIFICATION=${DISABLE_USER_VERIFICATION}
     depends_on:
       - db
     networks:
@@ -52,7 +57,7 @@ services:
     image: ghcr.io/axeltlarsson/receptdatabasen-openresty:latest
     command: ["/usr/bin/openresty", "-g", "daemon off; error_log /dev/stderr info;"]
     environment:
-      - DEVELOPMENT=0
+      - DEVELOPMENT=1
       - POSTGREST_HOST=postgrest
       - POSTGREST_PORT=3000
       - DB_HOST=db
@@ -74,7 +79,7 @@ services:
       - "${OPENRESTY_PORT}:80"
 
 volumes:
-  db-vol:
+  db-vol2:
   uploads-vol:
 
 networks:
