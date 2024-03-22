@@ -47,61 +47,10 @@
           text = pkgs.lib.strings.fileContents ./scripts/hot-reload.sh;
         };
 
-        # NixOS VM
-        base = { lib, modulesPath, ... }: {
-          imports = [ "${modulesPath}/virtualisation/qemu-vm.nix" ];
-          # https://github.com/utmapp/UTM/issues/2353
-          networking.nameservers = lib.mkIf pkgs.stdenv.isDarwin [ "8.8.8.8" ];
-          services.getty.autologinUser = "root";
-          virtualisation = {
-            graphics = false;
-            host = { inherit pkgs; };
-            diskSize = 2 * 1024; # 2 GiB
-
-            forwardPorts = [
-              {
-                from = "host";
-                host.port = 8081;
-                guest.port = 8081;
-              }
-              {
-                from = "host";
-                host.port = 80;
-                guest.port = 80;
-              }
-              {
-                from = "host";
-                host.port = 443;
-                guest.port = 443;
-              }
-            ];
-          };
-          services.openssh.enable = true;
-          services.openssh.settings.PermitRootLogin = "yes";
-          users.extraUsers.root.initialPassword = "";
-          system.stateVersion = "24.05";
+        vm-config = import ./nix/vm-configuration.nix {
+          inherit system nixpkgs;
+          module = self.nixosModules.default;
         };
-        machine = nixpkgs.lib.nixosSystem {
-          system = builtins.replaceStrings [ "darwin" ] [ "linux" ] system;
-          modules = [
-            base
-            self.nixosModules.default
-            ({ config, pkgs, ... }: {
-              services.receptdatabasen.enable = true;
-              services.receptdatabasen.port = 8081;
-              services.receptdatabasen.domain = "test.axellarsson.nu";
-              services.receptdatabasen.jwtSecret =
-                "3ARDEfnJWEXlnJE0GRp5NRFUiLbuNZlF";
-              services.receptdatabasen.cookieSessionSecret =
-                "SkNUZkQNePjYlOfBbLM641wqzFhi0I7u";
-            })
-          ];
-        };
-        program = pkgs.writeShellScript "run-vm.sh" ''
-          export NIX_DISK_IMAGE=$(mktemp -u -t nixos.qcow2)
-          trap "rm -f $NIX_DISK_IMAGE" EXIT
-          ${machine.config.system.build.vm}/bin/run-nixos-vm
-        '';
 
       in {
         devShells.default = pkgs.mkShell {
@@ -130,13 +79,13 @@
 
         apps.nixos-vm = {
           type = "app";
-          program = "${program}";
+          program = "${vm-config.run-vm}";
         };
 
         packages = {
           docker-compose-file = pkgs.writeTextFile {
             name = "docker-compose.yml";
-            text = pkgs.lib.readFile ./docker-compose.nixos.yml;
+            text = pkgs.lib.readFile ./nix/docker-compose.nixos.yml;
           };
 
           inherit (self.checks.${system}.default) driverInteractive;
@@ -166,7 +115,7 @@
             };
           };
 
-          testScript = { nodes }: pkgs.lib.readFile ./nixos_integration_test.py;
+          testScript = { nodes }: pkgs.lib.readFile ./nix/integration_test.py;
         };
       }) // {
         nixosModules.default = { pkgs, ... }:
@@ -177,7 +126,7 @@
               self.packages.${pkgs.system}.docker-compose-file;
           in {
             # to get the actual module, we must first apply the docker-compose-file arg
-            imports = [ ((import ./module.nix) docker-compose-file) ];
+            imports = [ ((import ./nix/module.nix) docker-compose-file) ];
           };
       };
 }
