@@ -39,9 +39,6 @@ services:
       - PGRST_DB_POOL=10
       - PGRST_JWT_SECRET=${JWT_SECRET}
       - PGRST_MAX_ROWS=5000
-      - PGRST_RP_ID=${RP_ID}
-      - PGRST_ORIGIN=${ORIGIN}
-      - PGRST_DISABLE_USER_VERIFICATION=${DISABLE_USER_VERIFICATION}
     depends_on:
       - db
     networks:

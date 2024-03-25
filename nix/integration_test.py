@@ -21,10 +21,6 @@ actual = json.loads(
 
 assert actual == expected, f"Expected {expected}, but got {actual}"
 
-res = client.succeed("cat cookie.txt")
-print(res)
-
-
 # get recipes
 recipes = json.loads(
     client.wait_until_succeeds(
