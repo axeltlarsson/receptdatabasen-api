@@ -40,7 +40,9 @@ RUN DEBIAN_FRONTEND=noninteractive \
       ldconfig
 
 # The final openresty image
-FROM --platform=linux/amd64 openresty/openresty:buster
+FROM openresty/openresty:buster
+LABEL org.opencontainers.image.source=https://github.com/axeltlarsson/receptdatabasen-api
+LABEL org.opencontainers.image.description="Receptdatabasen openresty"
 
 COPY --from=builder /usr/local/lib /usr/local/lib
 
@@ -68,7 +70,7 @@ RUN luarocks install lua-resty-session
 RUN mkdir -p /uploads/cache && chown -R nobody /uploads
 VOLUME /uploads
 
-COPY --from=receptdatabasen_frontend_builder /app/dist /usr/local/openresty/nginx/html
+COPY --from=ghcr.io/axeltlarsson/receptdatabasen-frontend /app/dist /usr/local/openresty/nginx/html
 COPY nginx /usr/local/openresty/nginx/conf
 COPY nginx_prod /usr/local/openresty/nginx/conf/prod
 COPY lua /usr/local/openresty/lua

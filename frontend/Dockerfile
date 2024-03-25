@@ -3,6 +3,8 @@
 # so we simply run this with x86 instead as on prod, locally I'd use nix's
 # version of elm (compiled for aarch64) anyway
 FROM --platform=linux/amd64 node:bookworm
+LABEL org.opencontainers.image.source=https://github.com/axeltlarsson/receptdatabasen-api
+LABEL org.opencontainers.image.description="Receptdatabasen frontend"
 
 WORKDIR /app
 COPY package*.json ./
