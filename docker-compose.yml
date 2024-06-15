@@ -48,7 +48,7 @@ services:
   openresty:
     build: # openresty image builds the frontend, so needs access to that context
       context: openresty
-    command: ["/usr/bin/openresty", "-g", "daemon off; error_log /dev/stderr info;"]
+    command: ["openresty", "-g", "daemon off; error_log /dev/stderr info;"]
     environment:
       - DEVELOPMENT=${DEVELOPMENT}
       - POSTGREST_HOST=${POSTGREST_HOST}

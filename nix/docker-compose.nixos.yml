@@ -50,7 +50,7 @@ services:
   # to PostgREST down the stack.
   openresty:
     image: ghcr.io/axeltlarsson/receptdatabasen-openresty:latest
-    command: ["/usr/bin/openresty", "-g", "daemon off; error_log /dev/stderr info;"]
+    command: ["openresty", "-g", "daemon off; error_log /dev/stderr info;"]
     environment:
       - DEVELOPMENT=1
       - POSTGREST_HOST=postgrest
