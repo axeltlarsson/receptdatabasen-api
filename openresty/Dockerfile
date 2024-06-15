@@ -40,7 +40,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
       ldconfig
 
 # The final openresty image
-FROM openresty/openresty:jammy
+FROM openresty/openresty:focal
 LABEL org.opencontainers.image.source=https://github.com/axeltlarsson/receptdatabasen-api
 LABEL org.opencontainers.image.description="Receptdatabasen openresty"
 
@@ -50,8 +50,8 @@ COPY --from=builder /usr/local/lib /usr/local/lib
 RUN DEBIAN_FRONTEND=noninteractive \
       apt-get update && \
       apt-get install --no-install-recommends -y \
-      libglib2.0-0 libjpeg-turbo8 libpng16-16 \
-      libwebp7 libwebpmux3 libwebpdemux2 libtiff5 libgif7 libexif12 libxml2 \
+      libglib2.0-0 libjpeg-turbo8 libjpeg62 libpng16-16 \
+      libwebp6 libwebpmux3 libwebpdemux2 libtiff5 libgif7 libexif12 libxml2 \
       libgsf-1-114 fftw3 liborc-0.4-0 librsvg2-2 libheif1 && \
       apt-get autoremove -y && \
       apt-get autoclean && \
