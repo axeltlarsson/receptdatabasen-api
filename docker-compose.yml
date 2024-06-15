@@ -30,7 +30,7 @@ services:
   # PostgREST instance, is responsible for communicating with the database
   # and providing a REST api, (almost) every request that is sent to the database goes through it
   postgrest:
-    image: postgrest/postgrest:v12.0.2
+    image: postgrest/postgrest:v12.0.3
     environment:
       - PGRST_DB_URI=postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
       - PGRST_DB_SCHEMA=${DB_SCHEMA}
