@@ -11,7 +11,7 @@ let
     virtualisation = {
       graphics = false;
       host = { inherit pkgs; };
-      diskSize = 2 * 1024; # 2 GiB
+      diskSize = 3 * 1024; # 3 GiB
 
       forwardPorts = [
         {
