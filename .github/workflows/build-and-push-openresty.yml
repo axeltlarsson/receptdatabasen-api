@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - axel/nixos
+      - master
     paths:
       - 'frontend/**'
       - 'openresty/**'

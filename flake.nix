@@ -100,7 +100,7 @@
               config = {
                 virtualisation = {
                   # 2 GiB - the project needs a little bit more space
-                  diskSize = 2 * 1024;
+                  diskSize = 3 * 1024;
                 };
 
                 services.receptdatabasen.enable = true;
