@@ -1,7 +1,7 @@
 # Build vips in a builder container, taken from:
 # https://github.com/h2non/imaginary/blob/master/Dockerfile
 ARG GOLANG="1.13"
-FROM --platform=linux/amd64 golang:${GOLANG}  as builder
+FROM golang:${GOLANG} as builder
 
 ARG LIBVIPS_VERSION="8.12.2"
 
@@ -40,7 +40,9 @@ RUN DEBIAN_FRONTEND=noninteractive \
       ldconfig
 
 # The final openresty image
-FROM --platform=linux/amd64 openresty/openresty:buster
+FROM openresty/openresty:focal
+LABEL org.opencontainers.image.source=https://github.com/axeltlarsson/receptdatabasen-api
+LABEL org.opencontainers.image.description="Receptdatabasen openresty"
 
 COPY --from=builder /usr/local/lib /usr/local/lib
 
@@ -48,7 +50,7 @@ COPY --from=builder /usr/local/lib /usr/local/lib
 RUN DEBIAN_FRONTEND=noninteractive \
       apt-get update && \
       apt-get install --no-install-recommends -y \
-      libglib2.0-0 libjpeg62-turbo libpng16-16 \
+      libglib2.0-0 libjpeg-turbo8 libjpeg62 libpng16-16 \
       libwebp6 libwebpmux3 libwebpdemux2 libtiff5 libgif7 libexif12 libxml2 \
       libgsf-1-114 fftw3 liborc-0.4-0 librsvg2-2 libheif1 && \
       apt-get autoremove -y && \
@@ -56,19 +58,15 @@ RUN DEBIAN_FRONTEND=noninteractive \
       apt-get clean && \
       rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install luarocks
-RUN DEBIAN_FRONTEND=noninteractive apt-get update \
-      && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      luarocks
-
 # Install lua-vips
-RUN luarocks install lua-vips
-RUN luarocks install lua-resty-session
+RUN /usr/local/openresty/luajit/bin/luarocks config --lua-version=5.1 rocks_provided.luaffi-tkl 2.1-1
+RUN /usr/local/openresty/luajit/bin/luarocks install lua-vips
+RUN /usr/local/openresty/luajit/bin/luarocks install lua-resty-session
 
 RUN mkdir -p /uploads/cache && chown -R nobody /uploads
 VOLUME /uploads
 
-COPY --from=receptdatabasen_frontend_builder /app/dist /usr/local/openresty/nginx/html
+COPY --from=ghcr.io/axeltlarsson/receptdatabasen-frontend /app/dist /usr/local/openresty/nginx/html
 COPY nginx /usr/local/openresty/nginx/conf
 COPY nginx_prod /usr/local/openresty/nginx/conf/prod
 COPY lua /usr/local/openresty/lua

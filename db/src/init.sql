@@ -14,8 +14,8 @@ set client_min_messages to warning;
 \set jwt_lifetime `echo $JWT_LIFETIME`
 \set quoted_jwt_lifetime '\'' :jwt_lifetime '\''
 \set rp_id `echo $RP_ID`
-\set origin `echo $origin`
-\set req_usr_verification `echo $DISABLE_USR_VERIFICATION`
+\set origin `echo $ORIGIN`
+\set disable_user_verification `echo $DISABLE_USER_VERIFICATION`
 
 \echo # Loading database definition
 begin;
@@ -41,10 +41,12 @@ select settings.set('jwt_secret', :quoted_jwt_secret);
 select settings.set('jwt_lifetime', :quoted_jwt_lifetime);
 select settings.set('rp_id', :rp_id);
 select settings.set('origin', :origin);
-select settings.set('disable_usr_verification', :disable_usr_verification);
-
+select settings.set('disable_user_verification', :disable_user_verification::int::text); --  settings need bools as '0' or '1'
 
 \echo # Loading application definitions
+
+\echo # Loading roles
+\ir authorization/roles.sql
 
 -- private schema where all tables will be defined
 -- you can use other names besides "data" or even spread the tables
@@ -56,13 +58,27 @@ select settings.set('disable_usr_verification', :disable_usr_verification);
 -- privileges defined for the current PostgreSQL role making the requests
 \ir api/schema.sql
 
-
-\echo # Loading roles and privilege settings
-\ir authorization/roles.sql
+\echo # Loading privileges
 \ir authorization/privileges.sql
 
 \echo # Loading sample data
 \ir sample_data/data.sql
+
+
+-- Deploy app:schema_cache_refresh_trigger to pg
+-- Create an event trigger function - this will trigger postgrest schema cache reload
+CREATE OR REPLACE FUNCTION pgrst_watch() RETURNS event_trigger
+  LANGUAGE plpgsql
+  AS $$
+BEGIN
+  NOTIFY pgrst, 'reload schema';
+END;
+$$;
+
+-- This event trigger will fire after every ddl_command_end event
+CREATE EVENT TRIGGER pgrst_watch
+  ON ddl_command_end
+  EXECUTE PROCEDURE pgrst_watch();
 
 
 commit;
