@@ -1,27 +1,10 @@
-# Use nix to build vips as it's already neatly packaged in nixpkgs
-FROM --platform=linux/amd64 nixos/nix:latest as builder
-
-RUN nix-env \
-  --option filter-syscalls false \
-  -iA nixpkgs.vips
-
-RUN mkdir /tmp/nix-store-closure
-# first get the closure of the vips package and copy to /tmp/nix-store-closure
-RUN nix-store -qR $(nix-env --out-path --query vips | grep -oP 'bin=\K[^;]+') | xargs -I{} cp -R {} /tmp/nix-store-closure
-# then get the location of the vips binary and copy to /usr/bin/vips
-RUN cp -R $(nix-env --out-path --query vips | grep -oP 'bin=\K[^;]+') /usr/bin/vips
-
-# The final openresty image
 FROM --platform=linux/amd64 openresty/openresty:1.27.1.1-0-noble
-
-COPY --from=builder /tmp/nix-store-closure /nix/store
-# get the vips binary - probably actually not necessary as all we care about is the lib, still nice to have I suppose
-COPY --from=builder /usr/bin/vips/bin/* /usr/bin/
 
 # Install runtime dependencies
 RUN DEBIAN_FRONTEND=noninteractive \
       apt-get update && \
       apt-get install --no-install-recommends -y \
+      libvips \
       libglib2.0-0 libjpeg-turbo8 libpng16-16 libwebp-dev \
       libwebp7 libwebpmux3 libwebpdemux2 libtiff6 libgif7 libexif12 libxml2 \
       libgsf-1-114 libfftw3-bin liborc-0.4-0 librsvg2-2 libheif1 && \
@@ -36,8 +19,9 @@ RUN luarocks config --lua-version=5.1 rocks_provided.luaffi-tkl 2.1-1
 RUN luarocks install lua-vips 1.1-11 && \
     luarocks install lua-resty-session 4.0.5-1
 
-# link libvips.so to /usr/local/lib so that the dynamic linker can find it, and update the dynamic linker cache
-RUN ln -s $(find /nix/store -name libvips.so) /usr/local/lib && ldconfig
+# the libvips provided by apt-get is versioned libvips.so.42 but lua-vips expects it to be named libvips.so
+# so let's symlink it and refresh the linker cache
+RUN ln -s /lib/x86_64-linux-gnu/libvips.so.42 /lib/x86_64-linux-gnu/libvips.so && ldconfig
 
 RUN mkdir -p /uploads/cache && chown -R nobody /uploads
 VOLUME /uploads
