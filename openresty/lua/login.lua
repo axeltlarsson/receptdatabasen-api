@@ -13,7 +13,7 @@ ngx.req.read_body()
 local res = ngx.location.capture(
   "/internal/rest/rpc/login",
   { method = ngx.HTTP_POST, always_forward_body = true }
-  )
+)
 
 if res.status ~= 200 then
   -- in case of error, just forward it as is

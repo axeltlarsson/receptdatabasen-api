@@ -21,3 +21,4 @@ services:
       - ./openresty/nginx:/usr/local/openresty/nginx/conf
       - ./frontend/dist:/usr/local/openresty/nginx/html
       - ./openresty/lua:/usr/local/openresty/lua
+    command: ["openresty", "-g", "daemon off; error_log /dev/stderr debug;"]
