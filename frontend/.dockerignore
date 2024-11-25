@@ -2,3 +2,8 @@ node_modules/
 build/
 elm-stuff/
 *.md
+dist/
+review/
+*.txt
+flake.lock
+flake.nix
