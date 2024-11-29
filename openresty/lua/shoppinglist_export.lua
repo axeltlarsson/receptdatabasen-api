@@ -1,6 +1,7 @@
 local utils = require "utils"
 local cjson = require "cjson"
 local jwt = require "resty.jwt"
+local http = require "resty.http"
 
 -- Extract the recipe ID using ngx.re.match
 local recipe_id_match = ngx.re.match(ngx.var.uri, "^/export_to_list/(\\w+)$")
@@ -62,11 +63,22 @@ local jwt_token = generate_jwt(user_name) -- assume same user_name in both servi
 -- how to know which list to add the ingredients to? - we just assume the first available list for now
 -- how to know which user is making the request? - we know from a call to /me to get the user_name
 -- make the external http request to the listan API
-
 local api_url = os.getenv("LISTAN_API_URL") .. "/lists/batch/"
-print("POST to " .. api_url)
+local httpc = http.new()
+local res, err = httpc:request_uri(api_url, {
+    method = "POST",
+    headers = {
+        ["Content-Type"] = "application/json",
+        ["Authorization"] = "Bearer " .. jwt_token
+    },
+    body = cjson.encode(cjson.decode(recipe.body).ingredients)
+})
 
-
--- Return the response from PostgREST as is for now
-ngx.status = recipe.status
-ngx.say(cjson.encode({ jwt = jwt_token, recipe = cjson.decode(recipe.body) }))
+if not res then
+    utils.return_error("Failed to make request to listan API: " .. err, ngx.HTTP_INTERNAL_SERVER_ERROR)
+else
+    print("Response from listan API: " .. res.body)
+    -- return the response from the listan API as is
+    ngx.status = res.status
+    return ngx.say(res.body)
+end
