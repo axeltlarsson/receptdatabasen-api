@@ -13,7 +13,9 @@ module Recipe exposing
     , metadata
     , search
     , slug
+    , id
     , uploadImage
+    , exportToShoppingList
     )
 
 {- The interface to the Recipe data structure.
@@ -90,6 +92,10 @@ contents (Recipe _ (Full c)) =
 slug : Recipe a -> Slug
 slug (Recipe md _) =
     md.title
+
+id: Recipe a -> Int
+id (Recipe md _) =
+    md.id
 
 
 
@@ -249,6 +255,19 @@ uploadImage idx file toMsg =
         , headers = []
         , body = Http.fileBody file
         , expect = expectJsonWithBody toMsg imageUrlDecoder
+        }
+
+-- export to /export_to_list/:recipe_id
+exportToShoppingList : Int -> (Result ServerError () -> msg) -> Cmd msg
+exportToShoppingList recipeId toMsg =
+    Http.request
+        { url = "/export_to_list/" ++ String.fromInt recipeId
+        , method = "POST"
+        , timeout = Nothing
+        , tracker = Nothing
+        , headers = []
+        , body = Http.emptyBody
+        , expect = expectJsonWithBody toMsg (Decode.succeed ())
         }
 
 
