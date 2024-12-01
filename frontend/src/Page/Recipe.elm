@@ -54,7 +54,15 @@ type alias Model =
     , checkboxStatus : Dict Int Bool
     , scaledPortions : Int
     , toDelete : Bool
+    , exportStatus : ExportStatus ()
     }
+
+
+type ExportStatus a
+    = NotStarted
+    | AwaitingExport
+    | ExportedList
+    | ExportFailed Api.ServerError
 
 
 type Status recipe
@@ -72,6 +80,7 @@ init session slug =
               , checkboxStatus = Dict.empty
               , scaledPortions = recipe |> Recipe.contents |> .portions
               , toDelete = False
+              , exportStatus = NotStarted
               }
             , resetViewport
             )
@@ -82,6 +91,7 @@ init session slug =
               , checkboxStatus = Dict.empty
               , scaledPortions = 0
               , toDelete = False
+              , exportStatus = NotStarted
               }
             , Cmd.batch [ Recipe.fetch slug LoadedRecipe, resetViewport ]
             )
@@ -322,8 +332,23 @@ viewIngredients ingredients scaledPortions originalPortions =
             [ el [ Font.size Palette.xLarge ] (text "Ingredienser")
             , viewPortions scaledPortions originalPortions
             , column [] [ viewMarkdown (toFloat scaledPortions / toFloat originalPortions) False ingredients Dict.empty ]
+            , viewAddToShoppingList
             ]
         ]
+
+
+viewAddToShoppingList : Element Msg
+viewAddToShoppingList =
+    Input.button
+        [ Background.color Palette.blush
+        , Border.rounded 3
+        , padding 10
+        , Font.color Palette.white
+        , Element.mouseOver [ Border.glow Palette.lightGrey 3 ]
+        ]
+        { onPress = Just ClickedAddToShoppingList
+        , label = row [ spacing 10 ] [ wrapIcon FeatherIcons.shoppingCart, text "Lägg till i inköpslista" ]
+        }
 
 
 wrapIcon : FeatherIcons.Icon -> Element msg
@@ -451,6 +476,8 @@ type Msg
     | ClickedConfirmedDelete
     | BlurredDelete
     | ClickedEdit
+    | ClickedAddToShoppingList
+    | ExportedToShoppingList (Result Api.ServerError ())
     | DecrementPortions
     | IncrementPortions
     | ResetPortions
@@ -514,6 +541,21 @@ update msg model =
 
                 _ ->
                     ( model, Cmd.none )
+
+        ClickedAddToShoppingList ->
+            -- call /export_to_shopping_list/:recipe_id
+            case model.recipe of
+                Loaded recipe ->
+                    ( { model | exportStatus = AwaitingExport }, Recipe.exportToShoppingList (Recipe.id recipe) ExportedToShoppingList )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        ExportedToShoppingList (Ok _) ->
+            ( { model | exportStatus = ExportedList }, Cmd.none )
+
+        ExportedToShoppingList (Err error) ->
+            ( { model | exportStatus = ExportFailed error }, Cmd.none )
 
         DecrementPortions ->
             ( { model | scaledPortions = max (model.scaledPortions - 1) 1 }, Cmd.none )
