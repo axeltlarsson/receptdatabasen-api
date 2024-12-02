@@ -1,4 +1,3 @@
-version: '3.7'
 services:
 
   # This is the database to which the all the other components in the stack will connect and interact with
@@ -61,6 +60,8 @@ services:
       - DB_PASS=${DB_PASS}
       - COOKIE_SESSION_SECRET=${COOKIE_SESSION_SECRET}
       - COOKIE_SESSION_LIFETIME=${COOKIE_SESSION_LIFETIME}
+      - LISTAN_API_URL=${LISTAN_API_URL}
+      - LISTAN_JWT_SECRET=${LISTAN_JWT_SECRET}
     volumes:
       - uploads-vol:/uploads
     depends_on:

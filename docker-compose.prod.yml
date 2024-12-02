@@ -1,6 +1,4 @@
 # Production environment docker-compose setup
-#
-version: '3.7'
 services:
   db:
     restart: unless-stopped

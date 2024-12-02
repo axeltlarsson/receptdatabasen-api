@@ -11,12 +11,12 @@ fswatch -0 --batch-marker=batch openresty db | while read -rd "" event; do
 		# Process the batch
 		if $openresty_changed; then
 			echo -e "\e[1;34m[OpenResty]\e[0m Source files in 'openresty/' have changed. Reloading configuration..."
-			docker-compose kill -s SIGHUP openresty
+			docker compose kill -s SIGHUP openresty
 		fi
 		if $db_changed; then
 			echo -e "\e[1;32m[Database]\e[0m Source files in 'db/' have changed. Reloading configuration..."
 			./scripts/reload_db.sh
-			docker-compose kill -s SIGUSR1 postgrest
+			docker compose kill -s SIGUSR1 postgrest
 		fi
 
 		# Reset for the next batch
