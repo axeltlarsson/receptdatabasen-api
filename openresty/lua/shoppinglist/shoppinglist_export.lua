@@ -1,25 +1,32 @@
-local markdown_parser = require "shoppinglist/markdown_parser"
 local utils = require "utils"
 local jwt_helper = require "shoppinglist/jwt_helper"
-local recipe_service = require "shoppinglist/recipe_service"
 local shoppinglist_client = require "shoppinglist/shoppinglist_client"
 local cjson = require "cjson"
 
--- Extract the recipe slug from the URL
-local recipe_id_match = ngx.re.match(ngx.var.uri, "^/export_to_list/(\\d+)$")
-local recipe_slug = recipe_id_match and recipe_id_match[1]
-if not recipe_slug then
-    utils.return_error("Invalid recipe ID in URL", ngx.HTTP_BAD_REQUEST)
+-- Extract ingredient json list from body
+ngx.req.read_body()
+local body = ngx.req.get_body_data()
+
+-- Parse the JSON payload
+local payload, err_payload = cjson.decode(body)
+if not payload then
+    return utils.return_error(err_payload, ngx.HTTP_BAD_REQUEST)
 end
 
--- Fetch the recipe ingredients and user information
-local recipe = recipe_service.get_recipe_ingredients(recipe_slug)
-local user_name = recipe_service.get_user_name()
+-- Validate the payload
+if not payload.ingredients or type(payload.ingredients) ~= "table" or #payload.ingredients == 0 then
+    return utils.return_error("Expected non-empty array in field `ingredients`", ngx.HTTP_BAD_REQUEST)
+end
+
+-- Fetch the user_name from /me
+local res_me = ngx.location.capture("/internal/rest/rpc/me", { method = ngx.HTTP_GET })
+
+if res_me.status ~= ngx.HTTP_OK then
+    utils.return_error("Could not fetch user details", res_me.status)
+end
+local user_name = cjson.decode(res_me.body).user_name
 
 ngx.log(ngx.INFO, "Adding ingredients for user: " .. user_name)
-
--- Parse the markdown ingredients into structured format
-local parsed_ingredients = markdown_parser.parse(recipe.ingredients)
 
 -- Generate a JWT token for authentication
 local jwt_token = jwt_helper.generate(user_name, os.getenv("LISTAN_JWT_SECRET"))
@@ -29,7 +36,7 @@ local api_url = os.getenv("LISTAN_API_URL") .. "/lists/batch"
 
 -- Send ingredients to the shopping list API and send ok response back
 local ok, err = pcall(function()
-    local response = shoppinglist_client.send_ingredients(api_url, jwt_token, parsed_ingredients)
+    local response = shoppinglist_client.send_ingredients(api_url, jwt_token, payload.ingredients)
     ngx.status = ngx.HTTP_OK
     ngx.say(cjson.encode(response))
 end)

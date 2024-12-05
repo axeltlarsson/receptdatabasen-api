@@ -543,10 +543,12 @@ update msg model =
                     ( model, Cmd.none )
 
         ClickedAddToShoppingList ->
-            -- call /export_to_shopping_list/:recipe_id
+            -- call /export_to_shopping_list with POST body containing the ingredients
             case model.recipe of
                 Loaded recipe ->
-                    ( { model | exportStatus = AwaitingExport }, Recipe.exportToShoppingList (Recipe.id recipe) ExportedToShoppingList )
+                    ( { model | exportStatus = AwaitingExport }
+                    , Recipe.exportToShoppingList (Recipe.contents recipe).ingredients ExportedToShoppingList
+                    )
 
                 _ ->
                     ( model, Cmd.none )

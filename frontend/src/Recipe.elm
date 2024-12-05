@@ -8,14 +8,14 @@ module Recipe exposing
     , create
     , delete
     , edit
+    , exportToShoppingList
     , fetch
     , fetchMany
+    , id
     , metadata
     , search
     , slug
-    , id
     , uploadImage
-    , exportToShoppingList
     )
 
 {- The interface to the Recipe data structure.
@@ -32,6 +32,7 @@ import File exposing (File)
 import Http
 import Json.Decode as Decode exposing (Decoder, field, int, list, string)
 import Json.Encode as Encode
+import Recipe.IngredientsParser exposing (parseIngredients)
 import Recipe.Slug as Slug exposing (Slug)
 import Url.Builder exposing (QueryParameter)
 
@@ -93,7 +94,8 @@ slug : Recipe a -> Slug
 slug (Recipe md _) =
     md.title
 
-id: Recipe a -> Int
+
+id : Recipe a -> Int
 id (Recipe md _) =
     md.id
 
@@ -257,16 +259,20 @@ uploadImage idx file toMsg =
         , expect = expectJsonWithBody toMsg imageUrlDecoder
         }
 
--- export to /export_to_list/:recipe_id
-exportToShoppingList : Int -> (Result ServerError () -> msg) -> Cmd msg
-exportToShoppingList recipeId toMsg =
+
+exportToShoppingList : String -> (Result ServerError () -> msg) -> Cmd msg
+exportToShoppingList ingredientStr toMsg =
+    let
+        ingredients =
+            parseIngredients ingredientStr
+    in
     Http.request
-        { url = "/export_to_list/" ++ String.fromInt recipeId
+        { url = "/export_to_list"
         , method = "POST"
         , timeout = Nothing
         , tracker = Nothing
         , headers = []
-        , body = Http.emptyBody
+        , body = Http.jsonBody (Encode.object [ ( "ingredients", Encode.list Encode.string ingredients ) ])
         , expect = expectJsonWithBody toMsg (Decode.succeed ())
         }
 
