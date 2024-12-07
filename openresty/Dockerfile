@@ -28,7 +28,6 @@ RUN ln -s /lib/x86_64-linux-gnu/libvips.so.42 /lib/x86_64-linux-gnu/libvips.so &
 RUN mkdir -p /uploads/cache && chown -R nobody /uploads
 VOLUME /uploads
 
-# COPY --from=receptdatabasen_frontend_builder /app/dist /usr/local/openresty/nginx/html
 COPY --from=ghcr.io/axeltlarsson/receptdatabasen-frontend:latest /app/dist /usr/local/openresty/nginx/html
 COPY nginx /usr/local/openresty/nginx/conf
 COPY nginx_prod /usr/local/openresty/nginx/conf/prod

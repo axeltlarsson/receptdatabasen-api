@@ -15,6 +15,7 @@ services:
       - backend
 
   openresty:
+    image: ghcr.io/axeltlarsson/receptdatabasen-openresty:latest
     restart: unless-stopped
     environment:
       - VIRTUAL_HOST=${VIRTUAL_HOST}

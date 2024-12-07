@@ -45,9 +45,8 @@ services:
   # After some processing/checks and transformation, the request is forwarded
   # to PostgREST down the stack.
   openresty:
-    build: # openresty image builds the frontend, so needs access to that context
+    build:
       context: openresty
-      platform: linux/amd64
     command: ["openresty", "-g", "daemon off; error_log /dev/stderr info;"]
     environment:
       - DEVELOPMENT=${DEVELOPMENT}
