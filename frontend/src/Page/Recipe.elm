@@ -54,14 +54,14 @@ type alias Model =
     , checkboxStatus : Dict Int Bool
     , scaledPortions : Int
     , toDelete : Bool
-    , listanExportStatus : ExportStatus ()
+    , listanExportStatus : ExportStatus String
     }
 
 
 type ExportStatus a
     = NotStarted
     | AwaitingExport
-    | ExportedList
+    | ExportedList a
     | ExportFailed Api.ServerError
 
 
@@ -178,7 +178,7 @@ paddingPx device =
         30
 
 
-viewRecipe : ExportStatus a -> Bool -> Recipe Full -> Dict Int Bool -> Int -> Element.Device -> Element Msg
+viewRecipe : ExportStatus String -> Bool -> Recipe Full -> Dict Int Bool -> Int -> Element.Device -> Element Msg
 viewRecipe listanExportStatus toDelete recipe checkboxStatus scaledPortions device =
     let
         { title, description, images } =
@@ -331,7 +331,7 @@ viewInstructions instructions checkboxStatus =
         ]
 
 
-viewIngredients : String -> Int -> Int -> ExportStatus a -> Element Msg
+viewIngredients : String -> Int -> Int -> ExportStatus String -> Element Msg
 viewIngredients ingredients scaledPortions originalPortions listanExportStatus =
     column [ alignTop, width fill ]
         [ column [ spacing 20 ]
@@ -343,7 +343,7 @@ viewIngredients ingredients scaledPortions originalPortions listanExportStatus =
         ]
 
 
-viewAddToShoppingList : ExportStatus a -> Element Msg
+viewAddToShoppingList : ExportStatus String -> Element Msg
 viewAddToShoppingList listanExportStatus =
     case listanExportStatus of
         NotStarted ->
@@ -369,7 +369,7 @@ viewAddToShoppingList listanExportStatus =
                 , label = row [ spacing 10 ] [ wrapIcon FeatherIcons.loader, text "Lägger till i listan..." ]
                 }
 
-        ExportedList ->
+        ExportedList name ->
             row
                 [ Background.color Palette.green
                 , Border.rounded 3
@@ -377,7 +377,7 @@ viewAddToShoppingList listanExportStatus =
                 , spacing 10
                 , Font.color Palette.white
                 ]
-                [ wrapIcon FeatherIcons.check, text "Tillagd i listan ✨" ]
+                [ wrapIcon FeatherIcons.check, row [] [ text "Tillagd i listan ", el [ Font.italic ] (text name), text " ✨" ] ]
 
         ExportFailed err ->
             el [ padding 10 ] (Api.viewServerError "Kunde ej lägga till i listan" err)
@@ -509,7 +509,7 @@ type Msg
     | BlurredDelete
     | ClickedEdit
     | ClickedAddToShoppingList
-    | ExportedToShoppingList (Result Api.ServerError ())
+    | ExportedToShoppingList (Result Api.ServerError String)
     | DecrementPortions
     | IncrementPortions
     | ResetPortions
@@ -585,8 +585,8 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
-        ExportedToShoppingList (Ok _) ->
-            ( { model | listanExportStatus = ExportedList }, Cmd.none )
+        ExportedToShoppingList (Ok name) ->
+            ( { model | listanExportStatus = ExportedList name }, Cmd.none )
 
         ExportedToShoppingList (Err error) ->
             ( { model | listanExportStatus = ExportFailed error }, Cmd.none )

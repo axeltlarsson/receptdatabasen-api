@@ -260,7 +260,7 @@ uploadImage idx file toMsg =
         }
 
 
-exportToShoppingList : String -> (Result ServerError () -> msg) -> Cmd msg
+exportToShoppingList : String -> (Result ServerError String -> msg) -> Cmd msg
 exportToShoppingList ingredientStr toMsg =
     let
         ingredients =
@@ -273,7 +273,7 @@ exportToShoppingList ingredientStr toMsg =
         , tracker = Nothing
         , headers = []
         , body = Http.jsonBody (Encode.object [ ( "ingredients", Encode.list Encode.string ingredients ) ])
-        , expect = expectJsonWithBody toMsg (Decode.succeed ())
+        , expect = expectJsonWithBody toMsg (Decode.field "list_name" string)
         }
 
 
