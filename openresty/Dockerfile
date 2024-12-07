@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 openresty/openresty:1.27.1.1-0-noble
+FROM openresty/openresty:1.27.1.1-0-noble
 
 # Install runtime dependencies
 RUN DEBIAN_FRONTEND=noninteractive \
@@ -29,7 +29,7 @@ RUN mkdir -p /uploads/cache && chown -R nobody /uploads
 VOLUME /uploads
 
 # COPY --from=receptdatabasen_frontend_builder /app/dist /usr/local/openresty/nginx/html
-COPY --from=ghcr.io/axeltlarsson/receptdatabasen-frontend /app/dist /usr/local/openresty/nginx/html
+COPY --from=ghcr.io/axeltlarsson/receptdatabasen-frontend:latest /app/dist /usr/local/openresty/nginx/html
 COPY nginx /usr/local/openresty/nginx/conf
 COPY nginx_prod /usr/local/openresty/nginx/conf/prod
 COPY lua /usr/local/openresty/lua
