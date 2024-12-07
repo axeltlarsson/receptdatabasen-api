@@ -12,8 +12,7 @@ create trigger passkey_set_updated_at_timestamp
   before update on data.passkey for each row
   execute procedure set_updated_at_timestamp ();
 
-grant select, insert, update, delete on data.passkey to api;
-
+create index idx_passkey_credential_id on data.passkey((data->>'credential_id'));
 
 alter table passkey enable row level security;
 create policy users_access_own_passkeys on passkey

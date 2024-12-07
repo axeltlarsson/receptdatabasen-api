@@ -11,4 +11,9 @@ module.exports = function (app) {
       target: "http://localhost:8080/",
     })
   );
+  app.use('/export_to_list',
+    createProxyMiddleware( {
+      target: "http://localhost:8080/",
+    })
+  );
 };

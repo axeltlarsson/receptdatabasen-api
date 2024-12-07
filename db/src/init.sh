@@ -13,7 +13,7 @@ log_statement = 'all'
 fsync = off
 synchronous_commit = off
 full_page_writes = off
-client_min_messages = 'debug';
+client_min_messages = 'debug'
 EOF
 )
 

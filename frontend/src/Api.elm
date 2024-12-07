@@ -93,19 +93,19 @@ httpErrorToString : Http.Error -> String
 httpErrorToString err =
     case err of
         Http.BadUrl str ->
-            "BadUrl " ++ str
+            "🔎 BadUrl " ++ str
 
         Http.Timeout ->
-            "Timeout"
+            "⌛Timeout"
 
         Http.NetworkError ->
-            "NetworkError"
+            "🌐 NetworkError"
 
         Http.BadStatus code ->
-            "BadStatus " ++ String.fromInt code
+            "🔥 BadStatus " ++ String.fromInt code
 
         Http.BadBody str ->
-            "BadBody " ++ str
+            "🧐 BadBody " ++ str
 
 
 viewServerError : String -> ServerError -> Element msg
