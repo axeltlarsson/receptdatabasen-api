@@ -2,10 +2,7 @@
 services:
   db:
     restart: unless-stopped
-    build:
-      context: ./db
-      args:
-        - PG_VERSION=${PG_VERSION}
+    image: ghcr.io/axeltlarsson/receptdatabasen-db:latest
     networks:
       - backend
 
