@@ -29,7 +29,7 @@ import Element.Border as Border
 import Element.Events as Events
 import Element.Font as Font
 import Element.Input as Input
-import Element.Lazy exposing (lazy2, lazy3, lazy5)
+import Element.Lazy exposing (lazy2, lazy4, lazy5)
 import Element.Region as Region
 import FeatherIcons
 import Html.Attributes
@@ -54,7 +54,7 @@ type alias Model =
     , checkboxStatus : Dict Int Bool
     , scaledPortions : Int
     , toDelete : Bool
-    , exportStatus : ExportStatus ()
+    , listanExportStatus : ExportStatus ()
     }
 
 
@@ -80,7 +80,7 @@ init session slug =
               , checkboxStatus = Dict.empty
               , scaledPortions = recipe |> Recipe.contents |> .portions
               , toDelete = False
-              , exportStatus = NotStarted
+              , listanExportStatus = NotStarted
               }
             , resetViewport
             )
@@ -91,7 +91,7 @@ init session slug =
               , checkboxStatus = Dict.empty
               , scaledPortions = 0
               , toDelete = False
-              , exportStatus = NotStarted
+              , listanExportStatus = NotStarted
               }
             , Cmd.batch [ Recipe.fetch slug LoadedRecipe, resetViewport ]
             )
@@ -130,7 +130,13 @@ view model =
                             model.toDelete
                     in
                     { title = Slug.toString title
-                    , content = viewRecipe toDelete recipe model.checkboxStatus model.scaledPortions (Session.device model.session)
+                    , content =
+                        viewRecipe model.listanExportStatus
+                            toDelete
+                            recipe
+                            model.checkboxStatus
+                            model.scaledPortions
+                            (Session.device model.session)
                     }
     in
     { title = ui.title
@@ -172,8 +178,8 @@ paddingPx device =
         30
 
 
-viewRecipe : Bool -> Recipe Full -> Dict Int Bool -> Int -> Element.Device -> Element Msg
-viewRecipe toDelete recipe checkboxStatus scaledPortions device =
+viewRecipe : ExportStatus a -> Bool -> Recipe Full -> Dict Int Bool -> Int -> Element.Device -> Element Msg
+viewRecipe listanExportStatus toDelete recipe checkboxStatus scaledPortions device =
     let
         { title, description, images } =
             Recipe.metadata recipe
@@ -194,10 +200,10 @@ viewRecipe toDelete recipe checkboxStatus scaledPortions device =
     column [ width fill, spacing 30 ]
         [ lazy5 viewHeader (Slug.toString title) tags description image device
         , lazy2 column
-            [ width fill, padding <| paddingPx device, spacing 20 ]
+            [ width fill, padding <| paddingPx device, spacing 40 ]
             [ responsiveLayout
                 [ lazy2 viewInstructions instructions checkboxStatus
-                , lazy3 viewIngredients ingredients scaledPortions portions
+                , lazy4 viewIngredients ingredients scaledPortions portions listanExportStatus
                 ]
             , row [ spacing 20 ]
                 [ viewEditButton
@@ -325,30 +331,56 @@ viewInstructions instructions checkboxStatus =
         ]
 
 
-viewIngredients : String -> Int -> Int -> Element Msg
-viewIngredients ingredients scaledPortions originalPortions =
+viewIngredients : String -> Int -> Int -> ExportStatus a -> Element Msg
+viewIngredients ingredients scaledPortions originalPortions listanExportStatus =
     column [ alignTop, width fill ]
-        [ column []
+        [ column [ spacing 20 ]
             [ el [ Font.size Palette.xLarge ] (text "Ingredienser")
             , viewPortions scaledPortions originalPortions
             , column [] [ viewMarkdown (toFloat scaledPortions / toFloat originalPortions) False ingredients Dict.empty ]
-            , viewAddToShoppingList
+            , viewAddToShoppingList listanExportStatus
             ]
         ]
 
 
-viewAddToShoppingList : Element Msg
-viewAddToShoppingList =
-    Input.button
-        [ Background.color Palette.blush
-        , Border.rounded 3
-        , padding 10
-        , Font.color Palette.white
-        , Element.mouseOver [ Border.glow Palette.lightGrey 3 ]
-        ]
-        { onPress = Just ClickedAddToShoppingList
-        , label = row [ spacing 10 ] [ wrapIcon FeatherIcons.shoppingCart, text "Lägg till i inköpslista" ]
-        }
+viewAddToShoppingList : ExportStatus a -> Element Msg
+viewAddToShoppingList listanExportStatus =
+    case listanExportStatus of
+        NotStarted ->
+            Input.button
+                [ Background.color Palette.blush
+                , Border.rounded 3
+                , padding 10
+                , Font.color Palette.white
+                , Element.mouseOver [ Border.glow Palette.lightGrey 3 ]
+                ]
+                { onPress = Just ClickedAddToShoppingList
+                , label = row [ spacing 10 ] [ wrapIcon FeatherIcons.shoppingCart, text "Lägg till i listan" ]
+                }
+
+        AwaitingExport ->
+            Input.button
+                [ Background.color Palette.blush
+                , Border.rounded 3
+                , padding 10
+                , Font.color Palette.white
+                ]
+                { onPress = Nothing
+                , label = row [ spacing 10 ] [ wrapIcon FeatherIcons.loader, text "Lägger till i listan..." ]
+                }
+
+        ExportedList ->
+            row
+                [ Background.color Palette.green
+                , Border.rounded 3
+                , padding 10
+                , spacing 10
+                , Font.color Palette.white
+                ]
+                [ wrapIcon FeatherIcons.check, text "Tillagd i listan ✨" ]
+
+        ExportFailed err ->
+            el [ padding 10 ] (Api.viewServerError "Kunde ej lägga till i listan" err)
 
 
 wrapIcon : FeatherIcons.Icon -> Element msg
@@ -546,7 +578,7 @@ update msg model =
             -- call /export_to_shopping_list with POST body containing the ingredients
             case model.recipe of
                 Loaded recipe ->
-                    ( { model | exportStatus = AwaitingExport }
+                    ( { model | listanExportStatus = AwaitingExport }
                     , Recipe.exportToShoppingList (Recipe.contents recipe).ingredients ExportedToShoppingList
                     )
 
@@ -554,10 +586,10 @@ update msg model =
                     ( model, Cmd.none )
 
         ExportedToShoppingList (Ok _) ->
-            ( { model | exportStatus = ExportedList }, Cmd.none )
+            ( { model | listanExportStatus = ExportedList }, Cmd.none )
 
         ExportedToShoppingList (Err error) ->
-            ( { model | exportStatus = ExportFailed error }, Cmd.none )
+            ( { model | listanExportStatus = ExportFailed error }, Cmd.none )
 
         DecrementPortions ->
             ( { model | scaledPortions = max (model.scaledPortions - 1) 1 }, Cmd.none )

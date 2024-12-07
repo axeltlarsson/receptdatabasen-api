@@ -35,13 +35,12 @@ local jwt_token = jwt_helper.generate(user_name, os.getenv("LISTAN_JWT_SECRET"))
 local api_url = os.getenv("LISTAN_API_URL") .. "/lists/batch"
 
 -- Send ingredients to the shopping list API and send ok response back
-local ok, err = pcall(function()
-    local response = shoppinglist_client.send_ingredients(api_url, jwt_token, payload.ingredients)
-    ngx.status = ngx.HTTP_OK
-    ngx.say(cjson.encode(response))
-end)
+local res, err = shoppinglist_client.send_ingredients(api_url, jwt_token, payload.ingredients)
 
-if not ok and err then
-    ngx.log(ngx.ERR, "Error: ", err)
+if err then
     utils.return_error(err, ngx.HTTP_INTERNAL_SERVER_ERROR)
+    return
 end
+
+ngx.status = ngx.HTTP_OK
+ngx.say(cjson.encode(res))

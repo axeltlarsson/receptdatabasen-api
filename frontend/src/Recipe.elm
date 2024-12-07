@@ -165,7 +165,7 @@ fetch recipeSlug toMsg =
     Http.request
         { url = restUrl [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
         , method = "GET"
-        , timeout = Nothing
+        , timeout = Just 30000 -- ms = 5 seconds
         , tracker = Nothing
         , headers = [ Http.header "Accept" "application/vnd.pgrst.object+json" ]
         , body = Http.emptyBody
@@ -207,7 +207,7 @@ delete recipeSlug toMsg =
     Http.request
         { url = restUrl [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
         , method = "DELETE"
-        , timeout = Nothing
+        , timeout = Just 30000 -- ms = 5 seconds
         , tracker = Nothing
         , headers = []
         , body = Http.emptyBody
@@ -220,7 +220,7 @@ create jsonForm toMsg =
     Http.request
         { url = restUrl []
         , method = "POST"
-        , timeout = Nothing
+        , timeout = Just 30000 -- ms = 5 seconds
         , tracker = Nothing
         , headers =
             [ Http.header "Prefer" "return=representation"
@@ -236,7 +236,7 @@ edit recipeSlug jsonForm toMsg =
     Http.request
         { url = restUrl [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
         , method = "PATCH"
-        , timeout = Nothing
+        , timeout = Just 30000 -- ms = 5 seconds
         , tracker = Nothing
         , headers =
             [ Http.header "Prefer" "return=representation"
@@ -252,7 +252,7 @@ uploadImage idx file toMsg =
     Http.request
         { url = "/images/upload"
         , method = "POST"
-        , timeout = Nothing
+        , timeout = Just 30000 -- ms = 5 seconds
         , tracker = Just ("image" ++ String.fromInt idx)
         , headers = []
         , body = Http.fileBody file
@@ -269,7 +269,7 @@ exportToShoppingList ingredientStr toMsg =
     Http.request
         { url = "/export_to_list"
         , method = "POST"
-        , timeout = Nothing
+        , timeout = Just 30000 -- ms = 5 seconds
         , tracker = Nothing
         , headers = []
         , body = Http.jsonBody (Encode.object [ ( "ingredients", Encode.list Encode.string ingredients ) ])
