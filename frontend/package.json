@@ -15,7 +15,8 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "easymde": "^2.18.0 "
+        "easymde": "^2.18.0 ",
+        "elm": "^0.19.1-6"
     },
     "devDependencies": {
         "@parcel/packager-raw-url": "^2.10.0",
