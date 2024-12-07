@@ -32,5 +32,8 @@
     },
     "staticFiles": {
         "staticPath": "src/assets/static"
+    },
+    "optionalDependencies": {
+        "@parcel/watcher-linux-x64-glibc": "^2.5.0"
     }
 }

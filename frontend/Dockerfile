@@ -3,7 +3,7 @@
 # so we simply run this with x86 instead as on prod, locally I'd use nix's
 # version of elm (compiled for aarch64) anyway
 # Step 1: Base Node.js image
-FROM node:bookworm
+FROM node:23
 LABEL org.opencontainers.image.source=https://github.com/axeltlarsson/receptdatabasen-api
 LABEL org.opencontainers.image.description="Receptdatabasen frontend"
 
