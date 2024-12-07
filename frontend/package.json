@@ -3,7 +3,6 @@
     "version": "1.2.0",
     "description": "Run it in dev mode with: `npm start`",
     "source": "src/index.html",
-    "browserslist": "last 2 versions, not dead",
     "directories": {
         "test": "tests"
     },
