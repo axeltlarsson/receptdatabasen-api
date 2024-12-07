@@ -3,7 +3,6 @@ name: Build and push db Docker image
 on:
   push:
     branches:
-      - axel/nixos
       - master
     paths:
       - 'db/**'
