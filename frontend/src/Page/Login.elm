@@ -236,7 +236,7 @@ viewPasskeyAuthErrors passkeyAuth =
                     column [ spacing 10, Font.family [ Font.typeface "Courier New", Font.monospace ] ]
                         [ row [ Font.heavy ]
                             [ alertIcon
-                            , el [ Font.color Palette.red ] (text "Kunde ej loggga!")
+                            , el [ Font.color Palette.red ] (text "Kunde ej loggga in!")
                             ]
                         , text "Har du valt rätt passkey?"
                         ]

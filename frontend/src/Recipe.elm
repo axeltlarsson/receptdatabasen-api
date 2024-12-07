@@ -8,8 +8,10 @@ module Recipe exposing
     , create
     , delete
     , edit
+    , exportToShoppingList
     , fetch
     , fetchMany
+    , id
     , metadata
     , search
     , slug
@@ -30,6 +32,7 @@ import File exposing (File)
 import Http
 import Json.Decode as Decode exposing (Decoder, field, int, list, string)
 import Json.Encode as Encode
+import Recipe.IngredientsParser exposing (parseIngredients)
 import Recipe.Slug as Slug exposing (Slug)
 import Url.Builder exposing (QueryParameter)
 
@@ -90,6 +93,11 @@ contents (Recipe _ (Full c)) =
 slug : Recipe a -> Slug
 slug (Recipe md _) =
     md.title
+
+
+id : Recipe a -> Int
+id (Recipe md _) =
+    md.id
 
 
 
@@ -157,7 +165,7 @@ fetch recipeSlug toMsg =
     Http.request
         { url = restUrl [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
         , method = "GET"
-        , timeout = Nothing
+        , timeout = Just 30000 -- ms = 5 seconds
         , tracker = Nothing
         , headers = [ Http.header "Accept" "application/vnd.pgrst.object+json" ]
         , body = Http.emptyBody
@@ -199,7 +207,7 @@ delete recipeSlug toMsg =
     Http.request
         { url = restUrl [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
         , method = "DELETE"
-        , timeout = Nothing
+        , timeout = Just 30000 -- ms = 5 seconds
         , tracker = Nothing
         , headers = []
         , body = Http.emptyBody
@@ -212,7 +220,7 @@ create jsonForm toMsg =
     Http.request
         { url = restUrl []
         , method = "POST"
-        , timeout = Nothing
+        , timeout = Just 30000 -- ms = 5 seconds
         , tracker = Nothing
         , headers =
             [ Http.header "Prefer" "return=representation"
@@ -228,7 +236,7 @@ edit recipeSlug jsonForm toMsg =
     Http.request
         { url = restUrl [ Url.Builder.string "title" "eq." ] ++ Slug.toString recipeSlug
         , method = "PATCH"
-        , timeout = Nothing
+        , timeout = Just 30000 -- ms = 5 seconds
         , tracker = Nothing
         , headers =
             [ Http.header "Prefer" "return=representation"
@@ -244,11 +252,28 @@ uploadImage idx file toMsg =
     Http.request
         { url = "/images/upload"
         , method = "POST"
-        , timeout = Nothing
+        , timeout = Just 30000 -- ms = 5 seconds
         , tracker = Just ("image" ++ String.fromInt idx)
         , headers = []
         , body = Http.fileBody file
         , expect = expectJsonWithBody toMsg imageUrlDecoder
+        }
+
+
+exportToShoppingList : String -> (Result ServerError String -> msg) -> Cmd msg
+exportToShoppingList ingredientStr toMsg =
+    let
+        ingredients =
+            parseIngredients ingredientStr
+    in
+    Http.request
+        { url = "/export_to_list"
+        , method = "POST"
+        , timeout = Just 30000 -- ms = 5 seconds
+        , tracker = Nothing
+        , headers = []
+        , body = Http.jsonBody (Encode.object [ ( "ingredients", Encode.list Encode.string ingredients ) ])
+        , expect = expectJsonWithBody toMsg (Decode.field "list_name" string)
         }
 
 
