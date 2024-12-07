@@ -45,8 +45,6 @@ services:
   # After some processing/checks and transformation, the request is forwarded
   # to PostgREST down the stack.
   openresty:
-    build:
-      context: openresty
     command: ["openresty", "-g", "daemon off; error_log /dev/stderr info;"]
     environment:
       - DEVELOPMENT=${DEVELOPMENT}
