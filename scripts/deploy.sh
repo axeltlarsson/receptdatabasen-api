@@ -7,6 +7,6 @@ set -e
 
 echo "Deploying ${NEWREV:0:6}..."
 source .env
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d --pull always
 echo "Running migrations..."
 PGUSER=$SUPER_USER PGPASSWORD=$SUPER_USER_PASSWORD DOCKER_NETWORK="${COMPOSE_PROJECT_NAME}_backend" scripts/sqitch deploy prod --cd db/migrations
