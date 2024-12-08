@@ -25,6 +25,9 @@ RUN luarocks install lua-vips 1.1-11 && \
 # so let's symlink it and refresh the linker cache
 RUN ln -s /lib/x86_64-linux-gnu/libvips.so.42 /lib/x86_64-linux-gnu/libvips.so && ldconfig
 
+# https://github.com/ledgetech/lua-resty-http/issues/42
+RUN cp /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.pem
+
 RUN mkdir -p /uploads/cache && chown -R nobody /uploads
 VOLUME /uploads
 
