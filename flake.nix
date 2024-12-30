@@ -78,9 +78,24 @@
           module = self.nixosModules.default;
         };
 
-      in {
+        lua-vips = pkgs.callPackage ./nix/lua-vips.nix {
+          buildLuarocksPackage = pkgs.luajitPackages.buildLuarocksPackage;
+          # openresty provides an updated version of openresty/luajit2, so we use that one
+          lua = pkgs.openresty;
+        };
+
+        op = pkgs.writeShellApplication {
+          name = "op";
+          runtimeInputs = [ pkgs.cacert ];
+          text = ''
+            export SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
+            openresty -p ./openresty -c nginx/nginx.conf -e logs/error.log -g "daemon off; error_log /dev/stderr debug; pid ./nginx.pid;"
+          '';
+        };
+
+      in
+      {
         devShells.default = pkgs.mkShell {
-          nativeBuildInputs = [ pkgs.bashInteractive ];
           buildInputs = [
             import_prod
             db
@@ -94,10 +109,16 @@
             pkgs.pyright
 
             pkgs.lua-language-server
+            lua-vips
+            pkgs.openresty
+            op
             # for local dev shell only - to give hint for lua lsp
             (pkgs.luajit.withPackages (
               ps: with ps; [
                 lua-resty-core
+                lua-resty-http
+                lua-resty-session
+                lua-resty-jwt
                 cjson
               ]
             ))
@@ -128,39 +149,46 @@
         checks.default = nixpkgs.legacyPackages."${system}".nixosTest {
           name = "Integration test of the NixOS module";
           nodes = {
-            server = { modulesPath, ... }: {
-              imports = [ self.nixosModules.default ];
+            server =
+              { modulesPath, ... }:
+              {
+                imports = [ self.nixosModules.default ];
 
-              config = {
-                virtualisation = {
-                  # 2 GiB - the project needs a little bit more space
-                  diskSize = 3 * 1024;
+                config = {
+                  virtualisation = {
+                    # 2 GiB - the project needs a little bit more space
+                    diskSize = 3 * 1024;
+                  };
+
+                  services.receptdatabasen.enable = true;
+                  services.receptdatabasen.jwtSecret = "3ARDEfnJWEXlnJE0GRp5NRFUiLbuNZlF";
+                  services.receptdatabasen.cookieSessionSecret = "SkNUZkQNePjYlOfBbLM641wqzFhi0I7u";
                 };
-
-                services.receptdatabasen.enable = true;
-                services.receptdatabasen.jwtSecret =
-                  "3ARDEfnJWEXlnJE0GRp5NRFUiLbuNZlF";
-                services.receptdatabasen.cookieSessionSecret =
-                  "SkNUZkQNePjYlOfBbLM641wqzFhi0I7u";
               };
-            };
-            client = { pkgs, ... }: {
-              config = { environment.defaultPackages = [ pkgs.curl ]; };
-            };
+            client =
+              { pkgs, ... }:
+              {
+                config = {
+                  environment.defaultPackages = [ pkgs.curl ];
+                };
+              };
           };
 
           testScript = { nodes }: pkgs.lib.readFile ./nix/integration_test.py;
         };
-      }) // {
-        nixosModules.default = { pkgs, ... }:
-          let
-            # we wrap the actual module in a new module to be able to make it platform-agnostic
-            # and can access pkgs.system when referring to the self.packages
-            docker-compose-file =
-              self.packages.${pkgs.system}.docker-compose-file;
-          in {
-            # to get the actual module, we must first apply the docker-compose-file arg
-            imports = [ ((import ./nix/module.nix) docker-compose-file) ];
-          };
-      };
+      }
+    )
+    // {
+      nixosModules.default =
+        { pkgs, ... }:
+        let
+          # we wrap the actual module in a new module to be able to make it platform-agnostic
+          # and can access pkgs.system when referring to the self.packages
+          docker-compose-file = self.packages.${pkgs.system}.docker-compose-file;
+        in
+        {
+          # to get the actual module, we must first apply the docker-compose-file arg
+          imports = [ ((import ./nix/module.nix) docker-compose-file) ];
+        };
+    };
 }
