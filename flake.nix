@@ -67,6 +67,7 @@
           '';
         };
 
+        # TODO: fix this when using on-metal nix
         hot-reload = pkgs.writeShellApplication {
           name = "hot-reload";
           runtimeInputs = [ pkgs.fswatch ];
@@ -78,20 +79,8 @@
           module = self.nixosModules.default;
         };
 
-        lua-vips = pkgs.callPackage ./nix/lua-vips.nix {
-          buildLuarocksPackage = pkgs.luajitPackages.buildLuarocksPackage;
-          # openresty provides an updated version of openresty/luajit2, so we use that one
-          lua = pkgs.openresty;
-        };
-
-        op = pkgs.writeShellApplication {
-          name = "op";
-          runtimeInputs = [ pkgs.cacert ];
-          text = ''
-            export SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
-            openresty -p ./openresty -c nginx/nginx.conf -e logs/error.log -g "daemon off; error_log /dev/stderr debug; pid ./nginx.pid;"
-          '';
-        };
+        openresty-dev-shell = pkgs.callPackage ./openresty/shell.nix { };
+        openresty-package = pkgs.callPackage ./openresty/default.nix { };
 
       in
       {
@@ -107,22 +96,7 @@
             pythonEnv
             pkgs.ruff
             pkgs.pyright
-
-            pkgs.lua-language-server
-            lua-vips
-            pkgs.openresty
-            op
-            # for local dev shell only - to give hint for lua lsp
-            (pkgs.luajit.withPackages (
-              ps: with ps; [
-                lua-resty-core
-                lua-resty-http
-                lua-resty-session
-                lua-resty-jwt
-                cjson
-              ]
-            ))
-          ];
+          ] ++ openresty-dev-shell.buildInputs;
 
           # source the .env file
           shellHook = ''
@@ -138,6 +112,7 @@
         };
 
         packages = {
+          openresty-receptdb = openresty-package;
           docker-compose-file = pkgs.writeTextFile {
             name = "docker-compose.yml";
             text = pkgs.lib.readFile ./nix/docker-compose.nixos.yml;
