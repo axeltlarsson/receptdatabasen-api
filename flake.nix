@@ -96,7 +96,7 @@
             pythonEnv
             pkgs.ruff
             pkgs.pyright
-          ] ++ openresty-dev-shell.buildInputs;
+          ];# ++ openresty-dev-shell.buildInputs;
 
           # source the .env file
           shellHook = ''
