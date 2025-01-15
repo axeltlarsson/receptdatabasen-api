@@ -16,7 +16,7 @@ let
 
 in
 pkgs.mkShell {
-  buildInputs = [
+  packages = [
     pkgs.lua-language-server
     op
     openresty-deps

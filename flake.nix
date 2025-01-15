@@ -96,7 +96,10 @@
             pythonEnv
             pkgs.ruff
             pkgs.pyright
-          ];# ++ openresty-dev-shell.buildInputs;
+            pkgs.postgrest
+          ];
+
+          inputsFrom = [ openresty-dev-shell ];
 
           # source the .env file
           shellHook = ''
