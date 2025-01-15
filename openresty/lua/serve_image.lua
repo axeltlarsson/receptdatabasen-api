@@ -2,8 +2,8 @@ local sig, size, path, ext =
   ngx.var.sig, ngx.var.size, ngx.var.path, ngx.var.ext
 
 local secret = "hello_world" -- signature secret key
-local images_dir = "/uploads/" -- where images come from
-local cache_dir = "/uploads/cache/" -- where images are cached
+local images_dir = os.getenv("FILE_UPLOAD_PATH") .. "/" -- where images are stored
+local cache_dir = os.getenv("FILE_UPLOAD_PATH") .. "/cache/" -- where images are cached
 local utils = require "utils"
 
 local function calculate_signature(str)

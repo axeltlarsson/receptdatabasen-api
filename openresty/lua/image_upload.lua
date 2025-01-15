@@ -1,6 +1,4 @@
 local cjson = require 'cjson'
-local sha256 = require 'resty.sha256'
-local str = require 'resty.string'
 local mime_sniff = require "lib.mime_sniff"
 local utils = require "utils"
 
@@ -49,21 +47,25 @@ if body_data then
     utils.return_error("Content-type does not match sniffed mime type", ngx.HTTP_NOT_ALLOWED)
   end
 
-  local file_name = file_name()
+  local name = file_name()
   -- Save original
-  local file_path = '/uploads/' .. file_name
+  local file_path = os.getenv("FILE_UPLOAD_PATH") .. "/" .. name
+
   local file = io.open(file_path .. file_ext(mime_type), 'w+b')
-  file:write(body_data)
+  local f, write_err = file:write(body_data)
   file:close()
+  if write_err then
+    ngx.log(ngx.ERR, write_err)
+    utils.return_error("Could not write to file: ", ngx.HTTP_INTERNAL_SERVER_ERROR)
+  end
 
   -- Convert to jpeg
   local vips = require "vips"
-  -- or new_from_buffer?
   local image = vips.Image.new_from_buffer(body_data)
   image.jpegsave(image, file_path .. ".jpeg")
 
-  local response = { image = { url = file_name .. ".jpeg", originalUrl = file_name .. file_ext(mime_type) } }
+  local response = { image = { url = name .. ".jpeg", originalUrl = name .. file_ext(mime_type) } }
   ngx.say(cjson.encode(response))
 else
-  utils.return_error("Could not read the body data")
+  utils.return_error("Could not read the image data from POST body")
 end

@@ -10,6 +10,7 @@ local resty_session = require 'resty.session'
 ngx.req.read_body()
 -- "Issues a synchronous but still non-blocking Nginx Subrequest using uri"
 -- https://openresty-reference.readthedocs.io/en/latest/Lua_Nginx_API/#ngxlocationcapture
+
 local res = ngx.location.capture(
   "/internal/rest/rpc/login",
   { method = ngx.HTTP_POST, always_forward_body = true }

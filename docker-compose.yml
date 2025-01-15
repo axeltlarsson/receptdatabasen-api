@@ -50,16 +50,11 @@ services:
       - DEVELOPMENT=${DEVELOPMENT}
       - POSTGREST_HOST=${POSTGREST_HOST}
       - POSTGREST_PORT=${POSTGREST_PORT}
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
-      - DB_NAME=${DB_NAME}
-      - DB_SCHEMA=${DB_SCHEMA}
-      - DB_USER=${DB_USER}
-      - DB_PASS=${DB_PASS}
       - COOKIE_SESSION_SECRET=${COOKIE_SESSION_SECRET}
       - COOKIE_SESSION_LIFETIME=${COOKIE_SESSION_LIFETIME}
       - LISTAN_API_URL=${LISTAN_API_URL}
       - LISTAN_JWT_SECRET=${LISTAN_JWT_SECRET}
+      - FILE_UPLOAD_PATH=/uploads
     volumes:
       - uploads-vol:/uploads
     depends_on:
