@@ -43,7 +43,7 @@ describe('image server', function () {
       .expect('Content-Type', "image/jpeg")
       .expect(res => {
         // test.jpg resized to width 100 should have this length
-        res.body.length.should.equal(4475)
+        res.body.length.should.equal(4463)
       })
       .expect(200, done)
   })

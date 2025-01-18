@@ -3,7 +3,7 @@ services:
     build:
       context: ./db
       args:
-        - PG_VERSION=${PG_VERSION}
+        - PG_VERSION=12
     ports:
       - "5432:5432"
     volumes:

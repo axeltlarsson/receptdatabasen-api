@@ -19,7 +19,6 @@ services:
       - DEVELOPMENT=1
       - JWT_SECRET=${JWT_SECRET}
       - JWT_LIFETIME=2592060
-      - PG_VERSION=12
       - RP_ID=${RP_ID}
       - ORIGIN=${ORIGIN}
       - DISABLE_USER_VERIFICATION=false
