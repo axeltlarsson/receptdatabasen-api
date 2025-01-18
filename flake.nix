@@ -99,7 +99,7 @@
           openresty-dev-shell = pkgs.callPackage ./openresty/shell.nix { };
           openresty-package = pkgs.callPackage ./openresty/default.nix { };
 
-          frontend-dev-shell = pkgs.callPackage ./frontend/shell.nix { };
+          frontend-dev-shell = import ./frontend/shell.nix { inherit system; };
         in
         {
           devShells.default = pkgs.mkShell {
