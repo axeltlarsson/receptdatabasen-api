@@ -4,6 +4,8 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     nixpkgs_24_05.url = "github:NixOS/nixpkgs/nixpkgs-24.05-darwin";
     flake-parts.url = "github:hercules-ci/flake-parts";
+    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
+    services-flake.url = "github:juspay/services-flake";
   };
 
   outputs =
@@ -12,9 +14,11 @@
       nixpkgs,
       nixpkgs_24_05,
       flake-parts,
+      services-flake,
+      process-compose-flake,
     }:
     flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [ ];
+      imports = [ process-compose-flake.flakeModule ];
       systems = [
         "x86_64-linux"
         "x86_64-darwin"
@@ -95,6 +99,7 @@
           openresty-dev-shell = pkgs.callPackage ./openresty/shell.nix { };
           openresty-package = pkgs.callPackage ./openresty/default.nix { };
 
+          frontend-dev-shell = pkgs.callPackage ./frontend/shell.nix { };
         in
         {
           devShells.default = pkgs.mkShell {
@@ -112,7 +117,10 @@
               pkgs.postgrest
             ];
 
-            inputsFrom = [ openresty-dev-shell ];
+            inputsFrom = [
+              openresty-dev-shell
+              frontend-dev-shell
+            ];
 
             # source the .env file
             shellHook = ''
@@ -122,9 +130,19 @@
             '';
           };
 
-          apps.nixos-vm = {
-            type = "app";
-            program = "${vm-config.run-vm}";
+          apps = {
+            nixos-vm = {
+              type = "app";
+              program = "${vm-config.run-vm}";
+            };
+            postgrest = {
+              type = "app";
+              program = "${pkgs.postgrest}/bin/postgrest";
+            };
+            openresty-receptdb = {
+              type = "app";
+              program = "${openresty-package}/bin/openresty-receptdb";
+            };
           };
 
           packages = {
@@ -168,6 +186,18 @@
 
             testScript = { nodes }: pkgs.lib.readFile ./nix/integration_test.py;
           };
+          process-compose."dev" =
+            { config, ... }:
+            {
+              imports = [ services-flake.processComposeModules.default ];
+              settings.processes = {
+                # since this is "dev" we use the dev versions - not the "production" built derivations like (${self'.apps.openresty-receptdb.program})
+                postgrest.command = "postgrest";
+                openresty-receptdb.command = "op";
+                frontend.command = "(cd frontend; npm run start)";
+              };
+            };
+
         };
       flake.nixosModules = {
         default =
