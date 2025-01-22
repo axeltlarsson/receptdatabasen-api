@@ -36,7 +36,7 @@
         }:
         let
           pkgs_24_05 = nixpkgs_24_05.legacyPackages.${system};
-          pg = pkgs_24_05.postgresql_12;
+          pg = pkgs_24_05.postgresql_12.override { pythonSupport = true; };
 
           pyPkgs = pkgs.python311Packages;
 
@@ -190,6 +190,33 @@
             { config, ... }:
             {
               imports = [ services-flake.processComposeModules.default ];
+              services.postgres."db" = {
+                # TODO: webauthn
+                enable = true;
+                package = pg;
+                port = 5432;
+                superuser = "superuser";
+
+                settings = {
+                  log_connections = true;
+                  log_disconnections = true;
+                  log_statement = "all";
+
+                  # a few settings to speed up schema reloading at the expense of durability
+                  fsync = "off";
+                  synchronous_commit = "off";
+                  full_page_writes = "off";
+                  client_min_messages = "debug";
+                };
+                initialDatabases = [
+                  {
+                    name = "app";
+                    schemas = [ ./db/src ];
+                  }
+                ];
+
+              };
+              # TODO: dependencies - postgrest and openresty depends on healthy db being up
               settings.processes = {
                 # since this is "dev" we use the dev versions - not the "production" built derivations like (${self'.apps.openresty-receptdb.program})
                 postgrest.command = "postgrest";
