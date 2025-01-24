@@ -35,12 +35,13 @@
           ...
         }:
         let
-          pkgs_24_05 = nixpkgs_24_05.legacyPackages.${system};
-          pg = pkgs_24_05.postgresql_12.override { pythonSupport = true; };
+          # build postgres with python support and our custom python environment including webauthn
+          pg-python = pkgs.python3.withPackages (ps: [ ps.webauthn ]);
+          pg = pkgs.postgresql_17.override { pythonSupport = true; python3 = pg-python;};
 
-          pyPkgs = pkgs.python311Packages;
+          py-pkgs = pkgs.python311Packages;
 
-          soft-webauthn = pyPkgs.buildPythonPackage rec {
+          soft-webauthn = py-pkgs.buildPythonPackage rec {
             pname = "soft-webauthn";
             version = "0.1.4";
             src = pkgs.fetchPypi {
@@ -49,7 +50,7 @@
             };
             doCheck = false;
             # format = "pyproject";
-            propagatedBuildInputs = with pyPkgs; [
+            propagatedBuildInputs = with py-pkgs; [
               cryptography
               fido2
             ];
@@ -63,7 +64,7 @@
             soft-webauthn
           ]);
 
-          import_prod = pkgs.writeShellApplication {
+          import-prod = pkgs.writeShellApplication {
             name = "import-prod";
             runtimeInputs = [
               pkgs.docker
@@ -104,7 +105,7 @@
         {
           devShells.default = pkgs.mkShell {
             buildInputs = [
-              import_prod
+              import-prod
               db
               hot-reload
               pkgs.shellcheck
