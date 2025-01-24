@@ -12,6 +12,6 @@ RUN apt-get -y install python3 postgresql-plpython3-12 python3-pip
 # Install py_webauthn
 # RUN pip install --break-system-packages 'webauthn<2'
 # locally, this might be needed 💩
-RUN pip install 'webauthn<2'
+RUN pip install webauthn
 
 COPY ./src/ /docker-entrypoint-initdb.d

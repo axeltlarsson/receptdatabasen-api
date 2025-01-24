@@ -197,17 +197,14 @@
             {
               imports = [ services-flake.processComposeModules.default ];
               services.postgres."db" = {
-                # TODO: webauthn
                 enable = true;
                 package = pg;
                 port = 5432;
                 superuser = "superuser";
 
                 settings = {
-                  log_connections = true;
-                  log_disconnections = true;
                   log_statement = "all";
-
+                
                   # a few settings to speed up schema reloading at the expense of durability
                   fsync = "off";
                   synchronous_commit = "off";

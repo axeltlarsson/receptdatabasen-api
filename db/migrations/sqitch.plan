@@ -10,3 +10,4 @@ debug_passkey_auth 2023-12-29T18:54:16Z System Administrator <root@axel-mbp14.lo
 use_credential_id 2024-01-01T14:03:46Z System Administrator <root@axel-mbp14.local> # Use credential_id and not userHandle
 discoverable_credential 2024-01-01T15:49:59Z System Administrator <root@axel-mbp14.local> # Set registration options so Android uses discoverable credentials
 upgrade_postgrest 2024-03-25T07:58:16Z System Administrator <root@axel-mbp14> # Fix request.* functions for updated postgrest version
+upgrade_webauthn 2025-01-24T21:52:29Z System Administrator <root@axel-mbp14.local> # Upgrade webauthn version to 2.x

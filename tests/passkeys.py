@@ -7,7 +7,7 @@ import pytest
 import requests
 from soft_webauthn import SoftWebauthnDevice
 
-BASE_URL = "http://localhost:8080/rest"
+BASE_URL = "http://localhost:8081/rest"
 
 # insert into data.user (use_name, password) values ('user_1', 'password-password');
 USERNAME_1 = "alice"
@@ -246,8 +246,8 @@ def test_authentication_complete(get_passkey_w_session):
     assert res.status_code == 200
 
     body = res.json()
-    assert body[1]["last_used_at"]
-    assert body[1]["data"]["sign_count"] == 1
+    assert body[-1]["data"]["sign_count"] == 1
+    assert body[-1]["last_used_at"]
 
 
 # Poor man's teardown
