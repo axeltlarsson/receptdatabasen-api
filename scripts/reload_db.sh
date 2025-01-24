@@ -9,4 +9,4 @@ sqitch --chdir db/migrations revert -y --to "${revert_to}"
 sqitch --chdir db/migrations deploy
 
 # reload postgrest
-docker-compose kill -s SIGUSR1 postgrest
+# docker-compose kill -s SIGUSR1 postgrest

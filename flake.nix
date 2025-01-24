@@ -37,7 +37,10 @@
         let
           # build postgres with python support and our custom python environment including webauthn
           pg-python = pkgs.python3.withPackages (ps: [ ps.webauthn ]);
-          pg = pkgs.postgresql_17.override { pythonSupport = true; python3 = pg-python;};
+          pg = pkgs.postgresql_17.override {
+            pythonSupport = true;
+            python3 = pg-python;
+          };
 
           py-pkgs = pkgs.python311Packages;
 
@@ -85,10 +88,12 @@
             '';
           };
 
-          # TODO: fix this when using on-metal nix
           hot-reload = pkgs.writeShellApplication {
             name = "hot-reload";
-            runtimeInputs = [ pkgs.fswatch ];
+            runtimeInputs = [
+              pkgs.fswatch
+              pkgs.jq
+            ];
             text = pkgs.lib.strings.fileContents ./scripts/hot-reload.sh;
           };
 
@@ -207,7 +212,6 @@
                   fsync = "off";
                   synchronous_commit = "off";
                   full_page_writes = "off";
-                  client_min_messages = "debug";
                 };
                 initialDatabases = [
                   {

@@ -75,14 +75,14 @@ setup_colors
 # script logic here
 
 msg "${YELLOW}Import production database dump...${NOFORMAT}"
-ssh "$1" 'cd /srv/receptdatabasen && docker-compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U superuser -d app' >prod-dump.sql
+ssh "$1" 'cd /srv/receptdatabasen && docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U superuser -d app' >prod-dump.sql 2>/dev/null
 
 msg "${YELLOW}Drop local database...${NOFORMAT}"
-docker-compose exec db dropdb -U superuser app
+dropdb -h localhost -U "$SUPER_USER" -p "$DB_PORT" app
 msg "${YELLOW}Re-create local database...${NOFORMAT}"
-docker-compose exec db createdb -U superuser app
+createdb -h localhost -U "$SUPER_USER" -p "$DB_PORT" app
 msg "${YELLOW}Import production into local db...${NOFORMAT}"
-docker-compose exec -T db psql -U superuser -d app <prod-dump.sql
+psql -h localhost -U "$SUPER_USER" -d app <prod-dump.sql
 rm prod-dump.sql
 
 if [ -z "$download" ]; then
