@@ -42,6 +42,7 @@
             python3 = pg-python;
           };
 
+          # For integration tests we create a python env with the necessary dependencies
           py-pkgs = pkgs.python311Packages;
 
           soft-webauthn = py-pkgs.buildPythonPackage rec {
@@ -78,7 +79,6 @@
 
           db = pkgs.writeShellApplication {
             name = "db";
-            # TODO: isolate pgcli config file? e.g. pspg dep...
             runtimeInputs = [
               pkgs.pgcli
               pkgs.pspg
@@ -106,6 +106,7 @@
           openresty-package = pkgs.callPackage ./openresty/default.nix { };
 
           frontend-dev-shell = import ./frontend/shell.nix { inherit system; };
+
         in
         {
           devShells.default = pkgs.mkShell {
@@ -204,7 +205,7 @@
 
                 settings = {
                   log_statement = "all";
-                
+
                   # a few settings to speed up schema reloading at the expense of durability
                   fsync = "off";
                   synchronous_commit = "off";
