@@ -2,7 +2,6 @@
   description = "Receptdatabasen";
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    nixpkgs_24_05.url = "github:NixOS/nixpkgs/nixpkgs-24.05-darwin";
     flake-parts.url = "github:hercules-ci/flake-parts";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
     services-flake.url = "github:juspay/services-flake";
@@ -12,7 +11,6 @@
     inputs@{
       self,
       nixpkgs,
-      nixpkgs_24_05,
       flake-parts,
       services-flake,
       process-compose-flake,
@@ -35,13 +33,6 @@
           ...
         }:
         let
-          # build postgres with python support and our custom python environment including webauthn
-          pg-python = pkgs.python3.withPackages (ps: [ ps.webauthn ]);
-          pg = pkgs.postgresql_17.override {
-            pythonSupport = true;
-            python3 = pg-python;
-          };
-
           # For integration tests we create a python env with the necessary dependencies
           py-pkgs = pkgs.python311Packages;
 
@@ -105,6 +96,8 @@
           openresty-dev-shell = pkgs.callPackage ./openresty/shell.nix { };
           openresty-package = pkgs.callPackage ./openresty/default.nix { };
 
+          db-package = pkgs.callPackage ./db/default.nix { };
+
           frontend-dev-shell = import ./frontend/shell.nix { inherit system; };
 
         in
@@ -116,7 +109,7 @@
               hot-reload
               pkgs.shellcheck
               pkgs.sqitchPg
-              pg
+              db-package
 
               pythonEnv
               pkgs.ruff
@@ -199,7 +192,7 @@
               imports = [ services-flake.processComposeModules.default ];
               services.postgres."db" = {
                 enable = true;
-                package = pg;
+                package = db-package;
                 port = 5432;
                 superuser = "superuser";
 
