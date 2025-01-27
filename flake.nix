@@ -94,6 +94,7 @@
           };
 
           openresty-dev-shell = pkgs.callPackage ./openresty/shell.nix { };
+          # TODO: pass in built FE once I've nixified it
           openresty-package = pkgs.callPackage ./openresty/default.nix { };
 
           db-package = pkgs.callPackage ./db/default.nix { };
@@ -134,10 +135,6 @@
             nixos-vm = {
               type = "app";
               program = "${vm-config.run-vm}";
-            };
-            postgrest = {
-              type = "app";
-              program = "${pkgs.postgrest}/bin/postgrest";
             };
             openresty-receptdb = {
               type = "app";
@@ -191,6 +188,7 @@
             {
               imports = [ services-flake.processComposeModules.default ];
               services.postgres."db" = {
+                # TODO: could move this into db/default.nix for example or even db/flake.nix
                 enable = true;
                 package = db-package;
                 port = 5432;
@@ -212,12 +210,22 @@
                 ];
 
               };
-              # TODO: dependencies - postgrest and openresty depends on healthy db being up
               settings.processes = {
                 # since this is "dev" we use the dev versions - not the "production" built derivations like (${self'.apps.openresty-receptdb.program})
-                postgrest.command = "postgrest";
-                openresty-receptdb.command = "op";
+                postgrest = {
+                  command = "postgrest";
+                  depends_on."db".condition = "process_healthy";
+                };
+                openresty-receptdb = {
+                  command = "op";
+                  depends_on."db".condition = "process_healthy";
+                };
                 frontend.command = "(cd frontend; npm run start)";
+                hot-reload = {
+                  command = "hot-reload";
+                  depends_on."postgrest".condition = "process_started";
+                  depends_on."db".condition = "process_started";
+                };
               };
             };
 
