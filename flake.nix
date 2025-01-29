@@ -97,8 +97,6 @@
           # TODO: pass in built FE once I've nixified it
           openresty-package = pkgs.callPackage ./openresty/default.nix { };
 
-          db-package = pkgs.callPackage ./db/default.nix { };
-
           frontend-dev-shell = import ./frontend/shell.nix { inherit system; };
 
         in
@@ -110,7 +108,6 @@
               hot-reload
               pkgs.shellcheck
               pkgs.sqitchPg
-              db-package
 
               pythonEnv
               pkgs.ruff
@@ -186,30 +183,11 @@
           process-compose."dev" =
             { config, ... }:
             {
-              imports = [ services-flake.processComposeModules.default ];
-              services.postgres."db" = {
-                # TODO: could move this into db/default.nix for example or even db/flake.nix
-                enable = true;
-                package = db-package;
-                port = 5432;
-                superuser = "superuser";
-
-                settings = {
-                  log_statement = "all";
-
-                  # a few settings to speed up schema reloading at the expense of durability
-                  fsync = "off";
-                  synchronous_commit = "off";
-                  full_page_writes = "off";
-                };
-                initialDatabases = [
-                  {
-                    name = "app";
-                    schemas = [ ./db/src ];
-                  }
-                ];
-
-              };
+              imports = [
+                services-flake.processComposeModules.default
+                # db is in its own module
+                ./db/service.nix
+              ];
               settings.processes = {
                 # since this is "dev" we use the dev versions - not the "production" built derivations like (${self'.apps.openresty-receptdb.program})
                 postgrest = {
