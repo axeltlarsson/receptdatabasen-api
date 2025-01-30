@@ -103,15 +103,18 @@
         {
           devShells.default = pkgs.mkShell {
             buildInputs = [
+              # db
               import-prod
               db
-              hot-reload
-              pkgs.shellcheck
               pkgs.sqitchPg
 
+              # top-level
               pythonEnv
               pkgs.ruff
               pkgs.pyright
+              hot-reload
+              pkgs.shellcheck
+
               pkgs.postgrest
             ];
 
