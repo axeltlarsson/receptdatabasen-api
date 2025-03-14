@@ -7,6 +7,12 @@ let
     lua = pkgs.openresty;
   };
 
+  lua-resty-template = pkgs.callPackage ./lua-resty-template.nix {
+    buildLuarocksPackage = pkgs.luajitPackages.buildLuarocksPackage;
+    fetchFromGitHub = pkgs.fetchFromGitHub;
+    inherit (pkgs) lib;
+  };
+
 in
 [
   lua-vips
@@ -17,6 +23,7 @@ in
       lua-resty-http
       lua-resty-jwt
       lua-resty-session
+      lua-resty-template
       cjson
     ]
   ))

@@ -19,7 +19,8 @@ RUN luarocks config --lua-version=5.1 rocks_provided.luaffi-tkl 2.1-1
 RUN luarocks install lua-vips 1.1-11 && \
     luarocks install lua-resty-session 4.0.5-1 && \
     luarocks install lua-resty-jwt 0.2.3-0 && \
-    luarocks install lua-resty-http 0.17.2-0
+    luarocks install lua-resty-http 0.17.2-0 && \
+    luarocks install lua-resty-template 2.0
 
 # the libvips provided by apt-get is versioned libvips.so.42 but lua-vips expects it to be named libvips.so
 # so let's symlink it and refresh the linker cache

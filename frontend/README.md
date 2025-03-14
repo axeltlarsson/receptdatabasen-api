@@ -7,11 +7,11 @@
 
 ## Develop
 
-Run it in dev mode with: `dev` or `nix run`.
+Run it in dev mode with: `npm run start`
 
 ## Build
 
-- `build`
+- `npm run build`
 
 Use elm-review to find and remove dead code: `npx elm-review --fix`.
 

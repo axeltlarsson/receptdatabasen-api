@@ -152,6 +152,8 @@
             inherit (self.checks.${system}.default) driverInteractive;
           };
 
+          formatter = pkgs.nixfmt-rfc-style;
+
           # TODO: can probably do pkgs.nixosTest directly
           checks.default = nixpkgs.legacyPackages."${system}".nixosTest {
             name = "Integration test of the NixOS module";
