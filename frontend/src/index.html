@@ -7,18 +7,19 @@
     <meta name="theme-color" content="#000000">
 
     <!-- SOCIAL_METADATA_START (Rich link previews!) -->
-    <!-- These tags will be replaced for recipe pages -->
+    <!-- These values in mustache tags will be interolated by lua-rest-template -->
+    <!-- The url values enclosed in * are not HTML escaped -->
     <meta property="og:title" content="{{ title }}" />
     <meta property="og:description" content="{{ description }}" />
-    <meta property="og:image" content="{{ image }}" />
-    <meta property="og:url" content="{{ url }}" />
+    <meta property="og:image" content="{* image_url *}" />
+    <meta property="og:url" content="{* canonical_url *}" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Receptdatabasen" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="{{ title }}" />
     <meta name="twitter:description" content="{{ description }}" />
-    <meta name="twitter:image" content="{{ image }}" />
+    <meta name="twitter:image" content="{* image_url *}" />
     <!-- SOCIAL_METADATA_END -->
 
     <!--

@@ -54,6 +54,7 @@ if body_data then
   local file = io.open(file_path .. file_ext(mime_type), 'w+b')
   local f, write_err = file:write(body_data)
   file:close()
+
   if write_err then
     ngx.log(ngx.ERR, write_err)
     utils.return_error("Could not write to file: ", ngx.HTTP_INTERNAL_SERVER_ERROR)

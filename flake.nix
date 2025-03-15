@@ -84,6 +84,7 @@
             runtimeInputs = [
               pkgs.fswatch
               pkgs.jq
+              pkgs.postgresql_17
             ];
             text = pkgs.lib.strings.fileContents ./scripts/hot-reload.sh;
           };
