@@ -1,46 +1,80 @@
 -- serve_public_image.lua
--- Based on serve_image.lua but without signature verification and with additional checks for public images.
-
-local size, path, ext = ngx.var.size, ngx.var.path, ngx.var.ext
-local images_dir = os.getenv("FILE_UPLOAD_PATH") or "/uploads" -- where images are stored
-local cache_dir = (os.getenv("FILE_UPLOAD_PATH") or "/uploads") .. "/cache/" -- where images are cached
 local utils = require "utils"
 
--- Verify size is a reasonable number (additional check for public images)
+local size = ngx.var.size
+local path = ngx.var.path
+local ext = ngx.var.ext
+local file_upload_path = os.getenv("FILE_UPLOAD_PATH") or "/uploads"
+local images_dir = file_upload_path .. "/"      -- where original images are stored
+local cache_dir = file_upload_path .. "/cache/" -- where resized images are cached
+
+-- Verify size is a reasonable number
 local size_num = tonumber(size)
-if not size_num or size_num < 1 or size_num > 1200 then -- limit max size for public images
+if not size_num or size_num < 1 or size_num > 1200 then
     return utils.return_error("Invalid size parameter", ngx.HTTP_BAD_REQUEST)
 end
 
--- Basic path validation to prevent directory traversal (additional check for public images)
+-- Basic path validation to prevent directory traversal
 if path:find("%.%./") or path:find("/../") or path:find("^/") then
     return utils.return_error("Invalid path", ngx.HTTP_BAD_REQUEST)
 end
 
-local source_fname = images_dir .. "/" .. path
+-- Source file path
+local source_fname = images_dir .. path
 
--- make sure the file exists
+-- Log for debugging
+ngx.log(ngx.INFO, "Looking for source file: " .. source_fname)
+
+-- Check if the source file exists
 local file = io.open(source_fname)
 if not file then
-  utils.return_error("File not found", ngx.HTTP_NOT_FOUND)
+    ngx.log(ngx.ERR, "Source file not found: " .. source_fname)
+    return utils.return_error("File not found", ngx.HTTP_NOT_FOUND)
 end
 file:close()
 
-local dest_fname = cache_dir .. ngx.md5(size .. "/" .. path) .. "." .. ext
+-- Generate deterministic cache filename using MD5
+local digest = ngx.md5(size .. "/" .. path)
+local dest_fname = cache_dir .. digest .. "." .. ext
 
--- resize the image
+-- Resize the image using libvips
 local vips = require "vips"
 
--- fast thumbnail generator
-ngx.log(ngx.INFO, path .. " not found in cache, resizing image to width " .. size)
-local image = vips.Image.thumbnail(source_fname, size_num)
--- write the result to file
-image:write_to_file(dest_fname)
+-- Log for debugging
+ngx.log(ngx.INFO, "Resizing image " .. path .. " to width " .. size)
 
--- set header indicating cache miss and add cache control for public images
-ngx.header['x-image-server'] = 'cache miss'
-ngx.header['Cache-Control'] = 'public, max-age=2592000' -- 30 days
+-- Use pcall to catch any errors
+local ok, err = pcall(function()
+    -- Fast thumbnail generator
+    local image = vips.Image.thumbnail(source_fname, size_num)
+    -- Write the result to cache directory
+    image:write_to_file(dest_fname)
+end)
 
--- redirect back to same location again, this time try_files will pick up the
--- cached file!
-ngx.exec(ngx.var.request_uri)
+if not ok then
+    ngx.log(ngx.ERR, "Error resizing image: " .. tostring(err))
+    return utils.return_error("Error processing image: " .. tostring(err), ngx.HTTP_INTERNAL_SERVER_ERROR)
+end
+
+-- Log successful resize
+ngx.log(ngx.INFO, "Successfully resized image to: " .. dest_fname)
+
+-- Directly serve the file instead of redirecting
+local file = io.open(dest_fname, "rb")
+if not file then
+    ngx.log(ngx.ERR, "Could not open resized image: " .. dest_fname)
+    return utils.return_error("Error reading resized image", ngx.HTTP_INTERNAL_SERVER_ERROR)
+end
+
+-- Read the file content
+local content = file:read("*all")
+file:close()
+
+-- Set appropriate headers
+ngx.header["Content-Type"] = "image/" .. ext
+ngx.header["Content-Length"] = #content
+ngx.header["Cache-Control"] = "public, max-age=2592000"
+
+-- Send the file directly
+ngx.print(content)
+ngx.exit(ngx.OK)
