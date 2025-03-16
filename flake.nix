@@ -64,6 +64,7 @@
             runtimeInputs = [
               pkgs.docker
               pkgs.docker-compose
+              pkgs.postgresql_17
             ];
             text = pkgs.lib.strings.fileContents ./scripts/import_prod_db.sh;
           };

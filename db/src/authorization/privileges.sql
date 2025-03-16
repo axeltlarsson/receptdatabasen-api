@@ -25,9 +25,6 @@ grant usage on data.recipe_id_seq to webuser;
 -- authenticated users can request/change all the columns for this view
 grant select, insert, update, delete on api.recipes to webuser;
 
--- allow anonymous users to read the public_recipes view (for rich link previews)
-grant select on api.public_recipes to anonymous;
-
 -------------------------------------------------------------------------------
 
 grant execute on function api.search(text) to webuser;

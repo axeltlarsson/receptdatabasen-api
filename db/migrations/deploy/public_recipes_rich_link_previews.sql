@@ -2,11 +2,6 @@
 
 BEGIN;
 
-\ir ../../src/api/public_recipes.sql;
-
-alter view api.public_recipes owner to api;
-
--- And grant access to only this view
-GRANT SELECT ON api.public_recipes TO anonymous;
+\ir ../../src/api/recipe_preview_by_title.sql;
 
 COMMIT;

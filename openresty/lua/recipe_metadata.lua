@@ -1,6 +1,5 @@
 -- recipe_metadata.lua
 local cjson = require "cjson"
-
 local _M = {}
 
 -- Function to get recipe data by title
@@ -11,24 +10,31 @@ function _M.get_by_title(title)
     -- Log what we're doing
     ngx.log(ngx.INFO, "Fetching recipe data for: " .. title)
 
-    -- Make an internal API request to get the recipe data
+    -- Make an internal API request to get the recipe data using the new function
     local res = ngx.location.capture(
-        "/internal/rest/public/public_recipes?title=eq." .. encoded_title .. "&select=id,title,description,images",
-        { method = ngx.HTTP_GET }
+        "/internal/rest/rpc/recipe_preview_by_title",
+        {
+            method = ngx.HTTP_POST,
+            headers = {
+                ["Content-Type"] = "application/json; charset=utf-8",
+                ["Accept"] = "application/vnd.pgrst.object+json",
+                ["Prefer"] = "return=representation"
+            },
+            body = cjson.encode({ recipe_title = title })
+        }
     )
 
     if res.status ~= 200 then
-        ngx.log(ngx.ERR, "Failed to fetch recipe: " .. res.status .. res.body)
+        ngx.log(ngx.ERR, "Failed to fetch recipe: " .. res.status .. " " .. res.body)
         return nil, "API request failed with status " .. res.status
     end
 
-    local recipes = cjson.decode(res.body)
-    if #recipes == 0 then
+    local recipe = cjson.decode(res.body)
+
+    if not recipe or not recipe.id then
         ngx.log(ngx.ERR, "Recipe not found: " .. title)
         return nil, "Recipe not found"
     end
-
-    local recipe = recipes[1]
 
     -- Process description (truncate if needed)
     if recipe.description and #recipe.description > 160 then
@@ -46,7 +52,7 @@ function _M.get_by_title(title)
     if recipe.images and #recipe.images > 0 and recipe.images[1].url then
         -- Extract the URL from the image object
         recipe.image_url = ngx.var.scheme ..
-        "://" .. ngx.var.host .. port_suffix .. "/public-images/600/" .. recipe.images[1].url
+            "://" .. ngx.var.host .. port_suffix .. "/public-images/600/" .. recipe.images[1].url
         ngx.log(ngx.INFO, "Set image URL to: " .. recipe.image_url)
     else
         recipe.image_url = ngx.var.scheme .. "://" .. ngx.var.host .. port_suffix .. "/images/default-recipe.jpg"
@@ -55,7 +61,7 @@ function _M.get_by_title(title)
 
     -- Set canonical URL with port
     recipe.canonical_url = ngx.var.scheme ..
-    "://" .. ngx.var.host .. port_suffix .. "/recipe/" .. ngx.escape_uri(recipe.title)
+        "://" .. ngx.var.host .. port_suffix .. "/recipe/" .. ngx.escape_uri(recipe.title)
 
     return recipe
 end

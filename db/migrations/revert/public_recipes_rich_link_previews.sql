@@ -2,6 +2,6 @@
 
 BEGIN;
 
-drop view api.public_recipes;
+drop function api.recipe_preview_by_title(text);
 
 COMMIT;
