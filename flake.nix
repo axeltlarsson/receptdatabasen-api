@@ -210,6 +210,7 @@
                   command = "hot-reload";
                   depends_on."postgrest".condition = "process_started";
                   depends_on."db".condition = "process_started";
+                  depends_on."openresty-receptdb".condition = "process_started";
                 };
               };
             };

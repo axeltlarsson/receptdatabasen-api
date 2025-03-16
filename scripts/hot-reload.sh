@@ -6,9 +6,10 @@ batch_events=()
 openresty_changed=false
 db_changed=false
 
-# get the pids of the openresty and postgrest processes from the process compose REST API
-openresty_pid=$(curl -s http://localhost:8080/process/openresty-receptdb | jq '.pid')
+# get the pids of the postgrest process from the process compose REST API
 postgrest_pid=$(curl -s http://localhost:8080/process/postgrest | jq '.pid')
+# get the openresty pid from the openresty/nginx.pid file
+openresty_pid=$(cat openresty/nginx.pid)
 
 echo -e "\e[1;34m[Openresty]\e[0m PID: $openresty_pid"
 echo -e "\e[1;32m[Database]\e[0m PID: $postgrest_pid"
