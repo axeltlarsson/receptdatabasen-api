@@ -14,11 +14,9 @@ end
 
 -- URL decode the recipe title from the path
 local recipe_title = ngx.unescape_uri(uri_parts)
-ngx.log(ngx.INFO, "Recipe title detected: " .. recipe_title)
 
 -- Get the document root path
 local document_root = ngx.var.document_root or "/usr/local/openresty/nginx/html"
-ngx.log(ngx.INFO, "Document root: " .. document_root)
 
 -- Read the HTML template file
 local f, err = io.open(document_root .. "/index.html", "r")

@@ -78,7 +78,7 @@ function _M.get_fallback()
     return {
         title = "Receptdatabasen",
         description = "Din samling av favoritrecept",
-        image_url = ngx.var.scheme .. "://" .. ngx.var.host .. port_suffix .. "/images/default-recipe.jpg",
+        image_url = "",
         canonical_url = ngx.var.scheme .. "://" .. ngx.var.host .. port_suffix .. ngx.var.uri
     }
 end
