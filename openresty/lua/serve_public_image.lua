@@ -1,10 +1,9 @@
--- serve_public_image.lua
 local utils = require "utils"
 
 local size = ngx.var.size
 local path = ngx.var.path
 local ext = ngx.var.ext
-local file_upload_path = os.getenv("FILE_UPLOAD_PATH") or "/uploads"
+local file_upload_path = os.getenv("FILE_UPLOAD_PATH")
 local images_dir = file_upload_path .. "/"      -- where original images are stored
 local cache_dir = file_upload_path .. "/cache/" -- where resized images are cached
 
@@ -26,7 +25,7 @@ local source_fname = images_dir .. path
 ngx.log(ngx.INFO, "Looking for source file: " .. source_fname)
 
 -- Check if the source file exists
-local file = io.open(source_fname)
+local file = io.open(source_fname, "rb")
 if not file then
     ngx.log(ngx.ERR, "Source file not found: " .. source_fname)
     return utils.return_error("File not found", ngx.HTTP_NOT_FOUND)
@@ -41,7 +40,7 @@ local dest_fname = cache_dir .. digest .. "." .. ext
 local vips = require "vips"
 
 -- Log for debugging
-ngx.log(ngx.INFO, "Resizing image " .. path .. " to width " .. size)
+ngx.log(ngx.INFO, path .. "not found in cache, resizing image to width " .. size)
 
 -- Use pcall to catch any errors
 local ok, err = pcall(function()
@@ -59,22 +58,9 @@ end
 -- Log successful resize
 ngx.log(ngx.INFO, "Successfully resized image to: " .. dest_fname)
 
--- Directly serve the file instead of redirecting
-local file = io.open(dest_fname, "rb")
-if not file then
-    ngx.log(ngx.ERR, "Could not open resized image: " .. dest_fname)
-    return utils.return_error("Error reading resized image", ngx.HTTP_INTERNAL_SERVER_ERROR)
-end
+-- set header indicating cache miss
+ngx.header['x-image-server'] = 'cache miss'
 
--- Read the file content
-local content = file:read("*all")
-file:close()
-
--- Set appropriate headers
-ngx.header["Content-Type"] = "image/" .. ext
-ngx.header["Content-Length"] = #content
-ngx.header["Cache-Control"] = "public, max-age=2592000"
-
--- Send the file directly
-ngx.print(content)
-ngx.exit(ngx.OK)
+-- redirect back to same location again, this time try_files will pick up the
+-- cached file!
+ngx.exec(ngx.var.request_uri)

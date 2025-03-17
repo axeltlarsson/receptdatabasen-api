@@ -1,15 +1,15 @@
 local sig, size, path, ext =
-  ngx.var.sig, ngx.var.size, ngx.var.path, ngx.var.ext
+    ngx.var.sig, ngx.var.size, ngx.var.path, ngx.var.ext
 
-local secret = "hello_world" -- signature secret key
-local images_dir = os.getenv("FILE_UPLOAD_PATH") .. "/" -- where images are stored
+local secret = "hello_world"                                 -- signature secret key
+local images_dir = os.getenv("FILE_UPLOAD_PATH") .. "/"      -- where images are stored
 local cache_dir = os.getenv("FILE_UPLOAD_PATH") .. "/cache/" -- where images are cached
 local utils = require "utils"
 
 local function calculate_signature(str)
   return ngx.encode_base64(ngx.hmac_sha1(secret, str))
-    :gsub("[+/=]", {["+"] = "-", ["/"] = "_", ["="] = ","})
-    :sub(1,12)
+      :gsub("[+/=]", { ["+"] = "-", ["/"] = "_", ["="] = "," })
+      :sub(1, 12)
 end
 
 if calculate_signature(size .. "/" .. path) ~= sig then
@@ -25,7 +25,6 @@ local file = io.open(source_fname)
 if not file then
   utils.return_error("File not found", ngx.HTTP_NOT_FOUND)
 end
-
 file:close()
 
 local dest_fname = cache_dir .. ngx.md5(size .. "/" .. path) .. "." .. ext
