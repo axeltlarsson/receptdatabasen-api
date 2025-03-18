@@ -1,13 +1,13 @@
 -- recipe_metadata.lua
 local cjson = require "cjson"
+local utils = require "utils"
 local _M = {}
 
--- Function to get recipe data by title
-function _M.get_by_title(title)
-    -- URL encode the title for the API request
-    local encoded_title = ngx.escape_uri(title)
-
-    -- Log what we're doing
+-- This function is used to fetch recipe data from the API
+-- @param title string The title of the recipe to fetch
+-- @param secret string The secret key used to sign the image URLs
+-- @return table|nil The recipe data as a Lua table, or nil on failure
+function _M.get_by_title(title, secret)
     ngx.log(ngx.INFO, "Fetching recipe data for: " .. title)
 
     -- Make an internal API request to get the recipe data using the new function
@@ -51,12 +51,14 @@ function _M.get_by_title(title)
     -- Generate image URL if present
     if recipe.images and #recipe.images > 0 and recipe.images[1].url then
         -- Extract the URL from the image object
+        local size = "700"
+        local signature = utils.calculate_signature(secret, size .. "/" .. recipe.images[1].url)
+        print("calculated signatuer with secret: " .. secret .. " and url: " .. recipe.images[1].url .. " to: " .. signature)
         recipe.image_url = ngx.var.scheme ..
-            "://" .. ngx.var.host .. port_suffix .. "/public-images/600/" .. recipe.images[1].url
+            "://" .. ngx.var.host .. port_suffix .. "/public-images/" .. signature .. "/" .. size .. "/" .. recipe.images[1].url
         ngx.log(ngx.INFO, "Set image URL to: " .. recipe.image_url)
     else
-        recipe.image_url = ngx.var.scheme .. "://" .. ngx.var.host .. port_suffix .. "/images/default-recipe.jpg"
-        ngx.log(ngx.INFO, "Using default image URL: " .. recipe.image_url)
+        recipe.image_url = ""
     end
 
     -- Set canonical URL with port

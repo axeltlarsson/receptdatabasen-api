@@ -1,6 +1,7 @@
 -- rich_link_preview.lua
 local template = require "resty.template"
 local metadata = require "recipe_metadata"
+local secret = os.getenv("IMAGE_SERVER_SECRET")
 
 -- Add detailed logging for debugging
 ngx.log(ngx.INFO, "Starting rich link preview for URI: " .. ngx.var.uri)
@@ -29,7 +30,7 @@ local html = f:read("*all")
 f:close()
 
 -- Fetch recipe metadata
-local recipe, err = metadata.get_by_title(recipe_title)
+local recipe, err = metadata.get_by_title(recipe_title, secret)
 if not recipe then
     ngx.log(ngx.WARN, "Could not fetch recipe data: " .. (err or "unknown error"))
     ngx.log(ngx.WARN, "Using fallback metadata")

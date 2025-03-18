@@ -23,16 +23,13 @@ if path:find("%.%./") or path:find("/../") or path:find("^/") then
   return utils.return_error("Invalid path", ngx.HTTP_BAD_REQUEST)
 end
 
-local function calculate_signature(str)
-  return ngx.encode_base64(ngx.hmac_sha1(secret, str))
-      :gsub("[+/=]", { ["+"] = "-", ["/"] = "_", ["="] = "," })
-      :sub(1, 12)
-end
 
-if calculate_signature(size .. "/" .. path) ~= sig then
+if utils.calculate_signature(secret, size .. "/" .. path) ~= sig then
   -- TODO: implement this!
-  print('invalid signature')
+  print('invalid signature for secret: ' .. secret .. " and size: " .. size .. " and path: " .. path)
   -- return_not_found("invalid signature")
+else
+  print('valid signature!')
 end
 
 local source_fname = images_dir .. path
