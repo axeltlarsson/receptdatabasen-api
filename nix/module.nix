@@ -89,6 +89,17 @@ in
       '';
     };
 
+    imageServerSecret = lib.mkOption {
+      type = minLengthString 32;
+      example = "fQGUNzfLgA6l5wMazvRcDJ2IuauIMSiR";
+      description = ''
+        The secret to use for the image server
+        Must be at least 32 characters long!
+
+        Tip: use `< /dev/urandom tr -dc 'A-Za-z0-9' | head -c 32` to generate a random secret
+      '';
+    };
+
   };
 
   config = lib.mkIf cfg.enable {
@@ -119,6 +130,7 @@ in
           ORIGIN = "'${origin}'";
 
           COOKIE_SESSION_SECRET = cfg.cookieSessionSecret;
+          IMAGE_SERVER_SECRET = cfg.imageServerSecret;
           OPENRESTY_PORT = toString cfg.port;
         };
       serviceConfig = {

@@ -37,7 +37,7 @@ function _M.get_by_title(title)
     end
 
     -- Process description (truncate if needed)
-    if recipe.description and #recipe.description > 160 then
+    if recipe.description and recipe.description ~= cjson.null and #recipe.description > 160 then
         recipe.description = recipe.description:sub(1, 157) .. "..."
     end
 

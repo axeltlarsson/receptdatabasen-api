@@ -22,6 +22,7 @@ services:
       - RP_ID=${RP_ID}
       - ORIGIN=${ORIGIN}
       - DISABLE_USER_VERIFICATION=${DISABLE_USER_VERIFICATION}
+      - IMAGE_SERVER_SECRET=${IMAGE_SERVER_SECRET}
 
     volumes:
       - db-vol:/var/lib/postgresql/data
@@ -55,6 +56,7 @@ services:
       - LISTAN_API_URL=${LISTAN_API_URL}
       - LISTAN_JWT_SECRET=${LISTAN_JWT_SECRET}
       - FILE_UPLOAD_PATH=/uploads
+      - IMAGE_SERVER_SECRET=${IMAGE_SERVER_SECRET}
     volumes:
       - uploads-vol:/uploads
     depends_on:
