@@ -446,7 +446,7 @@ update msg model =
         handleError err updates =
             case err of
                 Api.Unauthorized ->
-                    ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+                    ( model, Route.pushUrl (Session.navKey (toSession model)) (Route.Login Nothing) )
 
                 _ ->
                     updates
@@ -539,7 +539,7 @@ update msg model =
             ( model, Passkey.logout LogoutComplete )
 
         LogoutComplete (Ok _) ->
-            ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+            ( model, Route.pushUrl (Session.navKey (toSession model)) (Route.Login Nothing) )
 
         LogoutComplete (Err _) ->
             ( model, Cmd.none )

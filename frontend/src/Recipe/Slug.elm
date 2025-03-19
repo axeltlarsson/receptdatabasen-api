@@ -1,4 +1,4 @@
-module Recipe.Slug exposing (Slug, decoder, toString, urlParser)
+module Recipe.Slug exposing (Slug(..), decoder, toString, urlParser)
 
 import Json.Decode as Decode exposing (Decoder)
 import Url.Parser exposing (Parser)

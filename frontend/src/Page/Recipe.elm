@@ -50,6 +50,7 @@ import Task
 
 type alias Model =
     { session : Session
+    , slug : Slug
     , recipe : Status (Recipe Full)
     , checkboxStatus : Dict Int Bool
     , scaledPortions : Int
@@ -77,6 +78,7 @@ init session slug =
         Just recipe ->
             ( { recipe = Loaded recipe
               , session = session
+              , slug = slug
               , checkboxStatus = Dict.empty
               , scaledPortions = recipe |> Recipe.contents |> .portions
               , toDelete = False
@@ -88,6 +90,7 @@ init session slug =
         Nothing ->
             ( { recipe = Loading
               , session = session
+              , slug = slug
               , checkboxStatus = Dict.empty
               , scaledPortions = 0
               , toDelete = False
@@ -532,7 +535,11 @@ update msg model =
         LoadedRecipe (Err error) ->
             case error of
                 Api.Unauthorized ->
-                    ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+                    let
+                        route =
+                            Route.Login (Just model.slug)
+                    in
+                    ( model, Route.pushUrl (Session.navKey (toSession model)) route )
 
                 _ ->
                     ( { model | recipe = Failed error }, Cmd.none )

@@ -311,7 +311,7 @@ update msg model =
         LoadedRecipes (Err error) ->
             case error of
                 Api.Unauthorized ->
-                    ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+                    ( model, Route.pushUrl (Session.navKey (toSession model)) (Route.Login Nothing) )
 
                 _ ->
                     ( { model | recipes = Failed error }, Cmd.none )
