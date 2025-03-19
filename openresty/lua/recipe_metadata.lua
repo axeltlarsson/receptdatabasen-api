@@ -50,12 +50,7 @@ function _M.get_by_title(title, secret)
 
     -- Generate image URL if present
     if recipe.images and #recipe.images > 0 and recipe.images[1].url then
-        -- Extract the URL from the image object
-        local size = "700"
-        local signature = utils.calculate_signature(secret, size .. "/" .. recipe.images[1].url)
-        print("calculated signatuer with secret: " .. secret .. " and url: " .. recipe.images[1].url .. " to: " .. signature)
-        recipe.image_url = ngx.var.scheme ..
-            "://" .. ngx.var.host .. port_suffix .. "/public-images/" .. signature .. "/" .. size .. "/" .. recipe.images[1].url
+        recipe.image_url = utils.signed_image_url("public-images", recipe.images[1].url, 700, secret)
         ngx.log(ngx.INFO, "Set image URL to: " .. recipe.image_url)
     else
         recipe.image_url = ""

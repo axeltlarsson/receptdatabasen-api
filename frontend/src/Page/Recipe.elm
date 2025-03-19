@@ -185,7 +185,7 @@ viewRecipe listanExportStatus toDelete recipe checkboxStatus scaledPortions devi
             Recipe.metadata recipe
 
         image =
-            List.head images |> Maybe.map .url
+            List.head images |> Maybe.map .url1600
 
         { portions, ingredients, instructions, tags } =
             Recipe.contents recipe
@@ -214,11 +214,8 @@ viewRecipe listanExportStatus toDelete recipe checkboxStatus scaledPortions devi
 
 
 viewHeader : String -> List String -> Maybe String -> Maybe String -> Element.Device -> Element Msg
-viewHeader title tags description image device =
+viewHeader title tags description imageUrl device =
     let
-        imageUrl =
-            image |> Maybe.map (\p -> "/images/sig/1600/" ++ p)
-
         background =
             imageUrl
                 |> Maybe.map Background.image

@@ -7,17 +7,28 @@ create or replace view api.recipes as (
     tags,
     portions,
     ingredients,
-    images,
+    (
+      select 
+        jsonb_agg(
+          jsonb_build_object(
+            'url', img->>'url',
+            'url1600', utils.generate_signed_image_url(img->>'url', 1600),
+            'url1496', utils.generate_signed_image_url(img->>'url', 1496)
+          )
+        )
+      from 
+        jsonb_array_elements(images) as img
+    ) as images,
     search,
     created_at,
     updated_at
   from data.recipe
 );
 
-alter view recipes owner to api; -- it is important to set the correct owner to the RLS policy kicks in TODO: what?
+alter view api.recipes owner to api; -- it is important to set the correct owner so the RLS policy kicks in
 
 -- Mutations
-create function insert_recipe()
+create or replace function insert_recipe()
 returns trigger
 as $$
   declare recipe_id int;
@@ -37,11 +48,11 @@ as $$
   end;
 $$ security definer language plpgsql;
 
-create trigger insert_recipe
+create or replace trigger insert_recipe
 instead of insert on api.recipes
 for each row execute procedure insert_recipe();
 
-create function update_recipe()
+create or replace function update_recipe()
 returns trigger
 as $$
   declare recipe_id int;
@@ -63,6 +74,6 @@ as $$
   end;
 $$ security definer language plpgsql;
 
-create trigger update_recipe
+create or replace trigger update_recipe
 instead of update on api.recipes
 for each row execute procedure update_recipe();

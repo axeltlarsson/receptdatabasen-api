@@ -15,6 +15,7 @@ set client_min_messages to warning;
 \set rp_id `echo $RP_ID`
 \set origin `echo $ORIGIN`
 \set disable_user_verification `echo $DISABLE_USER_VERIFICATION`
+\set image_server_secret `echo $IMAGE_SERVER_SECRET`
 
 \echo # Loading database definition
 begin;

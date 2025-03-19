@@ -57,7 +57,7 @@ type alias Metadata =
 
 
 type alias Image =
-    { url : String }
+    { url : String, url1496 : String, url1600 : String }
 
 
 type Preview
@@ -112,7 +112,10 @@ metadataDecoder =
         (field "description" <| Decode.nullable string)
         (field "images" <|
             Decode.list <|
-                Decode.map Image (Decode.field "url" <| string)
+                Decode.map3 Image
+                    (Decode.field "url" <| string)
+                    (Decode.field "url1496" <| string)
+                    (Decode.field "url1600" <| string)
         )
         (field "created_at" string)
         (field "updated_at" string)

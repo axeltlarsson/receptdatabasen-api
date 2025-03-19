@@ -1,6 +1,6 @@
 -- serve_image.lua
 -- Resize images and save them into the cache directory for future serving
--- the signature comprise the size and path of the image and a secret key
+-- the signature comprises the size and path of the image and a secret key
 -- it is used to verify the request and prevent DOS attacks trying to resize images wasting CPU
 local utils = require "utils"
 local vips = require "vips"
@@ -24,12 +24,9 @@ if path:find("%.%./") or path:find("/../") or path:find("^/") then
 end
 
 
-if utils.calculate_signature(secret, size .. "/" .. path) ~= sig then
-  -- TODO: implement this!
-  print('invalid signature for secret: ' .. secret .. " and size: " .. size .. " and path: " .. path)
-  -- return_not_found("invalid signature")
-else
-  print('valid signature!')
+if utils.calculate_signature(secret, size, path) ~= sig then
+  ngx.log(ngx.WARN, "Invalid signature")
+  utils.return_error("Invalid signature", ngx.HTTP_FORBIDDEN)
 end
 
 local source_fname = images_dir .. path
@@ -38,7 +35,7 @@ local source_fname = images_dir .. path
 local file, err = io.open(source_fname, "r")
 
 if not file then
-  ngx.log(ngx.ERR, "Source could not be opned: " .. err)
+  ngx.log(ngx.ERR, "Source could not be opened: " .. err)
   return utils.return_error("File not found", ngx.HTTP_NOT_FOUND)
 end
 file:close()
@@ -48,13 +45,13 @@ local dest_fname = cache_dir .. ngx.md5(size .. "/" .. path) .. "." .. ext
 
 -- Resize the image using libvips and write to cache directory
 local ok, err_vips = pcall(function()
-    local image = vips.Image.thumbnail(source_fname, size_num)
-    image:write_to_file(dest_fname)
+  local image = vips.Image.thumbnail(source_fname, size_num)
+  image:write_to_file(dest_fname)
 end)
 
 if not ok then
-    ngx.log(ngx.ERR, "Error resizing image: " .. tostring(err_vips))
-    return utils.return_error("Error processing image", ngx.HTTP_INTERNAL_SERVER_ERROR)
+  ngx.log(ngx.ERR, "Error resizing image: " .. tostring(err_vips))
+  return utils.return_error("Error processing image", ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
 -- Set header indicating cache miss
