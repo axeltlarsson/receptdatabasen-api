@@ -3,10 +3,10 @@ local cjson = require "cjson"
 local utils = require "utils"
 local _M = {}
 
--- This function is used to fetch recipe data from the API
--- @param title string The title of the recipe to fetch
--- @param secret string The secret key used to sign the image URLs
--- @return table|nil The recipe data as a Lua table, or nil on failure
+--- This function is used to fetch recipe data from the API
+--- @param title string The title of the recipe to fetch
+--- @param secret string The secret key used to sign the image URLs
+--- @return table|nil recipe_data as a Lua table, or nil on failure
 function _M.get_by_title(title, secret)
     ngx.log(ngx.INFO, "Fetching recipe data for: " .. title)
 
@@ -41,36 +41,24 @@ function _M.get_by_title(title, secret)
         recipe.description = recipe.description:sub(1, 157) .. "..."
     end
 
-    -- Get server port
-    local server_port = ngx.var.server_port
-    local port_suffix = ""
-    if server_port ~= "80" and server_port ~= "443" then
-        port_suffix = ":" .. server_port
+    -- Prepend public-facing base url to image url
+    if recipe.image_url ~= cjson.null then
+        recipe.image_url = utils.get_base_url() .. recipe.image_url
     end
 
+    -- Set the canonical URL
+    recipe.canonical_url = utils.get_base_url() .. "/recipe/" .. ngx.escape_uri(recipe.title)
 
-    -- Set canonical URL with port
-    recipe.canonical_url = ngx.var.scheme ..
-        "://" .. ngx.var.host .. port_suffix .. "/recipe/" .. ngx.escape_uri(recipe.title)
-
-    print("Recipe data fetched: " .. cjson.encode(recipe))
     return recipe
 end
 
 -- Function to get fallback metadata
 function _M.get_fallback()
-    -- Get server port
-    local server_port = ngx.var.server_port
-    local port_suffix = ""
-    if server_port ~= "80" and server_port ~= "443" then
-        port_suffix = ":" .. server_port
-    end
-
     return {
         title = "Receptdatabasen",
         description = "Din samling av favoritrecept",
         image_url = "",
-        canonical_url = ngx.var.scheme .. "://" .. ngx.var.host .. port_suffix .. ngx.var.uri
+        canonical_url = utils.get_base_url() .. ngx.var.uri
     }
 end
 
