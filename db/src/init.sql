@@ -37,6 +37,9 @@ create extension if not exists plpython3u;
 -- functions for JWT token generation in the database context
 \ir :db_dir/libs/pgjwt.sql
 
+- utils
+\ir :db_dir/libs/utils.sql
+
 -- save app settings (they are stored in the settings.secrets table)
 select settings.set('jwt_secret', :quoted_jwt_secret);
 select settings.set('jwt_lifetime', :quoted_jwt_lifetime);

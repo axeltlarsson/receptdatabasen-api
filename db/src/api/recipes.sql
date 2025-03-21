@@ -7,17 +7,21 @@ create or replace view api.recipes as (
     tags,
     portions,
     ingredients,
-    (
-      select 
-        jsonb_agg(
-          jsonb_build_object(
-            'url', img->>'url',
-            'url1600', utils.generate_signed_image_url(img->>'url', 1600),
-            'url1496', utils.generate_signed_image_url(img->>'url', 1496)
+    coalesce(
+      (
+        select 
+          jsonb_agg(
+            jsonb_build_object(
+              'url', img->>'url',
+              'url1600', utils.generate_signed_image_url('/images', img->>'url', 1600),
+              'url1496', utils.generate_signed_image_url('/images', img->>'url', 1496),
+              'url700', utils.generate_signed_image_url('/public-images', img->>'url', 700)
+            )
           )
-        )
-      from 
-        jsonb_array_elements(images) as img
+        from 
+          jsonb_array_elements(images) as img
+      ),
+      '[]'
     ) as images,
     search,
     created_at,

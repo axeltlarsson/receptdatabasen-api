@@ -48,18 +48,12 @@ function _M.get_by_title(title, secret)
         port_suffix = ":" .. server_port
     end
 
-    -- Generate image URL if present
-    if recipe.images and #recipe.images > 0 and recipe.images[1].url then
-        recipe.image_url = utils.signed_image_url("public-images", recipe.images[1].url, 700, secret)
-        ngx.log(ngx.INFO, "Set image URL to: " .. recipe.image_url)
-    else
-        recipe.image_url = ""
-    end
 
     -- Set canonical URL with port
     recipe.canonical_url = ngx.var.scheme ..
         "://" .. ngx.var.host .. port_suffix .. "/recipe/" .. ngx.escape_uri(recipe.title)
 
+    print("Recipe data fetched: " .. cjson.encode(recipe))
     return recipe
 end
 

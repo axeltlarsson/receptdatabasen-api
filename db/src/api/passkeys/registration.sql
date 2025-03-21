@@ -4,7 +4,6 @@
 
 create or replace function api.generate_registration_options(user_id text, user_name text, rp_id text, exclude_credentials text[]) returns json as $$
 
-  plpy.warning(f"generate_registration_options DEBUG: {user_id}, {user_name}");
   from webauthn import (
       generate_registration_options,
       options_to_json,

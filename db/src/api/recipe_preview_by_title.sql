@@ -6,14 +6,15 @@ returns table (
   id integer,
   title text,
   description text,
-  images jsonb
+  image_url text
 )
 as $$
   select
     id,
     title,
     description,
-    images
+    -- get the first, if any, url700 image url from the images array
+    (images #>> '{0, url700}')::text as image_url
   from api.recipes
   where api.recipes.title = recipe_title
   limit 1;

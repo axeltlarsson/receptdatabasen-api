@@ -38,6 +38,7 @@ $$ LANGUAGE plpgsql STABLE security definer;-- set search_path = utils, public, 
 
 -- Function to generate a signed URL for an image
 CREATE OR REPLACE FUNCTION utils.generate_signed_image_url(
+    url_path text,
     image_path text,
     size integer DEFAULT 600
 ) RETURNS text AS $$
@@ -48,7 +49,7 @@ BEGIN
     signature := utils.calculate_image_signature(size::text, image_path);
     
     -- Return the full signed URL
-    RETURN '/images/' || signature || '/' || size || '/' || image_path;
+    RETURN url_path || '/' || signature || '/' || size || '/' || image_path;
 END;
 $$ LANGUAGE plpgsql STABLE security definer set search_path = utils, pg_temp;
 
