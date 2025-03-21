@@ -37,7 +37,7 @@ create extension if not exists plpython3u;
 -- functions for JWT token generation in the database context
 \ir :db_dir/libs/pgjwt.sql
 
-- utils
+-- utils
 \ir :db_dir/libs/utils.sql
 
 -- save app settings (they are stored in the settings.secrets table)
@@ -49,7 +49,6 @@ select settings.set('disable_user_verification', :disable_user_verification::int
 
 \echo # Loading application definitions
 
-\echo # Loading roles
 \ir :db_dir/authorization/roles.sql
 
 -- private schema where all tables will be defined

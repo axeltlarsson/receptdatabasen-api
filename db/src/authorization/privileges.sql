@@ -27,4 +27,9 @@ grant select, insert, update, delete on api.recipes to webuser;
 
 -------------------------------------------------------------------------------
 
+-- since recipe_preview_by_title is security definer, it executes with the permissions
+-- of the function owner so we set that to `webuser` so that the view api.recipes can access it
+alter function api.recipe_preview_by_title(text) owner to webuser;
+grant usage on schema utils to webuser;
+
 grant execute on function api.search(text) to webuser;

@@ -10,16 +10,21 @@ services:
       - ./db/src:/docker-entrypoint-initdb.d
 
   postgrest:
+    environment:
+      - PGRST_DB_URI=postgresql://${DB_USER}:${DB_PASS}@db:5432/${DB_NAME}
     ports:
       - "3003:3000"
 
+
   openresty:
+    environment:
+      - POSTGREST_HOST=postgrest
     build:
       context: ./openresty
     ports:
-      - "8080:80"
+      - "8081:8081"
     volumes:
       - ./openresty/nginx:/usr/local/openresty/nginx/conf
       - ./frontend/dist:/usr/local/openresty/nginx/html
-      - ./openresty/lua:/usr/local/openresty/lua
+      - ./openresty/lua:/usr/local/openresty/nginx/lua
     command: ["openresty", "-g", "daemon off; error_log /dev/stderr debug;"]

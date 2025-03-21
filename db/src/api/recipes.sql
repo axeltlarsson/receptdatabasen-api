@@ -52,7 +52,8 @@ as $$
   end;
 $$ security definer language plpgsql;
 
-create or replace trigger insert_recipe
+drop trigger if exists insert_recipe on api.recipes;
+create trigger insert_recipe
 instead of insert on api.recipes
 for each row execute procedure insert_recipe();
 
@@ -78,6 +79,7 @@ as $$
   end;
 $$ security definer language plpgsql;
 
-create or replace trigger update_recipe
+drop trigger if exists update_recipe on api.recipes;
+create trigger update_recipe
 instead of update on api.recipes
 for each row execute procedure update_recipe();

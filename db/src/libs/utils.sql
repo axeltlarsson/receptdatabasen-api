@@ -53,10 +53,3 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql STABLE security definer set search_path = utils, pg_temp;
 
--- Permissions:
--- since it's security definer, it executes with the permissions of the function owner
--- so we set the function owner to webuser so that the view api.recipes can access it
-alter function api.recipe_preview_by_title(text) owner to webuser;
-revoke all privileges on function api.recipe_preview_by_title(text) from public;
-grant usage on schema utils to webuser;
---  grant execute on function api.recipe_preview_by_title(text) to webuser;
