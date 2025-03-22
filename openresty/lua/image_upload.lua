@@ -93,7 +93,12 @@ if body_data then
     return
   end
 
-  local response = { image = { url = name .. ".jpeg", originalUrl = name .. file_ext(mime_type) } }
+  local response = {
+    image = {
+      url = name .. ".jpeg",
+      originalUrl = name .. file_ext(mime_type)
+    }
+  }
   ngx.say(cjson.encode(response))
 else
   utils.return_error("Could not read the image data from POST body")
