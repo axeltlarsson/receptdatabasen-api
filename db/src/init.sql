@@ -16,6 +16,7 @@ set client_min_messages to warning;
 \set origin `echo $ORIGIN`
 \set disable_user_verification `echo $DISABLE_USER_VERIFICATION`
 \set image_server_secret `echo $IMAGE_SERVER_SECRET`
+\set quoted_image_server_secret '\'' `echo $IMAGE_SERVER_SECRET` '\''
 
 \echo # Loading database definition
 begin;
@@ -46,6 +47,7 @@ select settings.set('jwt_lifetime', :quoted_jwt_lifetime);
 select settings.set('rp_id', :rp_id);
 select settings.set('origin', :origin);
 select settings.set('disable_user_verification', :disable_user_verification::int::text); --  settings need bools as '0' or '1'
+select settings.set('image_server_secret', :quoted_image_server_secret);
 
 \echo # Loading application definitions
 
