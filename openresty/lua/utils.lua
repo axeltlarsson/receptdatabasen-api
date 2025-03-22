@@ -109,45 +109,19 @@ local function get_base_url()
     local host = ngx.req.get_headers()["X-Forwarded-Host"]
     local port = ngx.req.get_headers()["X-Forwarded-Port"]
     local scheme = ngx.req.get_headers()["X-Forwarded-Proto"]
+    local port_suffix = nil
 
-    -- Fall back to server variables if headers aren't available
-    if not host then
+    if host and scheme then
+        port_suffix = (port and port ~= "80" and port ~= "443") and ":" .. port or ""
+    else
+        -- Fall back to server variables if forwarded headers aren't available
+        port = ngx.var.server_port
+        port_suffix = (port ~= "80" and port ~= "443") and ":" .. port or ""
         host = ngx.var.host or ngx.var.server_name or "localhost"
-    end
-
-    if not scheme then
         scheme = ngx.var.scheme or "http"
     end
 
-    if not port then
-        -- Check if port is already part of the host (e.g., "localhost:8080")
-        local has_port = host:match(":[0-9]+$")
-
-        if not has_port then
-            port = ngx.var.server_port
-
-            -- Only append non-standard ports
-            if (scheme == "http" and port ~= "80") or
-                (scheme == "https" and port ~= "443") then
-                port = ":" .. port
-            else
-                port = ""
-            end
-        else
-            port = "" -- Port is already in the host, don't append anything
-        end
-    else
-        -- Only append non-standard ports from X-Forwarded-Port
-        if (scheme == "http" and port ~= "80") or
-            (scheme == "https" and port ~= "443") then
-            port = ":" .. port
-        else
-            port = ""
-        end
-    end
-
-
-    return scheme .. "://" .. host .. port
+    return scheme .. "://" .. host .. port_suffix
 end
 
 
