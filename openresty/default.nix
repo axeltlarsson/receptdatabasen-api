@@ -56,7 +56,7 @@ pkgs.stdenv.mkDerivation {
       if frontendHtml != null then
         ''
           mkdir -p $out/html
-          cp -r ${frontendHtml}/dist/* $out/html
+          cp -r ${frontendHtml}/* $out/html
         ''
       else
         ""

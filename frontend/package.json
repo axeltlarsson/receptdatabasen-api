@@ -7,21 +7,21 @@
         "test": "tests"
     },
     "scripts": {
-        "start": "parcel",
-        "build": "rm -rf dist && parcel build",
-        "test": "elm-test"
+        "start": "npm run make-elm:dev && parcel",
+        "build": "rm -rf dist && npm run make-elm:prod && parcel build",
+        "test": "elm-test",
+        "make-elm:dev": "elm make src/Main.elm --output=elm-output.js",
+        "make-elm:prod": "./optimise-elm.sh src/Main.elm"
     },
     "keywords": [],
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "easymde": "^2.20.0",
-        "elm": "^0.19.1-6"
+        "easymde": "^2.20.0"
     },
     "devDependencies": {
         "@parcel/packager-raw-url": "^2.14.1",
         "@parcel/reporter-bundle-analyzer": "^2.14.1",
-        "@parcel/transformer-elm": "^2.14.1",
         "@parcel/transformer-webmanifest": "^2.14.1",
         "eslint": "^7.32.0",
         "eslint-config-airbnb-base": "^14.2.1",

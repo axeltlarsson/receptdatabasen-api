@@ -5,6 +5,7 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
     services-flake.url = "github:juspay/services-flake";
+    nix-filter.url = "github:numtide/nix-filter";
   };
 
   outputs =
@@ -14,6 +15,7 @@
       flake-parts,
       services-flake,
       process-compose-flake,
+      nix-filter,
     }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [ process-compose-flake.flakeModule ];
@@ -95,12 +97,18 @@
             module = self.nixosModules.default;
           };
 
-          openresty-dev-shell = pkgs.callPackage ./openresty/shell.nix { };
-          # TODO: pass in built FE once I've nixified it
-          openresty-package = pkgs.callPackage ./openresty/default.nix { };
+          frontend-dev-shell = pkgs.callPackage ./frontend/shell.nix { };
+          frontend-dist =
+            (pkgs.callPackage ./frontend/default.nix {
+              inherit (pkgs) cacert;
+              elm = pkgs.elmPackages.elm;
+              elm-test = pkgs.elmPackages.elm-test;
+              uglify-js = pkgs.nodePackages.uglify-js;
+              nix-filter = nix-filter.lib;
+            }).frontend;
 
-          frontend-dev-shell = import ./frontend/shell.nix { inherit system; };
-
+            openresty-dev-shell = pkgs.callPackage ./openresty/shell.nix { };
+            openresty-package = pkgs.callPackage ./openresty/default.nix { frontendHtml = frontend-dist; };
         in
         {
           devShells.default = pkgs.mkShell {
@@ -145,6 +153,7 @@
           };
 
           packages = {
+            frontend-dist = frontend-dist;
             openresty-receptdb = openresty-package;
             docker-compose-file = pkgs.writeTextFile {
               name = "docker-compose.yml";
