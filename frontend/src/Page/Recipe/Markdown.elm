@@ -307,7 +307,6 @@ instagram =
         (\url _ ->
             Html.iframe
                 [ src (embedUrl url)
-
                 , Html.Attributes.width 450
                 , Html.Attributes.height 650
                 , Html.Attributes.attribute "style" "width: 100%; height: 100%;"

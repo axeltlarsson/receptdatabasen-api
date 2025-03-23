@@ -107,8 +107,24 @@
               nix-filter = nix-filter.lib;
             }).frontend;
 
-            openresty-dev-shell = pkgs.callPackage ./openresty/shell.nix { };
-            openresty-package = pkgs.callPackage ./openresty/default.nix { frontendHtml = frontend-dist; };
+          openresty-dev-shell = pkgs.callPackage ./openresty/shell.nix { };
+          openresty-package = pkgs.callPackage ./openresty/default.nix { frontendHtml = frontend-dist; };
+
+          # CI script that runs our linters/static type checkers etc
+          # You can run this locally in the same dev shell with `nix develop -c ci` or nix flake check -L which is how CI runs it as well!
+          ci = pkgs.writeShellApplication {
+            name = "ci";
+            runtimeInputs = [
+              pkgs.ruff
+            ];
+            text = ''
+              ruff format --check --diff tests
+              ruff check tests
+              nix fmt -- --check flake.nix && echo "flake.nix is formatted correctly"
+            '';
+          };
+
+          nixfmt = pkgs.nixfmt-rfc-style;
         in
         {
           devShells.default = pkgs.mkShell {
@@ -124,6 +140,8 @@
               pkgs.pyright
               hot-reload
               pkgs.shellcheck
+
+              ci
 
               pkgs.postgrest
             ];
@@ -163,7 +181,7 @@
             inherit (self.checks.${system}.default) driverInteractive;
           };
 
-          formatter = pkgs.nixfmt-rfc-style;
+          formatter = nixfmt;
 
           # TODO: can probably do pkgs.nixosTest directly
           checks.default = nixpkgs.legacyPackages."${system}".nixosTest {
@@ -196,6 +214,24 @@
 
             testScript = { nodes }: pkgs.lib.readFile ./nix/integration_test.py;
           };
+
+          # run the ci script as a check
+          checks.ci = pkgs.runCommandNoCC "ci" { } ''
+            # checks expects an out path , so we need to create it explicitly
+            mkdir -p $out
+
+            # copy over source to a temp dir so we can run the `ci` script self-contained
+            # as nix flake check -L without changing the `ci` script itself
+            # inspo https://github.com/numtide/treefmt-nix/blob/2fba33a182602b9d49f0b2440513e5ee091d838b/module-options.nix#L156
+            PRJ=$TMP/receptdatabasen
+            cp -r ${self} $PRJ
+            chmod -R a+w $PRJ
+            cd $PRJ
+
+            ${ci}/bin/ci
+            echo "✅ All CI checks passed!"
+          '';
+
           process-compose."dev" =
             { config, ... }:
             {

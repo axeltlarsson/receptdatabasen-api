@@ -3,12 +3,11 @@
   ...
 }:
 let
-  # However, current nixpkgs demandes to build ghc with big-parallell...
+  # current nixpkgs demandes to build ghc with big-parallell for elm-format...
   # which is *not* something I want to do, so I just pin it here for now
-  # TODO: stopgap - update this to stable at least
   pkgs = import (builtins.fetchTarball {
-    url = "github:nixos/nixpkgs#2b9c57d33e3d5be6262e124fc66e3a8bc650b93d";
-    sha256 = "sha256-1F7hDLj58OQCADRtG2DRKpmJ8QVza0M0NK/kfLWLs3k=";
+    url = "https://github.com/NixOS/nixpkgs/archive/refs/tags/24.11.tar.gz";
+    sha256 = "sha256:1gx0hihb7kcddv5h0k7dysp2xhf1ny0aalxhjbpj2lmvj7h9g80a";
   }) { inherit system; };
 in
 pkgs.mkShell {
@@ -22,5 +21,6 @@ pkgs.mkShell {
 
     pkgs.nodejs
     pkgs.nodePackages.uglify-js
+
   ];
 }

@@ -6,7 +6,6 @@
   elm,
   uglify-js,
   elm-test,
-
 }:
 
 # https://zimbatm.com/notes/nix-packaging-the-heretic-way
@@ -75,9 +74,7 @@ let
         nodejs
         elm
         uglify-js
-        # elm-format
       ];
-
 
       configurePhase = ''
         # Get the node_modules from its own derivation
