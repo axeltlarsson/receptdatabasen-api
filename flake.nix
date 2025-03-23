@@ -166,7 +166,7 @@
             };
             openresty-receptdb = {
               type = "app";
-              program = "${openresty-package}/bin/openresty-receptdb";
+              program = "${lib.getExe openresty-package}";
             };
           };
 

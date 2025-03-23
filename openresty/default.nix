@@ -64,6 +64,7 @@ pkgs.stdenv.mkDerivation {
   '';
 
   # A final wrapper script in $out/bin to run openresty for this app
+  # TODO: use makeWrapper instead
   postInstall = ''
     mkdir -p $out/bin
     cat > $out/bin/openresty-receptdb <<EOF
@@ -86,4 +87,9 @@ pkgs.stdenv.mkDerivation {
   '';
 
   allowSubstitutes = true;
+
+  meta = {
+    description = "Receptdatabasen openresty config - Lua, nginx config and the frontend baked in";
+    mainProgram = "openresty-receptdb";
+  };
 }
