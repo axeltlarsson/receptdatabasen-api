@@ -1,12 +1,10 @@
-# the first level of argument (docker-compose-file) is provided by this repo's flake
-# the actual NixOS machine configuration will then pass in the actual module arguments
-# that way the NixOS machine can use the module as is and doesn't have to worry about
-# the docker-compose-file arg
-docker-compose-file:
 {
   config,
   lib,
   pkgs,
+  openresty-receptdb,
+  postgrest,
+  postgresql,
   ...
 }:
 let
@@ -103,15 +101,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Currently we run the project via docker/compose
-    virtualisation.docker.enable = true;
-    environment.systemPackages = [ pkgs.docker-compose ];
-
-    # systemd service for the docker-compose setup
     systemd.services.receptdatabasen = {
       description = "Receptdatabasen";
-      requires = [ "docker.service" ];
-      after = [ "docker.service" ];
       wantedBy = [ "multi-user.target" ];
       environment =
         let
@@ -120,8 +111,6 @@ in
             if cfg.domain != "" then "https://" + cfg.domain else "http://localhost:${toString cfg.port}";
         in
         {
-          COMPOSE_PROJECT_NAME = "receptdatabasen";
-
           SUPER_USER = "superuser";
           SUPER_USER_PASSWORD = cfg.superuserPassword;
           DB_PASS = cfg.dbPassword;
@@ -138,10 +127,10 @@ in
         User = "root";
         Restart = "on-failure";
         ExecStart = ''
-          ${pkgs.docker-compose}/bin/docker-compose -f ${docker-compose-file} up
+          ${lib.getExe openresty-receptdb}
         '';
         ExecStop = ''
-          ${pkgs.docker-compose}/bin/docker-compose -f ${docker-compose-file} stop
+          ${lib.getExe openresty-receptdb}
         '';
       };
     };

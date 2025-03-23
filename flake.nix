@@ -173,10 +173,6 @@
           packages = {
             frontend-dist = frontend-dist;
             openresty-receptdb = openresty-package;
-            docker-compose-file = pkgs.writeTextFile {
-              name = "docker-compose.yml";
-              text = pkgs.lib.readFile ./nix/docker-compose.nixos.yml;
-            };
 
             inherit (self.checks.${system}.default) driverInteractive;
           };
@@ -262,17 +258,7 @@
 
         };
       flake.nixosModules = {
-        default =
-          { pkgs, ... }:
-          let
-            # we wrap the actual module in a new module to be able to make it platform-agnostic
-            # and can access pkgs.system when referring to the self.packages
-            docker-compose-file = self.packages.${pkgs.system}.docker-compose-file;
-          in
-          {
-            # to get the actual module, we must first apply the docker-compose-file arg
-            imports = [ ((import ./nix/module.nix) docker-compose-file) ];
-          };
+        default = import ./nix/module.nix;
       };
     };
 }
