@@ -1,14 +1,12 @@
 # Only for building the frontend
-# parcel/elm has elm as dep whose npm package is not arm64 compatible
-# so we simply run this with x86 instead as on prod, locally I'd use nix's
-# version of elm (compiled for aarch64) anyway
-# Step 1: Base Node.js image
 FROM node:alpine
 LABEL org.opencontainers.image.source=https://github.com/axeltlarsson/receptdatabasen-api
 LABEL org.opencontainers.image.description="Receptdatabasen frontend"
 
 WORKDIR /app
 
+# Install elm with @lydell/elm for multiarch support
+RUN npm install -g @lydell/elm uglify-js
 COPY package*.json ./
 RUN npm ci
 
