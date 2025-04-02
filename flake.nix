@@ -1,26 +1,44 @@
 {
   description = "Receptdatabasen";
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-  inputs.nixpkgs_24_05.url = "github:NixOS/nixpkgs/nixpkgs-24.05-darwin";
-  inputs.flake-utils.url = "github:numtide/flake-utils";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    process-compose-flake.url = "github:Platonic-Systems/process-compose-flake";
+    services-flake.url = "github:juspay/services-flake";
+    nix-filter.url = "github:numtide/nix-filter";
+  };
 
   outputs =
-    {
+    inputs@{
       self,
       nixpkgs,
-      nixpkgs_24_05,
-      flake-utils,
+      flake-parts,
+      services-flake,
+      process-compose-flake,
+      nix-filter,
     }:
-    flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        pkgs = nixpkgs.legacyPackages.${system};
-        pkgs_24_05 = nixpkgs_24_05.legacyPackages.${system};
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      imports = [ process-compose-flake.flakeModule ];
+      systems = [
+        "x86_64-linux"
+        "x86_64-darwin"
+        "aarch64-linux"
+        "aarch64-darwin"
+      ];
+      perSystem =
+        {
+          config,
+          self',
+          pkgs,
+          lib,
+          system,
+          ...
+        }:
+        let
+          # For integration tests we create a python env with the necessary dependencies
+          py-pkgs = pkgs.python311Packages;
 
-        pyPkgs = pkgs.python311Packages;
-
-        soft-webauthn = (
-          pyPkgs.buildPythonPackage rec {
+          soft-webauthn = py-pkgs.buildPythonPackage rec {
             pname = "soft-webauthn";
             version = "0.1.4";
             src = pkgs.fetchPypi {
@@ -29,138 +47,218 @@
             };
             doCheck = false;
             # format = "pyproject";
-            propagatedBuildInputs = with pyPkgs; [
+            propagatedBuildInputs = with py-pkgs; [
               cryptography
               fido2
             ];
 
             pythonImportsCheck = [ "soft_webauthn" ];
-          }
-        );
-        # );
-        pythonEnv = pkgs.python311.withPackages (ps: [
-          ps.requests
-          ps.pytest
-          ps.webauthn
-          soft-webauthn
-        ]);
+          };
+          pythonEnv = pkgs.python311.withPackages (ps: [
+            ps.requests
+            ps.pytest
+            ps.webauthn
+            soft-webauthn
+          ]);
 
-        pg = pkgs_24_05.postgresql_12;
-        import_prod = pkgs.writeShellApplication {
-          name = "import-prod";
-          runtimeInputs = [
-            pkgs.docker
-            pkgs.docker-compose
-          ];
-          text = pkgs.lib.strings.fileContents ./scripts/import_prod_db.sh;
-        };
-
-        db = pkgs.writeShellApplication {
-          name = "db";
-          # TODO: isolate pgcli config file? e.g. pspg dep...
-          runtimeInputs = [
-            pkgs.pgcli
-            pkgs.pspg
-          ];
-          text = ''
-            pgcli "postgresql://$SUPER_USER:$SUPER_USER_PASSWORD@localhost:$DB_PORT/$DB_NAME"
-          '';
-        };
-
-        hot-reload = pkgs.writeShellApplication {
-          name = "hot-reload";
-          runtimeInputs = [ pkgs.fswatch ];
-          text = pkgs.lib.strings.fileContents ./scripts/hot-reload.sh;
-        };
-
-        vm-config = import ./nix/vm-configuration.nix {
-          inherit system nixpkgs;
-          module = self.nixosModules.default;
-        };
-
-      in {
-        devShells.default = pkgs.mkShell {
-          nativeBuildInputs = [ pkgs.bashInteractive ];
-          buildInputs = [
-            import_prod
-            db
-            hot-reload
-            pkgs.shellcheck
-            pkgs.sqitchPg
-            pg
-
-            pythonEnv
-            pkgs.ruff
-            pkgs.pyright
-
-            pkgs.lua-language-server
-            # for local dev shell only - to give hint for lua lsp
-            (pkgs.luajit.withPackages (
-              ps: with ps; [
-                lua-resty-core
-                cjson
-              ]
-            ))
-          ];
-
-          # source the .env file
-          shellHook = ''
-            set -a
-            source .env
-            set +a
-          '';
-        };
-
-        apps.nixos-vm = {
-          type = "app";
-          program = "${vm-config.run-vm}";
-        };
-
-        packages = {
-          docker-compose-file = pkgs.writeTextFile {
-            name = "docker-compose.yml";
-            text = pkgs.lib.readFile ./nix/docker-compose.nixos.yml;
+          import-prod = pkgs.writeShellApplication {
+            name = "import-prod";
+            runtimeInputs = [
+              pkgs.docker
+              pkgs.docker-compose
+              pkgs.postgresql_17
+            ];
+            text = pkgs.lib.strings.fileContents ./scripts/import_prod_db.sh;
           };
 
-          inherit (self.checks.${system}.default) driverInteractive;
-        };
+          db = pkgs.writeShellApplication {
+            name = "db";
+            runtimeInputs = [
+              pkgs.pgcli
+              pkgs.pspg
+            ];
+            text = ''
+              pgcli "postgresql://$SUPER_USER:$SUPER_USER_PASSWORD@localhost:$DB_PORT/$DB_NAME"
+            '';
+          };
 
-        checks.default = nixpkgs.legacyPackages."${system}".nixosTest {
-          name = "Integration test of the NixOS module";
-          nodes = {
-            server = { modulesPath, ... }: {
-              imports = [ self.nixosModules.default ];
+          hot-reload = pkgs.writeShellApplication {
+            name = "hot-reload";
+            runtimeInputs = [
+              pkgs.fswatch
+              pkgs.jq
+              pkgs.postgresql_17
+            ];
+            text = pkgs.lib.strings.fileContents ./scripts/hot-reload.sh;
+          };
 
-              config = {
-                virtualisation = {
-                  # 2 GiB - the project needs a little bit more space
-                  diskSize = 3 * 1024;
+          vm-config = import ./nix/vm-configuration.nix {
+            inherit system nixpkgs;
+            module = self.nixosModules.default;
+          };
+
+          frontend-dev-shell = pkgs.callPackage ./frontend/shell.nix { };
+          frontend-dist =
+            (pkgs.callPackage ./frontend/default.nix {
+              inherit (pkgs) cacert;
+              elm = pkgs.elmPackages.elm;
+              elm-test = pkgs.elmPackages.elm-test;
+              uglify-js = pkgs.nodePackages.uglify-js;
+              nix-filter = nix-filter.lib;
+            }).frontend;
+
+          openresty-dev-shell = pkgs.callPackage ./openresty/shell.nix { };
+          openresty-package = pkgs.callPackage ./openresty/default.nix { frontendHtml = frontend-dist; };
+
+          # CI script that runs our linters/static type checkers etc
+          # You can run this locally in the same dev shell with `nix develop -c ci` or nix flake check -L which is how CI runs it as well!
+          ci = pkgs.writeShellApplication {
+            name = "ci";
+            runtimeInputs = [
+              pkgs.ruff
+            ];
+            text = ''
+              ruff format --check --diff tests
+              ruff check tests
+              nix fmt -- --check flake.nix && echo "flake.nix is formatted correctly"
+            '';
+          };
+
+          nixfmt = pkgs.nixfmt-rfc-style;
+        in
+        {
+          devShells.default = pkgs.mkShell {
+            buildInputs = [
+              # db
+              import-prod
+              db
+              pkgs.sqitchPg
+
+              # top-level
+              pythonEnv
+              pkgs.ruff
+              pkgs.pyright
+              hot-reload
+              pkgs.shellcheck
+
+              ci
+
+              pkgs.postgrest
+            ];
+
+            inputsFrom = [
+              openresty-dev-shell
+              frontend-dev-shell
+            ];
+
+            # source the .env file
+            shellHook = ''
+              set -a
+              source .env
+              set +a
+            '';
+          };
+
+          apps = {
+            nixos-vm = {
+              type = "app";
+              program = "${vm-config.run-vm}";
+            };
+            openresty-receptdb = {
+              type = "app";
+              program = "${lib.getExe openresty-package}";
+            };
+          };
+
+          packages = {
+            frontend-dist = frontend-dist;
+            openresty-receptdb = openresty-package;
+
+            inherit (self.checks.${system}.default) driverInteractive;
+          };
+
+          formatter = nixfmt;
+
+          # TODO: can probably do pkgs.nixosTest directly
+          checks.default = nixpkgs.legacyPackages."${system}".nixosTest {
+            name = "Integration test of the NixOS module";
+            nodes = {
+              server =
+                { modulesPath, ... }:
+                {
+                  imports = [ self.nixosModules.default ];
+
+                  config = {
+                    virtualisation = {
+                      # 2 GiB - the project needs a little bit more space
+                      diskSize = 3 * 1024;
+                    };
+
+                    services.receptdatabasen.enable = true;
+                    services.receptdatabasen.jwtSecret = "3ARDEfnJWEXlnJE0GRp5NRFUiLbuNZlF";
+                    services.receptdatabasen.cookieSessionSecret = "SkNUZkQNePjYlOfBbLM641wqzFhi0I7u";
+                  };
                 };
+              client =
+                { pkgs, ... }:
+                {
+                  config = {
+                    environment.defaultPackages = [ pkgs.curl ];
+                  };
+                };
+            };
 
-                services.receptdatabasen.enable = true;
-                services.receptdatabasen.jwtSecret =
-                  "3ARDEfnJWEXlnJE0GRp5NRFUiLbuNZlF";
-                services.receptdatabasen.cookieSessionSecret =
-                  "SkNUZkQNePjYlOfBbLM641wqzFhi0I7u";
+            testScript = { nodes }: pkgs.lib.readFile ./nix/integration_test.py;
+          };
+
+          # run the ci script as a check
+          checks.ci = pkgs.runCommandNoCC "ci" { } ''
+            # checks expects an out path , so we need to create it explicitly
+            mkdir -p $out
+
+            # copy over source to a temp dir so we can run the `ci` script self-contained
+            # as nix flake check -L without changing the `ci` script itself
+            # inspo https://github.com/numtide/treefmt-nix/blob/2fba33a182602b9d49f0b2440513e5ee091d838b/module-options.nix#L156
+            PRJ=$TMP/receptdatabasen
+            cp -r ${self} $PRJ
+            chmod -R a+w $PRJ
+            cd $PRJ
+
+            ${ci}/bin/ci
+            echo "✅ All CI checks passed!"
+          '';
+
+          process-compose."dev" =
+            { config, ... }:
+            {
+              imports = [
+                services-flake.processComposeModules.default
+                # db is in its own module
+                ./db/service.nix
+              ];
+              settings.processes = {
+                # since this is "dev" we use the dev versions - not the "production" built derivations like (${self'.apps.openresty-receptdb.program})
+                postgrest = {
+                  command = "postgrest";
+                  depends_on."db".condition = "process_healthy";
+                };
+                openresty-receptdb = {
+                  command = "op";
+                  depends_on."db".condition = "process_healthy";
+                };
+                frontend.command = "(cd frontend; npm run start)";
+                hot-reload = {
+                  command = "hot-reload";
+                  depends_on."postgrest".condition = "process_started";
+                  depends_on."db".condition = "process_started";
+                  depends_on."openresty-receptdb".condition = "process_started";
+                };
               };
             };
-            client = { pkgs, ... }: {
-              config = { environment.defaultPackages = [ pkgs.curl ]; };
-            };
-          };
 
-          testScript = { nodes }: pkgs.lib.readFile ./nix/integration_test.py;
         };
-      }) // {
-        nixosModules.default = { pkgs, ... }:
-          let
-            # we wrap the actual module in a new module to be able to make it platform-agnostic
-            # and can access pkgs.system when referring to the self.packages
-            docker-compose-file =
-              self.packages.${pkgs.system}.docker-compose-file;
-          in {
-            # to get the actual module, we must first apply the docker-compose-file arg
-            imports = [ ((import ./nix/module.nix) docker-compose-file) ];
-          };
+      flake.nixosModules = {
+        default = import ./nix/module.nix;
       };
+    };
 }

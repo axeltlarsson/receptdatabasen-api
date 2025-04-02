@@ -50,6 +50,7 @@ import Task
 
 type alias Model =
     { session : Session
+    , slug : Slug
     , recipe : Status (Recipe Full)
     , checkboxStatus : Dict Int Bool
     , scaledPortions : Int
@@ -77,6 +78,7 @@ init session slug =
         Just recipe ->
             ( { recipe = Loaded recipe
               , session = session
+              , slug = slug
               , checkboxStatus = Dict.empty
               , scaledPortions = recipe |> Recipe.contents |> .portions
               , toDelete = False
@@ -88,6 +90,7 @@ init session slug =
         Nothing ->
             ( { recipe = Loading
               , session = session
+              , slug = slug
               , checkboxStatus = Dict.empty
               , scaledPortions = 0
               , toDelete = False
@@ -185,7 +188,7 @@ viewRecipe listanExportStatus toDelete recipe checkboxStatus scaledPortions devi
             Recipe.metadata recipe
 
         image =
-            List.head images |> Maybe.map .url
+            List.head images |> Maybe.map .url1600
 
         { portions, ingredients, instructions, tags } =
             Recipe.contents recipe
@@ -214,11 +217,8 @@ viewRecipe listanExportStatus toDelete recipe checkboxStatus scaledPortions devi
 
 
 viewHeader : String -> List String -> Maybe String -> Maybe String -> Element.Device -> Element Msg
-viewHeader title tags description image device =
+viewHeader title tags description imageUrl device =
     let
-        imageUrl =
-            image |> Maybe.map (\p -> "/images/sig/1600/" ++ p)
-
         background =
             imageUrl
                 |> Maybe.map Background.image
@@ -535,7 +535,11 @@ update msg model =
         LoadedRecipe (Err error) ->
             case error of
                 Api.Unauthorized ->
-                    ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+                    let
+                        route =
+                            Route.Login (Just model.slug)
+                    in
+                    ( model, Route.pushUrl (Session.navKey (toSession model)) route )
 
                 _ ->
                     ( { model | recipe = Failed error }, Cmd.none )

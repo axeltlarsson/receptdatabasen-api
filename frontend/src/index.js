@@ -1,8 +1,8 @@
 import './main.css';
 import './hourglass_loader.css';
 import './fonts.css';
-import * as EasyMDE from 'easymde';
-import { Elm } from './Main.elm';
+import EasyMDE from 'easymde';
+import { Elm } from './elm-bridge';
 
 const flags = { width: window.innerWidth, height: window.innerHeight };
 const app = Elm.Main.init({

@@ -1,7 +1,7 @@
 # This script is currently not used - local db not reachable from docker
 set -euo pipefail
 
-PGHOST=./pg_db
+PGHOST=./data/db
 PGLOG=$PGHOST/postgres.log
 
 # expected env vars from .env file
@@ -62,11 +62,11 @@ import_prod() {
 	fi
 
 	# If db already exists, we must drop it and then recreate it
-	if psql -p "$DB_PORT" --user "$SUPER_USER" -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
+	if psql "$CONN" -lqt | cut -d \| -f 1 | grep -qw "$DB_NAME"; then
 		echo "Dropping $DB_NAME..."
 		echo dropdb --username "$SUPER_USER" -p "$DB_PORT" "$DB_NAME"
 		dropdb --username "$SUPER_USER" -p "$DB_PORT" "$DB_NAME"
-		echo "Creating $DB_NAME..."
+		psql "$CONN" -c "drop database $DB_NAME"
 		_createdb
 		_seed_db
 	fi

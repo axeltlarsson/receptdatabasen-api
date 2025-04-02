@@ -16,6 +16,7 @@ import Json.Decode as Decode exposing (field, int, string)
 import Json.Encode as Encode
 import Palette
 import Passkey
+import Recipe.Slug exposing (Slug(..))
 import Route
 import Session exposing (Session)
 import String.Verify
@@ -29,6 +30,7 @@ import Verify
 
 type alias Model =
     { session : Session
+    , redirect : Maybe Slug
     , status : Status
     , problem : Maybe ServerError
     , passkeyAuthentication : PasskeyAuthentication
@@ -72,9 +74,10 @@ type alias LoginForm =
     }
 
 
-init : Session -> ( Model, Cmd Msg )
-init session =
+init : Session -> Maybe Slug -> ( Model, Cmd Msg )
+init session maybeSlug =
     ( { session = session
+      , redirect = maybeSlug
       , status = FillingForm initialForm
       , problem = Nothing
       , passkeyAuthentication = AuthBeginLoading
@@ -341,7 +344,15 @@ update msg ({ session, status } as model) =
                     ( { model | passkeyAuthentication = AuthBeginFailed err }, Passkey.passkeyAuthenticationBegin Nothing LoadedAuthenticationBegin )
 
                 LoadedAuthenticationComplete (Ok response) ->
-                    ( { model | passkeyAuthentication = AuthCompleteLoaded response }, Route.replaceUrl (Session.navKey session) (Route.RecipeList Nothing) )
+                    let
+                        route =
+                            model.redirect
+                                |> Maybe.map Route.Recipe
+                                |> Maybe.withDefault (Route.RecipeList Nothing)
+                    in
+                    ( { model | passkeyAuthentication = AuthCompleteLoaded response }
+                    , Route.replaceUrl (Session.navKey session) route
+                    )
 
                 LoadedAuthenticationComplete (Err err) ->
                     ( { model
@@ -353,13 +364,19 @@ update msg ({ session, status } as model) =
         SubmittingForm form ->
             case msg of
                 CompletedLogin (Ok _) ->
+                    let
+                        route =
+                            model.redirect
+                                |> Maybe.map Route.Recipe
+                                |> Maybe.withDefault (Route.RecipeList Nothing)
+                    in
                     ( { model
                         | status = FillingForm { form | invalidCredentials = False }
                         , problem = Nothing
                       }
                     , Cmd.batch
                         [ Passkey.sendAbortCMAMsg
-                        , Route.replaceUrl (Session.navKey session) (Route.RecipeList Nothing)
+                        , Route.replaceUrl (Session.navKey session) route
                         ]
                     )
 

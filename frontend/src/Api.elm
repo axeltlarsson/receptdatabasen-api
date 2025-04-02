@@ -1,4 +1,4 @@
-module Api exposing (ServerError(..), expectJsonWithBody, viewServerError, errorFromString)
+module Api exposing (ServerError(..), errorFromString, expectJsonWithBody, viewServerError)
 
 import Element exposing (Element, column, el, fill, paddingEach, paragraph, row, spacing, text, width)
 import Element.Font as Font
@@ -79,6 +79,7 @@ type OtherError
 otherHttpError : Http.Error -> Maybe Body -> ServerError
 otherHttpError httpError body =
     Error (OtherHttpError httpError body)
+
 
 errorFromString : String -> ServerError
 errorFromString err =

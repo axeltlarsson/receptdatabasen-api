@@ -265,8 +265,17 @@ update msg ({ status } as model) =
             in
             ( { model | status = newStatus }, Cmd.none )
 
-        CompletedRecipeLoad slug (Err _) ->
-            ( { model | status = LoadingFailed slug }, Cmd.none )
+        CompletedRecipeLoad slug (Err error) ->
+            case error of
+                Api.Unauthorized ->
+                    let
+                        route =
+                            Route.Login (Just slug)
+                    in
+                    ( { model | status = LoadingFailed slug }, Route.pushUrl (Session.navKey (toSession model)) route )
+
+                _ ->
+                    ( { model | status = LoadingFailed slug }, Cmd.none )
 
         CompletedCreate (Ok recipe) ->
             ( { model | session = Session.addRecipe recipe model.session }
@@ -275,7 +284,7 @@ update msg ({ status } as model) =
             )
 
         CompletedCreate (Err Api.Unauthorized) ->
-            ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+            ( model, Route.pushUrl (Session.navKey (toSession model)) (Route.Login Nothing) )
 
         CompletedCreate (Err error) ->
             ( { model | status = savingError error model.status }

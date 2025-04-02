@@ -60,8 +60,9 @@ create or replace function api.verify_authentication_response(raw_credential tex
   )
   from webauthn.helpers.structs import AuthenticationCredential
   from webauthn.helpers.exceptions import InvalidAuthenticationResponse
-
-  credential = AuthenticationCredential.model_validate_json(raw_credential)
+  import json
+  import base64
+  import dataclasses
 
 
   expected_origin = plpy.execute("select settings.get('origin')")[0]["get"]
@@ -71,7 +72,7 @@ create or replace function api.verify_authentication_response(raw_credential tex
 
   try:
     auth_verification = verify_authentication_response(
-        credential=credential,
+        credential=raw_credential,
         expected_challenge=base64url_to_bytes(challenge),
         expected_origin=expected_origin,
         expected_rp_id=expected_rp_id,
@@ -84,7 +85,16 @@ create or replace function api.verify_authentication_response(raw_credential tex
     plpy.warning(e)
     return None
 
-  return auth_verification.json()
+  # webauthn does not provide a way to easily serialise the VerifiedAuthentication object
+  # - it contains some bytes fields that we need to encode as base64
+  class ByteToBase64Encoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, bytes):
+                # encode bytes as base64 string
+                return base64.urlsafe_b64encode(obj).decode("utf-8").rstrip("=")
+            return super().default(obj)
+
+  return json.dumps(dataclasses.asdict(auth_verification), cls=ByteToBase64Encoder)
 $$
 language 'plpython3u';
 
@@ -93,9 +103,10 @@ revoke all privileges on function api.verify_authentication_response(text, text,
 -- helper function to get credential_id from credential
 create or replace function api.id_from_credential(raw_credential text) returns text as $$
   from webauthn.helpers.structs import AuthenticationCredential
+  from webauthn.helpers import parse_authentication_credential_json
 
   try:
-    credential = AuthenticationCredential.model_validate_json(raw_credential)
+    credential = parse_authentication_credential_json(raw_credential)
     return credential.id
   except Exception as e:
     plpy.warning(e)
@@ -129,7 +140,7 @@ begin
 
     if existing_passkey is null then
       raise insufficient_privilege
-      using detail = ('Cannt find credential_id in database: ', credential_id),
+      using detail = ('Cannot find credential_id in database: ' || credential_id),
       hint = 'Check your payload';
     end if;
 

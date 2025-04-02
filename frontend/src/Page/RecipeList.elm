@@ -132,6 +132,9 @@ viewSearchBox model =
 
 imageWidths : { min : Int, max : Int }
 imageWidths =
+    -- N.B! the server needs to send the appropriate signed image URL
+    -- in this case based on the width of 1496, if you change this
+    -- you need to change the size param to calculate_signature on the PostgREST server
     let
         pagePadding =
             10
@@ -156,14 +159,8 @@ viewPreview recipe =
             Slug.toString title
 
         imageUrl =
-            let
-                width =
-                    -- *2 for Retina TODO: optimise with responsive/progressive images
-                    String.fromInt <| imageWidths.max * 2
-            in
             List.head images
-                |> Maybe.map .url
-                |> Maybe.map (\i -> "/images/sig/" ++ width ++ "/" ++ i)
+                |> Maybe.map .url1496
     in
     lazy2 column
         [ width (fill |> Element.maximum imageWidths.max |> Element.minimum imageWidths.min)
@@ -314,7 +311,7 @@ update msg model =
         LoadedRecipes (Err error) ->
             case error of
                 Api.Unauthorized ->
-                    ( model, Route.pushUrl (Session.navKey (toSession model)) Route.Login )
+                    ( model, Route.pushUrl (Session.navKey (toSession model)) (Route.Login Nothing) )
 
                 _ ->
                     ( { model | recipes = Failed error }, Cmd.none )

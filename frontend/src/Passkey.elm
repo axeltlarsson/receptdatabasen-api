@@ -11,21 +11,21 @@ port module Passkey exposing
     , passkeyRegistrationBegin
     , passkeyRegistrationComplete
     , portMsgDecoder
+    , sendAbortCMAMsg
     , sendCheckPasskeySupportMsg
     , sendCreatePasskeyMsg
     , sendGetPasskeyConditionalMsg
     , sendGetPasskeyMsg
-    , sendAbortCMAMsg
     , subscribe
     )
 
 import Api exposing (ServerError, expectJsonWithBody)
 import Http
+import Iso8601
 import Json.Decode as Decode exposing (field, int, nullable, string)
 import Json.Encode as Encode
-import Url.Builder
 import Time
-import Iso8601
+import Url.Builder
 
 
 type alias Profile =
@@ -249,9 +249,10 @@ sendGetPasskeyConditionalMsg : Encode.Value -> Cmd msg
 sendGetPasskeyConditionalMsg options =
     passkeyPortSender (Encode.object [ ( "type", Encode.string "getPasskeyConditional" ), ( "options", options ) ])
 
+
 sendAbortCMAMsg : Cmd msg
 sendAbortCMAMsg =
-    passkeyPortSender (Encode.object [ ("type", Encode.string "abortCMA")])
+    passkeyPortSender (Encode.object [ ( "type", Encode.string "abortCMA" ) ])
 
 
 port passkeyPortReceiver : (Decode.Value -> msg) -> Sub msg

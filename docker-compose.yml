@@ -9,6 +9,7 @@ services:
       - POSTGRES_PASSWORD=${SUPER_USER_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
       # env vars useful for our sql scripts
+      - DB_DIR=/docker-entrypoint-initdb.d
       - SUPER_USER=${SUPER_USER}
       - SUPER_USER_PASSWORD=${SUPER_USER_PASSWORD}
       - DB_NAME=${DB_NAME}
@@ -18,10 +19,10 @@ services:
       - DEVELOPMENT=${DEVELOPMENT}
       - JWT_SECRET=${JWT_SECRET}
       - JWT_LIFETIME=${JWT_LIFETIME}
-      - PG_VERSION=${PG_VERSION}
       - RP_ID=${RP_ID}
       - ORIGIN=${ORIGIN}
       - DISABLE_USER_VERIFICATION=${DISABLE_USER_VERIFICATION}
+      - IMAGE_SERVER_SECRET=${IMAGE_SERVER_SECRET}
 
     volumes:
       - db-vol:/var/lib/postgresql/data
@@ -50,16 +51,12 @@ services:
       - DEVELOPMENT=${DEVELOPMENT}
       - POSTGREST_HOST=${POSTGREST_HOST}
       - POSTGREST_PORT=${POSTGREST_PORT}
-      - DB_HOST=${DB_HOST}
-      - DB_PORT=${DB_PORT}
-      - DB_NAME=${DB_NAME}
-      - DB_SCHEMA=${DB_SCHEMA}
-      - DB_USER=${DB_USER}
-      - DB_PASS=${DB_PASS}
       - COOKIE_SESSION_SECRET=${COOKIE_SESSION_SECRET}
       - COOKIE_SESSION_LIFETIME=${COOKIE_SESSION_LIFETIME}
       - LISTAN_API_URL=${LISTAN_API_URL}
       - LISTAN_JWT_SECRET=${LISTAN_JWT_SECRET}
+      - FILE_UPLOAD_PATH=/uploads
+      - IMAGE_SERVER_SECRET=${IMAGE_SERVER_SECRET}
     volumes:
       - uploads-vol:/uploads
     depends_on:

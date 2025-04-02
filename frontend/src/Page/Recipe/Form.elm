@@ -147,7 +147,9 @@ fromRecipe recipe =
             , instructions = instructions
             , ingredients = ingredients
             , tags = tags
-            , images = List.indexedMap (\i { url } -> ( i, Done Nothing url )) images |> Dict.fromList
+
+            -- We choose the signed url1600 image url
+            , images = List.indexedMap (\i { url1600 } -> ( i, Done Nothing url1600 )) images |> Dict.fromList
         }
     }
 
@@ -318,8 +320,8 @@ viewImagesInput imagesDict tooManyError =
                                 }
                             )
 
-                    Done Nothing url ->
-                        imageRect ("/images/sig/1600/" ++ url)
+                    Done Nothing url1600 ->
+                        imageRect url1600
                             (removeButton [ alignBottom, alignRight, padding 10 ]
                                 { idx = idx
                                 , label = row [] [ trashIcon ]
@@ -351,8 +353,8 @@ viewImagesInput imagesDict tooManyError =
                                                 }
                                             )
 
-                                    Done Nothing url ->
-                                        smallImage ("/images/sig/1600/" ++ url)
+                                    Done Nothing url1600 ->
+                                        smallImage url1600
                                             i
                                             (removeButton [ alignBottom, alignRight, padding 5 ]
                                                 { idx = i

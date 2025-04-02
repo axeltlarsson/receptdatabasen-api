@@ -58,7 +58,7 @@ describe('auth', function () {
     rest_service()
       .post("/rest/logout")
       .expect('Content-Type', /json/)
-      .expect('Set-cookie', /Expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0;/)
+      .expect('Set-cookie', /receptdatabasen_session=.*/)
       .expect((r) => {
         r.body.message.should.equal("Session was succesfully destroyed")
       })

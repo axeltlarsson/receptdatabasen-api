@@ -1,17 +1,20 @@
-# the first level of argument (docker-compose-file) is provided by this repo's flake
-# the actual NixOS machine configuration will then pass in the actual module arguments
-# that way the NixOS machine can use the module as is and doesn't have to worry about
-# the docker-compose-file arg
-docker-compose-file:
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  openresty-receptdb,
+  postgrest,
+  postgresql,
+  ...
+}:
 let
 
   cfg = config.services.receptdatabasen;
-  minLengthString = minLength:
-    lib.types.addCheck lib.types.str
-    (s: lib.strings.stringLength s >= minLength);
+  minLengthString =
+    minLength: lib.types.addCheck lib.types.str (s: lib.strings.stringLength s >= minLength);
 
-in {
+in
+{
   options.services.receptdatabasen = {
     enable = lib.mkEnableOption "Receptdatabasen service";
 
@@ -84,54 +87,59 @@ in {
       '';
     };
 
+    imageServerSecret = lib.mkOption {
+      type = minLengthString 32;
+      example = "fQGUNzfLgA6l5wMazvRcDJ2IuauIMSiR";
+      description = ''
+        The secret to use for the image server
+        Must be at least 32 characters long!
+
+        Tip: use `< /dev/urandom tr -dc 'A-Za-z0-9' | head -c 32` to generate a random secret
+      '';
+    };
+
   };
 
   config = lib.mkIf cfg.enable {
-    # Currently we run the project via docker/compose
-    virtualisation.docker.enable = true;
-    environment.systemPackages = [ pkgs.docker-compose ];
-
-    # systemd service for the docker-compose setup
     systemd.services.receptdatabasen = {
       description = "Receptdatabasen";
-      requires = [ "docker.service" ];
-      after = [ "docker.service" ];
       wantedBy = [ "multi-user.target" ];
-      environment = let
-        rp_id = if cfg.domain != "" then cfg.domain else "localhost";
-        origin = if cfg.domain != "" then
-          "https://" + cfg.domain
-        else
-          "http://localhost:${toString cfg.port}";
-      in {
-        COMPOSE_PROJECT_NAME = "receptdatabasen";
+      environment =
+        let
+          rp_id = if cfg.domain != "" then cfg.domain else "localhost";
+          origin =
+            if cfg.domain != "" then "https://" + cfg.domain else "http://localhost:${toString cfg.port}";
+        in
+        {
+          SUPER_USER = "superuser";
+          SUPER_USER_PASSWORD = cfg.superuserPassword;
+          DB_PASS = cfg.dbPassword;
+          JWT_SECRET = cfg.jwtSecret;
+          RP_ID = "'${rp_id}'";
+          ORIGIN = "'${origin}'";
 
-        SUPER_USER = "superuser";
-        SUPER_USER_PASSWORD = cfg.superuserPassword;
-        DB_PASS = cfg.dbPassword;
-        JWT_SECRET = cfg.jwtSecret;
-        RP_ID = "'${rp_id}'";
-        ORIGIN = "'${origin}'";
-
-        COOKIE_SESSION_SECRET = cfg.cookieSessionSecret;
-        OPENRESTY_PORT = toString cfg.port;
-      };
+          COOKIE_SESSION_SECRET = cfg.cookieSessionSecret;
+          IMAGE_SERVER_SECRET = cfg.imageServerSecret;
+          OPENRESTY_PORT = toString cfg.port;
+        };
       serviceConfig = {
         Type = "simple";
         User = "root";
         Restart = "on-failure";
         ExecStart = ''
-          ${pkgs.docker-compose}/bin/docker-compose -f ${docker-compose-file} up
+          ${lib.getExe openresty-receptdb}
         '';
         ExecStop = ''
-          ${pkgs.docker-compose}/bin/docker-compose -f ${docker-compose-file} stop
+          ${lib.getExe openresty-receptdb}
         '';
       };
     };
 
     # Reverse proxy setup using caddy
-    networking.firewall.allowedTCPPorts =
-      lib.mkIf (cfg.domain != "" && cfg.openFirewall) [ 80 443 ];
+    networking.firewall.allowedTCPPorts = lib.mkIf (cfg.domain != "" && cfg.openFirewall) [
+      80
+      443
+    ];
 
     services.caddy = lib.mkIf (cfg.domain != "") {
       enable = true;

@@ -1,10 +1,10 @@
 module Route exposing (Route(..), fromUrl, pushUrl, replaceUrl, toString)
 
 import Browser.Navigation as Nav
-import Recipe.Slug as Slug exposing (Slug)
+import Recipe.Slug as Slug exposing (Slug(..))
 import Url exposing (Url)
 import Url.Builder
-import Url.Parser as Parser exposing ((</>), (<?>), Parser, map, oneOf, s)
+import Url.Parser as Parser exposing ((</>), (<?>), Parser, map, oneOf, query, s)
 import Url.Parser.Query as Query
 
 
@@ -17,7 +17,7 @@ type Route
     | RecipeList (Maybe String)
     | NewRecipe
     | EditRecipe Slug
-    | Login
+    | Login (Maybe Slug)
     | MyProfile
 
 
@@ -28,7 +28,8 @@ parser =
         , map RecipeList (Parser.top <?> Query.string "search")
         , map NewRecipe (s "editor")
         , map EditRecipe (s "editor" </> Slug.urlParser)
-        , map Login (s "login")
+        , map (\maybeStr -> Login (Maybe.map Slug.Slug maybeStr))
+            (s "login" <?> Query.string "redirect")
         , map MyProfile (s "my-profile")
         ]
 
@@ -52,7 +53,7 @@ toString : Route -> String
 toString page =
     case page of
         Recipe slug ->
-            Url.Builder.absolute [ "recipe", Url.percentEncode <| Slug.toString slug ] []
+            Url.Builder.absolute [ "recipe", Slug.toString slug ] []
 
         RecipeList (Just query) ->
             Url.Builder.absolute [] [ Url.Builder.string "search" query ]
@@ -64,9 +65,12 @@ toString page =
             Url.Builder.absolute [ "editor" ] []
 
         EditRecipe slug ->
-            Url.Builder.absolute [ "editor", Url.percentEncode <| Slug.toString slug ] []
+            Url.Builder.absolute [ "editor", Slug.toString slug ] []
 
-        Login ->
+        Login (Just slug) ->
+            Url.Builder.absolute [ "login" ] [ Url.Builder.string "redirect" <| Slug.toString slug ]
+
+        Login Nothing ->
             Url.Builder.absolute [ "login" ] []
 
         MyProfile ->

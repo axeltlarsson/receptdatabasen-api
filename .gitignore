@@ -226,3 +226,5 @@ pyrightconfig.json
 *.qcow2
 result
 .nixos-test-history
+openresty/nginx.pid
+data/db

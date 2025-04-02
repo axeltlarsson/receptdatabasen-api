@@ -17,3 +17,4 @@ create index idx_passkey_credential_id on data.passkey((data->>'credential_id'))
 alter table passkey enable row level security;
 create policy users_access_own_passkeys on passkey
     using (user_id = request.user_id());
+

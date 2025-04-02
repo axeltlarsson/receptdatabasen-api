@@ -4,8 +4,7 @@
 set client_min_messages to warning;
 
 -- load some variables from the env
-\setenv base_dir :DIR
-\set base_dir `if [ $base_dir != ":"DIR ]; then echo $base_dir; else echo "/docker-entrypoint-initdb.d"; fi`
+\set db_dir `echo $DB_DIR`
 \set anonymous `echo $DB_ANON_ROLE`
 \set authenticator `echo $DB_USER`
 \set authenticator_pass `echo $DB_PASS`
@@ -16,6 +15,8 @@ set client_min_messages to warning;
 \set rp_id `echo $RP_ID`
 \set origin `echo $ORIGIN`
 \set disable_user_verification `echo $DISABLE_USER_VERIFICATION`
+\set image_server_secret `echo $IMAGE_SERVER_SECRET`
+\set quoted_image_server_secret '\'' `echo $IMAGE_SERVER_SECRET` '\''
 
 \echo # Loading database definition
 begin;
@@ -23,18 +24,22 @@ create extension if not exists pgcrypto;
 create extension if not exists plpython3u;
 
 \echo # Loading dependencies
+\echo db_dir: :db_dir
 
 -- functions for storing different settings in a table
-\ir libs/settings.sql
+\ir :db_dir/libs/settings.sql
 
 -- functions for reading different http request properties exposed by PostgREST
-\ir libs/request.sql
+\ir :db_dir/libs/request.sql
 
 -- functions for sending messages to RabbitMQ entities
-\ir libs/rabbitmq.sql
+\ir :db_dir/libs/rabbitmq.sql
 
 -- functions for JWT token generation in the database context
-\ir libs/pgjwt.sql
+\ir :db_dir/libs/pgjwt.sql
+
+-- utils
+\ir :db_dir/libs/utils.sql
 
 -- save app settings (they are stored in the settings.secrets table)
 select settings.set('jwt_secret', :quoted_jwt_secret);
@@ -42,27 +47,27 @@ select settings.set('jwt_lifetime', :quoted_jwt_lifetime);
 select settings.set('rp_id', :rp_id);
 select settings.set('origin', :origin);
 select settings.set('disable_user_verification', :disable_user_verification::int::text); --  settings need bools as '0' or '1'
+select settings.set('image_server_secret', :quoted_image_server_secret);
 
 \echo # Loading application definitions
 
-\echo # Loading roles
-\ir authorization/roles.sql
+\ir :db_dir/authorization/roles.sql
 
 -- private schema where all tables will be defined
 -- you can use other names besides "data" or even spread the tables
 -- between different schemas. The schema name "data" is just a convention
-\ir data/schema.sql
+\ir :db_dir/data/schema.sql
 
 -- entities inside this schema (which should be only views and stored procedures) will be
 -- exposed as API endpoints. Access to them however is still governed by the
 -- privileges defined for the current PostgreSQL role making the requests
-\ir api/schema.sql
+\ir :db_dir/api/schema.sql
 
 \echo # Loading privileges
-\ir authorization/privileges.sql
+\ir :db_dir/authorization/privileges.sql
 
 \echo # Loading sample data
-\ir sample_data/data.sql
+\ir :db_dir/sample_data/data.sql
 
 
 -- Deploy app:schema_cache_refresh_trigger to pg

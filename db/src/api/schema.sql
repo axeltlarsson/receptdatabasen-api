@@ -19,3 +19,4 @@ grant api to current_user; -- this is a workaround for RDS where the master user
 \ir passkeys/passkeys.sql
 \ir passkeys/registration.sql
 \ir passkeys/authentication.sql
+\ir recipe_preview_by_title.sql

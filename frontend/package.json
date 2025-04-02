@@ -7,33 +7,38 @@
         "test": "tests"
     },
     "scripts": {
-        "start": "parcel",
-        "build": "rm -rf dist && parcel build",
-        "test": "elm-test"
+        "start": "npm run make-elm:dev && parcel",
+        "build": "rm -rf dist && npm run make-elm:prod && parcel build",
+        "test": "elm-test",
+        "make-elm:dev": "elm make src/Main.elm --output=elm-output.js",
+        "make-elm:prod": "./optimise-elm.sh src/Main.elm"
     },
     "keywords": [],
     "author": "",
     "license": "ISC",
     "dependencies": {
-        "easymde": "^2.18.0 ",
-        "elm": "^0.19.1-6"
+        "easymde": "^2.20.0"
     },
     "devDependencies": {
-        "@parcel/packager-raw-url": "^2.10.0",
-        "@parcel/reporter-bundle-analyzer": "^2.10.0",
-        "@parcel/transformer-elm": "^2.10.0",
-        "@parcel/transformer-webmanifest": "^2.10.0",
+        "@parcel/packager-raw-url": "^2.14.1",
+        "@parcel/reporter-bundle-analyzer": "^2.14.1",
+        "@parcel/transformer-webmanifest": "^2.14.1",
         "eslint": "^7.32.0",
-        "eslint-config-airbnb-base": "^14.2.0",
-        "eslint-plugin-import": "^2.25.4",
-        "http-proxy-middleware": "^2.0.6",
-        "parcel": "^2.10.0",
-        "parcel-reporter-static-files-copy": "^1.5.0"
+        "eslint-config-airbnb-base": "^14.2.1",
+        "eslint-plugin-import": "^2.31.0",
+        "http-proxy-middleware": "^2.0.7",
+        "parcel": "^2.14.1",
+        "parcel-reporter-static-files-copy": "^1.5.3",
+        "parcel-resolver-ignore": "^2.2.0"
     },
     "staticFiles": {
         "staticPath": "src/assets/static"
     },
     "optionalDependencies": {
         "@parcel/watcher-linux-x64-glibc": "^2.5.0"
-    }
+    },
+    "parcelIgnore": [
+        "{{.*}}",
+        "{\\* .* \\*}"
+    ]
 }

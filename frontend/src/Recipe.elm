@@ -56,8 +56,14 @@ type alias Metadata =
     }
 
 
+{-| An image has two useful cryptographically signed url:s for the FE
+
+  - url1496: 1496px wide image (e.g. /images/{signature}/1496/{filename}.jpeg)
+  - url1600: 1600px wide image (e.g. /images/{signature}/1600/{filename}.jpeg)
+
+-}
 type alias Image =
-    { url : String }
+    { url1496 : String, url1600 : String }
 
 
 type Preview
@@ -112,7 +118,9 @@ metadataDecoder =
         (field "description" <| Decode.nullable string)
         (field "images" <|
             Decode.list <|
-                Decode.map Image (Decode.field "url" <| string)
+                Decode.map2 Image
+                    (Decode.field "url1496" <| string)
+                    (Decode.field "url1600" <| string)
         )
         (field "created_at" string)
         (field "updated_at" string)

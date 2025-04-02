@@ -32,7 +32,7 @@ type Model
     | Redirect Session
     | NotFound Session
     | Editor (Maybe Slug) Editor.Model
-    | Login Login.Model
+    | Login (Maybe Slug) Login.Model
     | MyProfile MyProfile.Model
 
 
@@ -102,7 +102,7 @@ view model =
         Editor _ editor ->
             viewPage Page.Editor GotEditorMsg (Editor.view editor)
 
-        Login login ->
+        Login _ login ->
             viewPageWithoutHeader Page.Login GotLoginMsg (Login.view login)
 
         MyProfile profile ->
@@ -143,7 +143,7 @@ toSession page =
         Editor _ editor ->
             Editor.toSession editor
 
-        Login login ->
+        Login _ login ->
             Login.toSession login
 
         MyProfile profile ->
@@ -181,8 +181,8 @@ changeRouteTo maybeRoute model =
             Editor.initEdit session slug
                 |> updateWith (Editor (Just slug)) GotEditorMsg
 
-        Just Route.Login ->
-            Login.init session |> updateWith Login GotLoginMsg
+        Just (Route.Login maybeSlug) ->
+            Login.init session maybeSlug |> updateWith (Login maybeSlug) GotLoginMsg
 
         Just Route.MyProfile ->
             MyProfile.init session |> updateWith MyProfile GotMyProfileMsg
@@ -208,8 +208,8 @@ update msg model =
                 NotFound _ ->
                     NotFound newSession
 
-                Login login ->
-                    Login { login | session = newSession }
+                Login maybeSlug login ->
+                    Login maybeSlug { login | session = newSession }
 
                 MyProfile profile ->
                     MyProfile { profile | session = newSession }
@@ -247,9 +247,9 @@ update msg model =
             Editor.update subMsg editor
                 |> updateWith (Editor slug) GotEditorMsg
 
-        ( GotLoginMsg subMsg, Login login ) ->
+        ( GotLoginMsg subMsg, Login maybeSlug login ) ->
             Login.update subMsg login
-                |> updateWith Login GotLoginMsg
+                |> updateWith (Login maybeSlug) GotLoginMsg
 
         ( GotMyProfileMsg subMsg, MyProfile profile ) ->
             MyProfile.update subMsg profile
@@ -302,7 +302,7 @@ subscriptions model =
                 Editor _ editor ->
                     Sub.map GotEditorMsg (Editor.subscriptions editor)
 
-                Login login ->
+                Login _ login ->
                     Sub.map GotLoginMsg (Login.subscriptions login)
 
                 MyProfile profile ->
@@ -313,7 +313,7 @@ subscriptions model =
     in
     Sub.batch
         [ windowResizeSub
-        , modelSubs
+            , modelSubs
         ]
 
 
