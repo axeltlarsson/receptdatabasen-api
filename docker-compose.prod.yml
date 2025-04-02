@@ -19,6 +19,7 @@ services:
       - VIRTUAL_PORT=${VIRTUAL_PORT}
       - LETSENCRYPT_HOST=${VIRTUAL_HOST}
       - LETSENCRYPT_EMAIL=${EMAIL}
+      - SITE_BASE_URL=${SITE_BASE_URL}
     networks:
       - webproxy
       - backend

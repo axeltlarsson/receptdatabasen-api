@@ -107,15 +107,12 @@ local function get_base_url()
 
     -- Check for forwarded headers (from reverse proxy)
     local host = ngx.req.get_headers()["X-Forwarded-Host"]
-    local port = ngx.req.get_headers()["X-Forwarded-Port"]
     local scheme = ngx.req.get_headers()["X-Forwarded-Proto"]
-    local port_suffix = nil
+    local port_suffix = ""
 
-    if host and scheme then
-        port_suffix = (port and port ~= "80" and port ~= "443") and ":" .. port or ""
-    else
+    if not (host and scheme) then
         -- Fall back to server variables if forwarded headers aren't available
-        port = ngx.var.server_port
+        local port = ngx.var.server_port
         port_suffix = (port ~= "80" and port ~= "443") and ":" .. port or ""
         host = ngx.var.host or ngx.var.server_name or "localhost"
         scheme = ngx.var.scheme or "http"
