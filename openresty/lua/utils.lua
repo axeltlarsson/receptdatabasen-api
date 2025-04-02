@@ -102,6 +102,7 @@ local function get_base_url()
     -- Override: the SITE_BASE_URL environment variable
     local env_base_url = os.getenv("SITE_BASE_URL")
     if env_base_url and env_base_url ~= "" then
+        print("Using SITE_BASE_URL: " .. env_base_url)
         return env_base_url
     end
 
@@ -111,6 +112,7 @@ local function get_base_url()
     local port_suffix = ""
 
     if not (host and scheme) then
+        print("Forwarded headers not available, falling back to server variables")
         -- Fall back to server variables if forwarded headers aren't available
         local port = ngx.var.server_port
         port_suffix = (port ~= "80" and port ~= "443") and ":" .. port or ""
