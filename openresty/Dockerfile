@@ -38,4 +38,6 @@ COPY nginx /usr/local/openresty/nginx/conf
 COPY nginx_prod /usr/local/openresty/nginx/conf/prod
 COPY lua /usr/local/openresty/nginx/lua
 
-EXPOSE 80
+ENV PORT=8081
+
+EXPOSE $PORT
