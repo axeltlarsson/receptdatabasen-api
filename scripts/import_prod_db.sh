@@ -52,7 +52,7 @@ parse_params() {
 		-h | --help) usage ;;
 		-v | --verbose) set -x ;;
 		--no-color) NO_COLOR=1 ;;
-		-d | --download) download=1 ;; # download images too
+		-d | --download) download=true ;; # download images too
 		-?*) die "Unknown option: $1" ;;
 		*) break ;;
 		esac
@@ -85,16 +85,16 @@ msg "${YELLOW}Import production into local db...${NOFORMAT}"
 psql -h localhost -U "$SUPER_USER" -d app <prod-dump.sql
 rm prod-dump.sql
 
-if [ -z "$download" ]; then
-	msg "${YELLOW}Download images..${NOFORMAT}"
+if [ -n "$download" ]; then
+	msg "${YELLOW}Downloading images..${NOFORMAT}"
 	ssh "$host" "mkdir -p /tmp/uploads-recept"
 	ssh "$host" "docker run -i --rm -v receptdatabasen_uploads-vol:/uploads -v /tmp/uploads-recept:/target ubuntu tar cvf /target/backup.tar /uploads > /dev/null"
 	scp "$host":/tmp/uploads-recept/backup.tar .
 	ssh "$host" "rm -rf /tmp/uploads-recept"
-	docker-compose exec openresty bash -c "rm -rf /uploads/*"
+	docker compose exec openresty bash -c "rm -rf /uploads/*"
 	docker cp backup.tar receptdatabasen_openresty_1:/uploads
-	docker-compose exec openresty bash -c "cd /uploads && tar -xf backup.tar && mv uploads/* . && rmdir uploads && rm backup.tar"
-	docker-compose exec openresty bash -c "chown -R nobody /uploads/*"
+	docker compose exec openresty bash -c "cd /uploads && tar -xf backup.tar && mv uploads/* . && rmdir uploads && rm backup.tar"
+	docker compose exec openresty bash -c "chown -R nobody /uploads/*"
 	rm backup.tar
 fi
 
