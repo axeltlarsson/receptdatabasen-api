@@ -139,6 +139,7 @@
               pkgs.ruff
               pkgs.pyright
               hot-reload
+              pkgs.bash-language-server
               pkgs.shellcheck
 
               ci
@@ -236,6 +237,11 @@
                 # db is in its own module
                 ./db/service.nix
               ];
+
+              cli.options = {
+                no-server = false;
+              };
+
               settings.processes = {
                 # since this is "dev" we use the dev versions - not the "production" built derivations like (${self'.apps.openresty-receptdb.program})
                 postgrest = {
@@ -245,13 +251,25 @@
                 openresty-receptdb = {
                   command = "op";
                   depends_on."db".condition = "process_healthy";
+                  # Actually /live is more of a liveness probe than a readiness probe, but we keep it simple
+                  # and only implement a liveness probe for now which is more than good enough for dev
+                  # We have to call it a readiness probe though to make it work with process-compose - liveness doesn't
+                  # allow us a specific state to depend on for hot-reload
+                  readiness_probe = {
+                    initial_delay_seconds = 1;
+                    http_get = {
+                      host = "localhost";
+                      path = "/live";
+                      port = 8081;
+                    };
+                  };
                 };
                 frontend.command = "(cd frontend; npm run start)";
                 hot-reload = {
                   command = "hot-reload";
                   depends_on."postgrest".condition = "process_started";
                   depends_on."db".condition = "process_started";
-                  depends_on."openresty-receptdb".condition = "process_started";
+                  depends_on."openresty-receptdb".condition = "process_healthy";
                 };
               };
             };
