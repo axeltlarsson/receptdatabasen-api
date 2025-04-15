@@ -313,7 +313,7 @@ subscriptions model =
     in
     Sub.batch
         [ windowResizeSub
-            , modelSubs
+        , modelSubs
         ]
 
 

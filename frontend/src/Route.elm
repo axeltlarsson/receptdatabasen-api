@@ -53,7 +53,7 @@ toString : Route -> String
 toString page =
     case page of
         Recipe slug ->
-            Url.Builder.absolute [ "recipe", Slug.toString slug ] []
+            Url.Builder.absolute [ "recipe", Url.percentEncode (Slug.toString slug) ] []
 
         RecipeList (Just query) ->
             Url.Builder.absolute [] [ Url.Builder.string "search" query ]
