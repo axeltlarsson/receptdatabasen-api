@@ -1,6 +1,6 @@
 module Recipe exposing
     ( Full
-    , ImageUrl(..)
+    , UploadedImageUrl(..)
     , Metadata
     , Preview
     , Recipe(..)
@@ -60,10 +60,11 @@ type alias Metadata =
 
   - url1496: 1496px wide image (e.g. /images/{signature}/1496/{filename}.jpeg)
   - url1600: 1600px wide image (e.g. /images/{signature}/1600/{filename}.jpeg)
+  And the original file name called `url`
 
 -}
 type alias Image =
-    { url1496 : String, url1600 : String }
+    { url1496 : String, url1600 : String, url: String }
 
 
 type Preview
@@ -118,9 +119,10 @@ metadataDecoder =
         (field "description" <| Decode.nullable string)
         (field "images" <|
             Decode.list <|
-                Decode.map2 Image
+                Decode.map3 Image
                     (Decode.field "url1496" <| string)
                     (Decode.field "url1600" <| string)
+                    (Decode.field "url" <| string)
         )
         (field "created_at" string)
         (field "updated_at" string)
@@ -255,7 +257,7 @@ edit recipeSlug jsonForm toMsg =
         }
 
 
-uploadImage : Int -> File -> (Result ServerError ImageUrl -> msg) -> Cmd msg
+uploadImage : Int -> File -> (Result ServerError UploadedImageUrl -> msg) -> Cmd msg
 uploadImage idx file toMsg =
     Http.request
         { url = "/images/upload"
@@ -285,10 +287,10 @@ exportToShoppingList ingredientStr toMsg =
         }
 
 
-type ImageUrl
+type UploadedImageUrl
     = ImageUrl String
 
 
-imageUrlDecoder : Decode.Decoder ImageUrl
+imageUrlDecoder : Decode.Decoder UploadedImageUrl
 imageUrlDecoder =
     Decode.map ImageUrl (field "image" (field "url" string))

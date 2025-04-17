@@ -75,15 +75,17 @@ type alias RecipeForm =
 type UploadStatus
     = UrlEncoding File
     | InProgress File Base64Url UploadProgress
-    | Done (Maybe Base64Url) Url -- Nothing for Base64Url if fetched server (fromRecipe)
+    | Done (Maybe Base64Url) ImageUrl -- Nothing for Base64Url if fetched from server (fromRecipe)
 
 
 type alias UploadProgress =
     { sent : Int, size : Int }
 
 
-type alias Url =
-    String
+type alias ImageUrl =
+    -- url1600 is only available in cases we fetch the Recipe from the server as in editing an existing one
+    -- but is not available when uploading a new image - we just get the url back then (which is all we actually need though)
+    { url : String, maybeUrl1600 : Maybe String }
 
 
 type alias Base64Url =
@@ -148,8 +150,14 @@ fromRecipe recipe =
             , ingredients = ingredients
             , tags = tags
 
-            -- We choose the signed url1600 image url
-            , images = List.indexedMap (\i { url1600 } -> ( i, Done Nothing url1600 )) images |> Dict.fromList
+            -- We need the original url to re-upload when editing, and the 1600 one to actually display the image
+            , images =
+                List.indexedMap
+                    (\i { url, url1600 } ->
+                        ( i, Done Nothing { url = url, maybeUrl1600 = Just url1600 } )
+                    )
+                    images
+                    |> Dict.fromList
         }
     }
 
@@ -320,7 +328,11 @@ viewImagesInput imagesDict tooManyError =
                                 }
                             )
 
-                    Done Nothing url1600 ->
+                    Done Nothing { maybeUrl1600 } ->
+                        let
+                            url1600 =
+                                Maybe.withDefault "" maybeUrl1600
+                        in
                         imageRect url1600
                             (removeButton [ alignBottom, alignRight, padding 10 ]
                                 { idx = idx
@@ -353,7 +365,11 @@ viewImagesInput imagesDict tooManyError =
                                                 }
                                             )
 
-                                    Done Nothing url1600 ->
+                                    Done Nothing { maybeUrl1600 } ->
+                                        let
+                                            url1600 =
+                                                Maybe.withDefault "" maybeUrl1600
+                                        in
                                         smallImage url1600
                                             i
                                             (removeButton [ alignBottom, alignRight, padding 5 ]
@@ -570,7 +586,7 @@ type Msg
     | BlurredTitle
     | BlurredDescription
     | ImageUrlEncoded Int File Base64Url
-    | ImageUploadComplete Int (Result Api.ServerError Recipe.ImageUrl)
+    | ImageUploadComplete Int (Result Api.ServerError Recipe.UploadedImageUrl)
     | RemoveImage Int
     | MakeMainImage Int
     | GotImageUploadProgress Int Http.Progress
@@ -767,7 +783,7 @@ update msg ({ form } as model) =
                         (\p ->
                             case p of
                                 InProgress _ base64Url _ ->
-                                    Done (Just base64Url) url
+                                    Done (Just base64Url) { url = url, maybeUrl1600 = Nothing }
 
                                 x ->
                                     -- TODO: handle debug
@@ -1067,7 +1083,7 @@ toJson form =
             Dict.map
                 (\_ imageStatus ->
                     case imageStatus of
-                        Done _ url ->
+                        Done _ { url } ->
                             Encode.object [ ( "url", Encode.string url ) ]
 
                         _ ->
