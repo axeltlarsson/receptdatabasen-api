@@ -31,7 +31,7 @@ all =
                             Ok s ->
                                 Route.toString (Route.Recipe s)
                 in
-                Expect.equal actual "/recipe/fläskpannkaka i ugn"
+                Expect.equal actual "/recipe/fl%C3%A4skpannkaka%20i%20ugn"
         , test "RecipeList" <|
             \_ ->
                 let
