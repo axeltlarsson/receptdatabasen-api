@@ -27,6 +27,7 @@ pkgs.stdenv.mkDerivation {
 
   phases = [
     "installPhase"
+    "fixupPhase"
     "postInstall"
   ];
 
@@ -61,6 +62,11 @@ pkgs.stdenv.mkDerivation {
       else
         ""
     }
+  '';
+
+  fixupPhase = ''
+    substituteInPlace "$out/nginx/nginx.conf" \
+      --replace-fail "/etc/ssl/certs/ca-certificates.crt" "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
   '';
 
   # A final wrapper script in $out/bin to run openresty for this app
