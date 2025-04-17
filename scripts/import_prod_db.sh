@@ -80,17 +80,50 @@ setup_colors
 msg "${YELLOW}Import production database dump...${NOFORMAT}"
 ssh "$1" 'cd /srv/receptdatabasen && docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_dump -U superuser -d app' >prod-dump.sql 2>/dev/null
 
+_dropdb() {
+	if [ "$DOCKER" -eq 1 ]; then
+		docker compose exec db bash -c "dropdb -h localhost -U $SUPER_USER -p $DB_PORT app"
+	else
+		dropdb -h localhost -U "$SUPER_USER" -p "$DB_PORT" app
+	fi
+}
+
+_createdb() {
+	if [ "$DOCKER" -eq 1 ]; then
+		docker compose exec db bash -c "createdb -h localhost -U $SUPER_USER -p $DB_PORT app"
+	else
+		createdb -h localhost -U "$SUPER_USER" -p "$DB_PORT" app
+	fi
+}
+
+_importdb() {
+	if [ "$DOCKER" -eq 1 ]; then
+		docker compose exec -T db bash -c "psql -h localhost -U $SUPER_USER -p $DB_PORT app" <prod-dump.sql
+	else
+		psql -h localhost -U "$SUPER_USER" -p "$DB_PORT" app <prod-dump.sql
+	fi
+}
+
+_execdb() {
+	if [ "$DOCKER" -eq 1 ]; then
+		echo "$1" | docker compose exec -T db psql -U "$SUPER_USER" app
+	else
+		psql -h localhost -U "$SUPER_USER" -p "$DB_PORT" app "$1"
+	fi
+}
+
 msg "${YELLOW}Drop local database...${NOFORMAT}"
-dropdb -h localhost -U "$SUPER_USER" -p "$DB_PORT" app
+_dropdb
 msg "${YELLOW}Re-create local database...${NOFORMAT}"
-createdb -h localhost -U "$SUPER_USER" -p "$DB_PORT" app
+_createdb
 msg "${YELLOW}Import production into local db...${NOFORMAT}"
-psql -h localhost -U "$SUPER_USER" -d app <prod-dump.sql
+_importdb
 rm prod-dump.sql
 
 # create test users and set some settings for local usage
 msg "${YELLOW}Configuring prod db for local usage...${NOFORMAT}"
-psql -h localhost -U "$SUPER_USER" -d app <<EOF
+sql_config=$(
+	cat <<EOF
 	begin;
 	\echo Creating test users;
 	insert into data.user (user_name, password) values ('alice', 'pass');
@@ -104,6 +137,9 @@ psql -h localhost -U "$SUPER_USER" -d app <<EOF
 	select settings.set('disable_user_verification', 'true');
 	commit;
 EOF
+)
+
+_execdb "$sql_config"
 
 if [ "$DOWNLOAD" -eq 1 ]; then
 	msg "${YELLOW}Downloading images..${NOFORMAT}"
