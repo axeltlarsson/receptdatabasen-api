@@ -57,6 +57,7 @@ services:
       - LISTAN_JWT_SECRET=${LISTAN_JWT_SECRET}
       - FILE_UPLOAD_PATH=/uploads
       - IMAGE_SERVER_SECRET=${IMAGE_SERVER_SECRET}
+      - SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
     volumes:
       - uploads-vol:/uploads
     depends_on:
