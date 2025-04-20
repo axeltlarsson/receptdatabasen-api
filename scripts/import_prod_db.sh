@@ -141,6 +141,10 @@ EOF
 
 _execdb "$sql_config"
 
+if [ "$DOCKER" -eq 1 ]; then
+	_execdb "select settings.set('origin', 'http://localhost:8081');"
+fi
+
 if [ "$DOWNLOAD" -eq 1 ]; then
 	msg "${YELLOW}Downloading images..${NOFORMAT}"
 	ssh "$host" "mkdir -p /tmp/uploads-recept"
