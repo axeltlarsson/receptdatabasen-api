@@ -23,6 +23,7 @@ pkgs.stdenv.mkDerivation {
   buildInputs = [
     pkgs.openresty
     pkgs.cacert
+    pkgs.makeWrapper
   ] ++ openresty-deps;
 
   phases = [
@@ -70,26 +71,26 @@ pkgs.stdenv.mkDerivation {
   '';
 
   # A final wrapper script in $out/bin to run openresty for this app
-  # TODO: use makeWrapper instead
   postInstall = ''
     mkdir -p $out/bin
-    cat > $out/bin/openresty-receptdb <<EOF
+
+    # Create a simple script that will be wrapped
+    cat > $out/bin/.openresty-receptdb-unwrapped <<EOF
     #!/usr/bin/env bash
     set -euo pipefail
-
-    export SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt
-
-    # set up the LUA_PATH to include the vendored 3:rd party dependencies
-    export LUA_PATH="$out/lua/vendor/?.lua;$out/lua/vendor/?/init.lua;$LUA_PATH"
-
-    # Start openresty, pointing to $out as the prefix
     exec ${pkgs.openresty}/bin/openresty \
       -p $out \
       -c $out/nginx/nginx.conf \
       -e /dev/stderr \
       -g "daemon off; error_log /dev/stderr debug; pid /tmp/nginx.pid;"
     EOF
-    chmod +x $out/bin/openresty-receptdb
+    chmod +x $out/bin/.openresty-receptdb-unwrapped
+
+    # Use makeWrapper to create the final wrapper with all environment variables
+    makeWrapper $out/bin/.openresty-receptdb-unwrapped $out/bin/openresty-receptdb \
+      --set SSL_CERT_FILE "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" \
+      --set LUA_SSL_TRUSTED_CERT "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" \
+      --prefix LUA_PATH "$out/lua/vendor/?.lua;$out/lua/vendor/?/init.lua;"
   '';
 
   allowSubstitutes = true;
