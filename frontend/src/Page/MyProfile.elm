@@ -270,11 +270,11 @@ viewResponsiveTable device zone passkeys =
                     { year = Time.toYear zone date |> String.fromInt
                     , month = Time.toMonth zone date |> numericMonth
                     , day = Time.toDay zone date |> String.fromInt |> String.padLeft 2 '0'
-                    , hour = Time.toHour zone date |> String.fromInt
-                    , min = Time.toMinute zone date |> String.fromInt
+                    , hour = Time.toHour zone date |> String.fromInt |> String.padLeft 2 '0'
+                    , min = Time.toMinute zone date |> String.fromInt |> String.padLeft 2 '0'
                     }
             in
-            r.year ++ "-" ++ r.month ++ "-" ++ r.day ++ " " ++ r.hour ++ ":" ++ r.hour
+            r.year ++ "-" ++ r.month ++ "-" ++ r.day ++ " " ++ r.hour ++ ":" ++ r.min
 
         shortenId len id =
             String.left (len - 6) id ++ "..." ++ String.right 3 id
