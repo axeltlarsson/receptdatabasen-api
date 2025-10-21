@@ -59,18 +59,17 @@ const bufferToBase64url = (buffer) => {
 };
 
 const base64urlToBuffer = (baseurl64String) => {
-  // Base64url to Base64
-  const padding = '=='.slice(0, (4 - (baseurl64String.length % 4)) % 4);
+  const padding = '='.repeat((4 - (baseurl64String.length % 4)) % 4);
   const base64String = baseurl64String.replace(/-/g, '+').replace(/_/g, '/') + padding;
 
-  // Base64 to binary string
-  const str = atob(base64String);
+  // Decode base64
+  const binaryString = atob(base64String);
 
-  // Binary string to buffer
-  const buffer = new ArrayBuffer(str.length);
+  // Convert binary string to ArrayBuffer
+  const buffer = new ArrayBuffer(binaryString.length);
   const byteView = new Uint8Array(buffer);
-  for (let i = 0; i < str.length; i++) {
-    byteView[i] = str.charCodeAt(i);
+  for (let i = 0; i < binaryString.length; i++) {
+    byteView[i] = binaryString.charCodeAt(i);
   }
   return buffer;
 };
@@ -117,13 +116,15 @@ const getBrowserInfo = () => {
 };
 
 const encodeOptions = (options) => {
-  const opts = options;
-  // passkeycreation requires user.id and challenge to be in buffers
-  // the server base64url encodes the user.id and challenge
-  if (options.user) {
+  // Create a deep copy to avoid modifying the original
+  const opts = JSON.parse(JSON.stringify(options));
+
+  if (opts.user && opts.user.id) {
     opts.user.id = base64urlToBuffer(opts.user.id);
   }
+
   opts.challenge = base64urlToBuffer(opts.challenge);
+
   if (opts.excludeCredentials) {
     for (let i = 0; i < opts.excludeCredentials.length; i++) {
       opts.excludeCredentials[i].id = base64urlToBuffer(opts.excludeCredentials[i].id);
@@ -132,6 +133,7 @@ const encodeOptions = (options) => {
 
   return opts;
 };
+
 const serializePasskey = (credential) => ({
   authenticatorAttachment: credential.authenticatorAttachment,
   id: credential.id,
@@ -158,8 +160,10 @@ app.ports.passkeyPortSender.subscribe((message) => {
     }
     case 'createPasskey': {
       const { options } = message;
+      console.log('Original options:', JSON.stringify(options));
 
       const opts = encodeOptions(options);
+      console.log('Encoded options:', opts);
 
       createPasskey(opts).then((credential) => {
         const serialized = {

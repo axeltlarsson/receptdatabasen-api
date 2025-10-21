@@ -18,18 +18,20 @@ create or replace function api.generate_registration_options(user_id text, user_
     AuthenticatorAttachment
   )
 
+  plpy.warning("hello from generate_registration_options")
   registration_options = generate_registration_options(
     rp_id=rp_id,
     rp_name="receptdatabasen", 
     # TODO: user_id should ideally be a random bytes id associated with each user record
     # https://github.com/duo-labs/py_webauthn/blob/master/CHANGELOG.md#option-2-generate-unique-webauthn-specific-identifiers-for-existing-and-new-users
-    user_id=user_id.encode("utf-8"),
+    #user_id=user_id.encode("utf-8"),
+    user_id=generate_user_handle(),
     user_name=user_name,
     user_display_name=user_name,
-    exclude_credentials=[PublicKeyCredentialDescriptor(id=base64url_to_bytes(cred)) for cred in (exclude_credentials or [])],
+    #exclude_credentials=[PublicKeyCredentialDescriptor(id=base64url_to_bytes(cred)) for cred in (exclude_credentials or [])],
     authenticator_selection=AuthenticatorSelectionCriteria(
         authenticator_attachment=AuthenticatorAttachment.PLATFORM,
-        resident_key=ResidentKeyRequirement.REQUIRED,
+        resident_key=None,
     ),
   )
 
