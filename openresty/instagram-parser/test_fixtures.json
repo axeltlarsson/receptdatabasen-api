@@ -1,0 +1,354 @@
+{
+  "_comment": "Expected extraction results for Instagram recipe parser tests",
+  "_format": {
+    "is_recipe": "true if content is a recipe, false if not, 'uncertain' if hard to tell",
+    "has_ingredients": "true if ingredients should be extractable from the text",
+    "has_instructions": "true if instructions should be extractable from the text",
+    "portions": "expected portion count if detectable, null otherwise",
+    "notes": "optional notes about the test case"
+  },
+
+  "asiatiskt_biffsallad.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": null,
+    "notes": "Swedish recipe with UPPERCASE section headers"
+  },
+
+  "best_lemonade_in_the_world.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": 4,
+    "notes": "English recipe with Ingredients: and Directions:"
+  },
+
+  "bruschetta_med_nektarin_tomat_chevre_och_mascarpone.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": 4,
+    "notes": "Swedish recipe with numbered steps and 'Räcker till 4'"
+  },
+
+  "butter_garlic_prawsn.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": false,
+    "portions": 2,
+    "notes": "Recipe Ingredients marker, no written instructions (video only)"
+  },
+
+  "chicken_rice_done_right.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": false,
+    "portions": 4,
+    "notes": "Has Serves X, no written instructions"
+  },
+
+  "chilli_oil_prawn_noodles.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "Has subsection headers (Garlic Chilli Oil, etc.)"
+  },
+
+  "coconut_margarita.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "Cocktail recipe - instructions are inline in ingredients, difficult to separate"
+  },
+
+  "crispy_chilli_beef.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": 4,
+    "notes": "Swedish style with numbered steps"
+  },
+
+  "espresso_cheesecake.html": {
+    "is_recipe": false,
+    "has_ingredients": false,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "Recipe in bio/substack - no actual recipe in post"
+  },
+
+  "espresso_martini.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "Simple cocktail list, no explicit instructions"
+  },
+
+  "espresso_spritz.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": null,
+    "notes": "Swedish recipe with numbered steps"
+  },
+
+  "focaccia.html": {
+    "is_recipe": false,
+    "has_ingredients": true,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "Has ingredients but instructions in pinned comment, so is_recipe=false"
+  },
+
+  "grilled_nectraine_buratta_hot_honey_toast.html": {
+    "is_recipe": "uncertain",
+    "has_ingredients": false,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "EDGE CASE: Uses emoji-based headers, difficult to parse without emoji handling"
+  },
+
+  "het_salamipasta_med_pinjen_tter_och_rucola.html": {
+    "is_recipe": "uncertain",
+    "has_ingredients": false,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "EDGE CASE: File may have encoding issues or unusual format"
+  },
+
+  "honungskyckling_med_gochujang.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": 1,
+    "notes": "Swedish with 'Här är receptet:' and numbered steps"
+  },
+
+  "how_to_cook_a_steak_in_a_cast_iron_pan_not_a_recipe.html": {
+    "is_recipe": false,
+    "has_ingredients": false,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "Cooking technique video, not a recipe"
+  },
+
+  "how_to_cook_using_stainless_steel_pan_not_a_recipe.html": {
+    "is_recipe": false,
+    "has_ingredients": false,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "Cooking technique video, not a recipe"
+  },
+
+  "how_to_handle_sticky_doughs_not_really_a_recipe.html": {
+    "is_recipe": false,
+    "has_ingredients": false,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "Baking tip, not a recipe"
+  },
+
+  "hur_man_steker_en_entrecote_not_really_a_recipe.html": {
+    "is_recipe": false,
+    "has_ingredients": false,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "Cooking technique video, not a recipe"
+  },
+
+  "krossad_sesampotatis_med_asiatiskt_skagenr_ra.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": null,
+    "notes": "Swedish with subsection headers"
+  },
+
+  "laxpudding.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": null,
+    "notes": "Swedish recipe"
+  },
+
+  "limonada.html": {
+    "is_recipe": false,
+    "has_ingredients": false,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "Link in bio - no recipe in post"
+  },
+
+  "majssallad_esquites.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": 6,
+    "notes": "Swedish with DU BEHÖVER and GÖR SÅHÄR"
+  },
+
+  "marry_me_chicken.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": null,
+    "notes": "English recipe with Ingredients: marker"
+  },
+
+  "nattj_sta_frallor.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": null,
+    "notes": "Swedish bread recipe with paragraph instructions"
+  },
+
+  "out_of_tonic_not_a_recipe.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": null,
+    "notes": "DATA ISSUE: URL points to risotto recipe, not out of tonic post"
+  },
+
+  "pad_kra_pao.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "Has Ingredients:, no written instructions"
+  },
+
+  "panzanella_perfection.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "Has ingredients, no explicit instructions"
+  },
+
+  "papperdelle_med_tryffeldoftande_vit_k_ttf_rss_s.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": 4,
+    "notes": "Swedish with numbered steps"
+  },
+
+  "peach_burrchetta.html": {
+    "is_recipe": "uncertain",
+    "has_ingredients": false,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "EDGE CASE: Uses emoji section headers, difficult to parse"
+  },
+
+  "punjabi_fried_shrimp.html": {
+    "is_recipe": "uncertain",
+    "has_ingredients": false,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "EDGE CASE: Unusual format, may have minimal content"
+  },
+
+  "punjabi_masala_chicken.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": false,
+    "portions": 3,
+    "notes": "Has Recipe Ingredients and Serves X"
+  },
+
+  "punjabi_style_chicken_masala.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": false,
+    "portions": 3,
+    "notes": "Has Recipe Ingredients and Serves X"
+  },
+
+  "rebellpasta.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": 2,
+    "notes": "Swedish, quantity-based list + numbered steps"
+  },
+
+  "risgrynsgr_t.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": null,
+    "notes": "Swedish rice porridge recipe"
+  },
+
+  "sommarens_b_sta_risotta.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": null,
+    "notes": "Swedish risotto with numbered steps"
+  },
+
+  "spicy_mango_margarita.html": {
+    "is_recipe": "uncertain",
+    "has_ingredients": false,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "EDGE CASE: Cocktail with bullet separators, difficult to parse"
+  },
+
+  "super_crispy_potatoes.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": null,
+    "notes": "English recipe"
+  },
+
+  "thai_dish.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "Has ingredients, instructions may be minimal"
+  },
+
+  "thai_glasnudelsallad.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": 4,
+    "notes": "Swedish with GÖR SÅ HÄR"
+  },
+
+  "tomato_mozzarella_basil_stuffed_flatbreads.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "Has Flatbread: marker"
+  },
+
+  "v_rldens_enklaste_br_d.html": {
+    "is_recipe": true,
+    "has_ingredients": true,
+    "has_instructions": true,
+    "portions": null,
+    "notes": "Swedish bread with Ingredienser: and paragraph instructions"
+  },
+
+  "vispat_brynt_sm_r.html": {
+    "is_recipe": false,
+    "has_ingredients": false,
+    "has_instructions": false,
+    "portions": null,
+    "notes": "Very short, no recipe content"
+  }
+}
