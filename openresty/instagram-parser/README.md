@@ -15,6 +15,8 @@ This module parses Instagram `og:description` content and extracts recipe compon
 | `run_tests.lua` | Automated test runner |
 | `test_fixtures.json` | Expected results for test cases |
 | `test_extractor.lua` | Manual testing helper |
+| `test_data/` | HTML test fixtures (downloaded Instagram pages) |
+| `download_all.sh` | Script to download test fixtures |
 | `cli.lua` | CLI wrapper for quick testing |
 
 ## Usage

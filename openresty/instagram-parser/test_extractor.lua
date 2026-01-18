@@ -6,6 +6,9 @@ local parser = require("instagram_parser")
 local extractor = require("recipe_extractor")
 local cjson = require("cjson")
 
+-- Test data directory
+local TEST_DATA_DIR = "test_data/"
+
 -- Helper to read file
 local function read_file(filename)
     local file = io.open(filename, "r")
@@ -40,7 +43,13 @@ local function test_file(filename)
     print("FILE: " .. filename)
     print(string.rep("=", 60))
 
-    local html = read_file(filename)
+    -- Try with test_data prefix first, then without (for direct paths)
+    local filepath = TEST_DATA_DIR .. filename
+    local html = read_file(filepath)
+    if not html then
+        html = read_file(filename)  -- Try direct path
+        filepath = filename
+    end
     if not html then
         print("ERROR: Could not read file")
         return
@@ -88,7 +97,7 @@ else
     }
 
     for _, filename in ipairs(test_files) do
-        local exists = io.open(filename, "r")
+        local exists = io.open(TEST_DATA_DIR .. filename, "r")
         if exists then
             exists:close()
             test_file(filename)

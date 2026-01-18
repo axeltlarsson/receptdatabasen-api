@@ -3,6 +3,7 @@
 # Run from the instagram-parser directory
 
 cd "$(dirname "$0")"
+mkdir -p test_data
 
 # Function to convert name to safe filename
 to_filename() {
@@ -27,7 +28,7 @@ tail -n +3 urls_for_test.md | while IFS='|' read -r _ name url _; do
     [ -z "$name" ] && continue
 
     # Generate filename
-    filename="$(to_filename "$name").html"
+    filename="test_data/$(to_filename "$name").html"
 
     # Skip if already exists and has og:description
     if [ -f "$filename" ] && grep -q 'og:description' "$filename" 2>/dev/null; then
@@ -53,4 +54,4 @@ tail -n +3 urls_for_test.md | while IFS='|' read -r _ name url _; do
 done
 
 echo "Done! Run the parser on all files:"
-echo "  nix-shell --run 'for f in *.html; do echo \"=== \$f ===\"; luajit cli.lua \"\$f\" | python3 -m json.tool; done'"
+echo "  nix-shell --run 'for f in test_data/*.html; do echo \"=== \$f ===\"; luajit cli.lua \"\$f\" | python3 -m json.tool; done'"

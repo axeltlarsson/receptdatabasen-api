@@ -7,6 +7,9 @@ local parser = require("instagram_parser")
 local extractor = require("recipe_extractor")
 local cjson = require("cjson")
 
+-- Test data directory
+local TEST_DATA_DIR = "test_data/"
+
 -- Helper to read file
 local function read_file(filename)
     local file = io.open(filename, "r")
@@ -34,7 +37,7 @@ local function bold(s) return "\27[1m" .. s .. "\27[0m" end
 
 -- Test a single file
 local function test_file(filename, expected)
-    local html = read_file(filename)
+    local html = read_file(TEST_DATA_DIR .. filename)
     if not html then
         return nil, "File not found"
     end
